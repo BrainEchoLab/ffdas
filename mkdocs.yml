@@ -1,0 +1,7 @@
+site_name: ffdas
+theme:
+  name: material
+markdown_extensions:
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true

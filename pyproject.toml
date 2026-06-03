@@ -1,0 +1,33 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "nanobind>=2.6"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "ffdas-cu13"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "array-api-compat",
+    "cuda-pathfinder",
+    "nvidia-cuda-runtime",
+    "nvidia-cublas",
+    "nvidia-cusolver",
+    "nvidia-nvtx",
+]
+
+[tool.scikit-build]
+cmake.build-type = "Release"
+cmake.define = {BUILD_PYTHON = "ON", BUILD_MEX = "OFF", CMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"}
+ninja.make-fallback = true
+wheel.packages = ["bindings/python/ffdas"]
+wheel.py-api = "cp312"
+build-dir = "_build_python"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["bindings/python/tests"]

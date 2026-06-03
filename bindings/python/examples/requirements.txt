@@ -1,0 +1,4 @@
+ffdas
+cupy
+numpy>=2.0
+matplotlib

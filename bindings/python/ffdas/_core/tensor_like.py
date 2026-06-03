@@ -1,0 +1,16 @@
+from typing import Any, Protocol, TypeVar, runtime_checkable
+
+
+@runtime_checkable
+class TensorLike(Protocol):
+    @property
+    def ndim(self) -> int: ...
+    @property
+    def shape(self) -> tuple[int, ...]: ...
+    @property
+    def dtype(self) -> Any: ...
+    def __dlpack__(self, *, stream: Any = ...) -> Any: ...
+    def __dlpack_device__(self) -> tuple[int, int]: ...
+
+
+T = TypeVar("T", bound=TensorLike)
