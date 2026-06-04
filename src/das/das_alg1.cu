@@ -58,6 +58,41 @@ ffdas_error_t das_alg1_launch(
             return err;
 
         input_ptr = xcomp_ptr.get();
+    } else {
+        int64_t exp_seq = params.samples;
+        int64_t exp_ch = (int64_t)params.seqlen * params.samples;
+        int64_t exp_batch = (int64_t)params.channels * exp_ch;
+        bool is_contig = (params.seqlen <= 1 || params.seq_stride == exp_seq) &&
+                         (params.channels <= 1 || params.channel_stride == exp_ch) &&
+                         (!params.have_batch || params.batch_size <= 1 || params.batch_stride == exp_batch);
+
+        if (!is_contig) {
+            std::vector<int64_t> dims = {
+                params.batch_size,
+                params.channels,
+                params.seqlen,
+                params.samples
+            };
+            std::vector<int64_t> strides = {
+                params.batch_stride,
+                params.channel_stride,
+                params.seq_stride,
+                params.sample_stride
+            };
+
+            ffdas_tensor_desc xcomp_desc(dims, strides, builtin_traits<Tcompute>::ffdas_datatype);
+            if (!can_use_int32_indexing(xcomp_desc))
+                return FFDAS_ERROR_INVALID_DIMS;
+
+            FFDAS_CHECK(xcomp_ptr.alloc(handle, xcomp_desc.nbytes()));
+
+            ffdas_error_t err = contiguous_copy_impl<Tx, Tcompute>(handle, xcomp_desc, x, xcomp_ptr.get());
+
+            if (err != FFDAS_SUCCESS)
+                return err;
+
+            input_ptr = xcomp_ptr.get();
+        }
     }
 
     bool dir_check = (xdir != NULL);
