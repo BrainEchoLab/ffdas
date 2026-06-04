@@ -41,3 +41,6 @@ docs = [
 
 [tool.pytest.ini_options]
 testpaths = ["bindings/python/tests"]
+
+[tool.ruff]
+line-length = 120
