@@ -2,7 +2,7 @@
 
 GPU tensor indexing operations. These avoid host-device round trips that occur when using Python-side fancy indexing on large arrays.
 
-## gather {#gather}
+## gather
 
 Gather elements from `x` along a dimension at the given indices.
 
@@ -41,15 +41,13 @@ Array with the same shape as `x` except along the gather dimension, where the si
 
 ---
 
-## scatter {#scatter}
+## scatter
 
-Scatter elements of `x` into an output array along a dimension at the given indices. The inverse of gather.
+Scatter elements of `x` into an output array along a dimension at the given indices. The inverse of gather. Python only.
 
-=== "Python"
-
-    ```python
-    ffdas.scatter(x, indices, axis, *, out=None)
-    ```
+```python
+ffdas.scatter(x, indices, axis, *, out=None)
+```
 
 ### Parameters
 
@@ -61,15 +59,13 @@ Scatter elements of `x` into an output array along a dimension at the given indi
 
 ---
 
-## contiguous_copy {#contiguous_copy}
+## contiguous_copy
 
-Copy a strided (non-contiguous) GPU array into a contiguous buffer. Useful after slicing or transposing when a subsequent operation requires contiguous memory.
+Copy a strided (non-contiguous) GPU array into a contiguous buffer. Useful after slicing or transposing when a subsequent operation requires contiguous memory. Python only.
 
-=== "Python"
-
-    ```python
-    ffdas.contiguous_copy(x, *, out=None)
-    ```
+```python
+ffdas.contiguous_copy(x, *, out=None)
+```
 
 ### Parameters
 

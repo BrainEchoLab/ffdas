@@ -28,4 +28,4 @@ The library provides GPU-accelerated implementations of:
 
 ## Conventions
 
-All positions and time offsets passed to `das` are in sampling wavelengths (`c / f_s`). Array layouts follow the conventions of each language: coordinate-last `(..., 3)` in Python, coordinate-first `(3, ...)` in MATLAB. See the [conventions](conventions.md) page for full details.
+All positions and time offsets passed to `das` are in sampling wavelengths (`c / f_s`), avoiding per-element scaling on the GPU. Array layouts follow the conventions of each language: coordinate-last `(..., 3)` in Python, coordinate-first `(3, ...)` in MATLAB. See the [conventions](conventions.md) page for full details.

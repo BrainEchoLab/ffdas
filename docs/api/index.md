@@ -29,4 +29,4 @@ All functions accept GPU arrays from any DLPack-compatible library (CuPy, PyTorc
 | [`cdist`](utilities.md#cdist) | Pairwise Euclidean distance |
 | [`rect_dist`](utilities.md#rect_dist) | Distance from points to an axis-aligned rectangle |
 | [`angle`](utilities.md#angle) | Angle between vectors |
-| [`Timer`](utilities.md#timer) | GPU timing via CUDA events (Python only) |
+| [`Timer`](utilities.md#timer) | GPU timing via CUDA events |

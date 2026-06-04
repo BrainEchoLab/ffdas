@@ -35,9 +35,9 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `x` | `(batch, channels, seq, samples)` or `(channels, seq, samples)` | `(samples, seq, channels[, batch])` | Channel data (RF or IQ). |
+| `x` | `([batch,] channels, seq, samples)` | `(samples, seq, channels[, batch])` | Channel data (RF or IQ). |
 | `xpos` | `(channels, 3)` | `(3, channels)` | Channel positions in sampling wavelengths. |
-| `ypos` | `(..., 3)` | `(3, ...)` | Target positions in sampling wavelengths. The spatial dimensions are `ypos.shape[:-1]`. |
+| `ypos` | `(..., 3)` | `(3, ...)` | Target positions in sampling wavelengths. |
 | `offsets` | `(seq, ...)` | `(..., seq)` | Per-target transmit time offsets in samples. Spatial dimensions must match `ypos`. |
 | `weights` | `(seq, ...)` | `(..., seq)` | Per-target apodization weights. Same shape as `offsets`. |
 | `xdir` | `(channels, 4)` or `None` | `(4, channels)` or `[]` | Directivity vectors. The first three components are the unit surface normal of each channel element; the fourth is the cosine of the sensitivity half-angle. Targets outside a channel's cone receive zero contribution from that channel. |
@@ -48,7 +48,7 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 
 ## Returns
 
-Reconstructed output with the spatial dimensions of `ypos` and an optional leading batch dimension: `(batch, ...)` or `(...)` in Python, `(...[, batch])` in MATLAB.
+Reconstructed output with the spatial dimensions of `ypos`: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
 
 ## Example
 
@@ -85,7 +85,7 @@ Reconstructed output with the spatial dimensions of `ypos` and an optional leadi
 
 ---
 
-## das_sparse {#das_sparse}
+## das_sparse
 
 Like `das`, but each target compounds over a per-target subset of $n$ sequence events selected by `sparse_indices`, rather than all sequence events. This is useful for synthetic aperture setups where each target only uses a subset of transmissions.
 
@@ -93,7 +93,7 @@ Like `das`, but each target compounds over a per-target subset of $n$ sequence e
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `sparse_indices` | `(n, ...)`, `int32` | `(..., n)`, `int32` | Indices into the sequence dimension of `x`. Each target compounds the $n$ events given by these indices. 0-based in both Python and MATLAB. |
+| `sparse_indices` | `(n, ...)`, `int32`, 0-based | `(..., n)`, `int32`, 1-based | Indices into the sequence dimension of `x`. Each target compounds the $n$ events given by these indices. |
 
 The `offsets` and `weights` arrays have shape `(n, ...)` in Python and `(..., n)` in MATLAB, matching `sparse_indices` rather than the full sequence dimension.
 

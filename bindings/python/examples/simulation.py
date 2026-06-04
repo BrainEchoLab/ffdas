@@ -60,7 +60,7 @@ amplitudes = cp.random.randn(batch_size, n_sources, 1).astype(cp.complex64)
 x = pulse[None, None, :] * amplitudes  # (batch, sources, frequencies)
 
 with ffdas.utils.Timer() as t:
-    received = ffdas.greens(x, sources, receiver_pos, wavenums)
+    received = ffdas.greens(sources, wavenums, x, receiver_pos)
 print(
     f"greens: {n_sources} sources, {receiver_pos.shape[0]} receivers, "
     f"batch {batch_size}: {t.elapsed_ms():.1f} ms"

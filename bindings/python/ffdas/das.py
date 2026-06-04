@@ -32,8 +32,9 @@ def das(
     xdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
-    out: None = ...,
     use_fp16: bool = False,
+    channels_trailing: bool = False,
+    out: None = ...,
 ) -> T: ...
 @overload
 def das(
@@ -46,8 +47,9 @@ def das(
     xdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
-    out: T,
     use_fp16: bool = False,
+    channels_trailing: bool = False,
+    out: T,
 ) -> T: ...
 
 def das(
@@ -60,8 +62,9 @@ def das(
     xdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
-    out: TensorLike | None = None,
     use_fp16: bool = False,
+    channels_trailing: bool = False,
+    out: TensorLike | None = None,
 ) -> TensorLike:
     """Delay-and-sum beamforming, compounding over the sequence dimension.
 
@@ -84,8 +87,10 @@ def das(
         wavenum: Wavenumber for phase rotation, typically -2*pi*fc/fs.
             Set to 0 to disable.
         algorithm: Algorithm variant.
-        out: Pre-allocated output array.
         use_fp16: Use half-precision arithmetic.
+        channels_trailing: If true, the input dimensions are interpreted as (batch, sequence, channels, samples)
+            instead of (batch, channels, sequence, samples). Default: False.
+        out: Pre-allocated output array.
 
     Returns:
         Beamformed output with shape (...) or (batch, ...).
@@ -133,6 +138,7 @@ def das(
         out,
         algorithm,
         compute_type,
+        channels_trailing,
     )
     return out
 
@@ -149,8 +155,9 @@ def das_sparse(
     xdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
-    out: None = ...,
     use_fp16: bool = False,
+    channels_trailing: bool = False,
+    out: None = ...,
 ) -> T: ...
 @overload
 def das_sparse(
@@ -164,8 +171,9 @@ def das_sparse(
     xdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
-    out: T,
     use_fp16: bool = False,
+    channels_trailing: bool = False,
+    out: T,
 ) -> T: ...
 
 def das_sparse(
@@ -179,8 +187,9 @@ def das_sparse(
     xdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
-    out: TensorLike | None = None,
     use_fp16: bool = False,
+    channels_trailing: bool = False,
+    out: TensorLike | None = None,
 ) -> TensorLike:
     """Sparse compounding delay-and-sum beamforming.
 
@@ -201,8 +210,9 @@ def das_sparse(
             See ``das`` for details.
         wavenum: Wavenumber for phase rotation (-2*pi*fc/fs).
         algorithm: Algorithm variant.
-        out: Pre-allocated output array.
         use_fp16: Use half-precision arithmetic.
+        channels_trailing: If true, the input dimensions are interpreted as (batch, sequence, channels, samples). Default: False.
+        out: Pre-allocated output array.
 
     Returns:
         Beamformed output with shape (...) or (batch, ...).
@@ -263,5 +273,6 @@ def das_sparse(
         sparse_indices,
         algorithm,
         compute_type,
+        channels_trailing,
     )
     return out

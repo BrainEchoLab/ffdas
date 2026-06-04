@@ -2,6 +2,8 @@
 
 Interpolation from a structured 3D grid to arbitrary query positions. The grid has a regular index-space lattice `(nz, ny, nx)` but its vertex positions can be arbitrary 3D coordinates, enabling interpolation from curvilinear grids (spherical, cylindrical, etc.) to Cartesian coordinates or any other target geometry.
 
+The grid vertex positions must define a non-self-intersecting mapping from index space to physical space. Self-intersecting grids (where different index-space cells map to overlapping physical regions) will produce unpredictable results.
+
 ## interpolate
 
 One-shot interpolation. Creates an internal plan, evaluates the query points, and discards the plan. Use `Interpolator` instead when interpolating multiple value arrays or query point sets on the same grid.
@@ -34,18 +36,18 @@ One-shot interpolation. Creates an internal plan, evaluates the query points, an
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
 | `grid_points` | `(nz, ny, nx, 3)` | `(3, nx, ny, nz)` | Grid vertex positions. |
-| `values` | `([batch], nz, ny, nx)` | `(nx, ny, nz[, batch])` | Values defined on the grid. |
+| `values` | `([batch,] nz, ny, nx)` | `(nx, ny, nz[, batch])` | Values defined on the grid. |
 | `query_points` | `(..., 3)` | `(3, ...)` | Points at which to evaluate. |
 | `mode` | `str` | `char` | `"nearest"` or `"linear"` (default). |
 | `fill` | `float` or `None` | `numeric` | Value assigned to query points outside the grid. Default `0`. |
 
 ### Returns
 
-Interpolated values at the query points, with shape matching the spatial dimensions of `query_points` and an optional batch dimension.
+Interpolated values at the query points, with shape matching the spatial dimensions of `query_points` and an optional batch dimension: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
 
 ---
 
-## Interpolator {#interpolator}
+## Interpolator
 
 Python only. Creates a reusable interpolation plan for a fixed grid. Avoids rebuilding internal lookup structures when interpolating multiple value arrays or query point sets.
 
@@ -68,7 +70,7 @@ result = interp(values, query_points, *, fill=None, out=None, preprocess=False)
 
 | Parameter | Shape | Description |
 |---|---|---|
-| `values` | `([batch], nz, ny, nx)` | Values on the grid. |
+| `values` | `([batch,] nz, ny, nx)` | Values on the grid. |
 | `query_points` | `(..., 3)` | Evaluation points. |
 | `fill` | `float` or `None` | Fill value for out-of-grid points. Default `0`. |
 | `preprocess` | `bool` | If `True`, cache lookup structures for these query points so that subsequent calls with different values skip this step. |
@@ -83,7 +85,7 @@ result = interp(values, query_points, *, fill=None, out=None, preprocess=False)
 
     # reuse for multiple frames
     for frame in frames:
-        cart = interp(frame, cart_points, fill=0.0)  # (cart_nz, cart_ny, cart_nx)
+        cart = interp(frame, cart_points, fill=0.0)
     ```
 
 === "MATLAB"

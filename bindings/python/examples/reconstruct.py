@@ -55,8 +55,8 @@ phases = cp.exp(
     2j * cp.pi * cp.random.rand(batch_size, n_scatterers, 1)
 ).astype(cp.complex64)
 
-tx = ffdas.greens(pulse[None, None, :], source, scatterers, wavenums)
-rx = ffdas.greens(tx * phases, scatterers, channel_pos, wavenums)
+tx = ffdas.greens(source, wavenums, pulse[None, None, :], scatterers)
+rx = ffdas.greens(scatterers, wavenums, tx * phases, channel_pos)
 rf = cp.fft.ifft(rx, axis=-1).astype(cp.complex64).conj()
 rf = rf[:, :, None, :]  # (batch, channels, 1 transmit, samples)
 

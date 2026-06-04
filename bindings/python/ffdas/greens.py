@@ -9,28 +9,28 @@ from ._core.tensor import empty_like, reshape, astype
 
 @overload
 def greens(
-    x: T,
     xpos: TensorLike,
-    ypos: TensorLike,
     wavenums: TensorLike,
+    x: T,
+    ypos: TensorLike,
     *,
     out: None = ...,
 ) -> T: ...
 @overload
 def greens(
-    x: TensorLike,
     xpos: TensorLike,
-    ypos: TensorLike,
     wavenums: TensorLike,
+    x: TensorLike,
+    ypos: TensorLike,
     *,
     out: T,
 ) -> T: ...
 
 def greens(
-    x: TensorLike,
     xpos: TensorLike,
-    ypos: TensorLike,
     wavenums: TensorLike,
+    x: TensorLike,
+    ypos: TensorLike,
     *,
     out: TensorLike | None = None,
 ) -> TensorLike:
@@ -42,10 +42,10 @@ def greens(
     frequency.
 
     Args:
-        x: Input field, shape (batch, sources, frequencies) Complex-valued (frequency domain).
         xpos: Source positions, shape (sources, 3).
-        ypos: Target positions, shape (..., 3).
         wavenums: Wavenumber per frequency bin, shape (frequencies,).
+        x: Input field, shape (batch, sources, frequencies) Complex-valued (frequency domain).
+        ypos: Target positions, shape (..., 3).
         out: Pre-allocated output array.
 
     Returns:

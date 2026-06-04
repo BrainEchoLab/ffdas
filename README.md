@@ -1,6 +1,6 @@
 # ffdas
 
-ffdas is a CUDA-accelerated library of delay-and-sum and related primitives for image reconstruction in high frame rate ultrasound, photoacoustics, and similar domains. Python and MATLAB bindings integrate directly with GPU arrays (CuPy, PyTorch, MATLAB gpuArrays) via zero-copy interop.
+ffdas is a CUDA-accelerated library of delay-and-sum and related primitives for image reconstruction in high frame rate ultrasound, photoacoustics, and similar domains. Python and MATLAB bindings integrate directly with common GPU array libraries (CuPy, PyTorch, MATLAB gpuArrays) via zero-copy interop.
 
 ```python
 import cupy as cp
@@ -75,7 +75,7 @@ The [`bindings/python/examples/`](bindings/python/examples/) directory contains 
 
 - **`reconstruct.py`** — End-to-end volume reconstruction: simulate diverging-wave channel data via Green's function propagation, compute transmit geometry, and reconstruct a 3D image with `das`.
 - **`simulation.py`** — Frequency-domain acoustic simulation with `greens`, followed by a receive-only DAS reconstruction (as in photoacoustics).
-- **`eigfilter.py`** — Clutter filtering on a slow-time sequence: separate stationary tissue from moving flow using `eigfilter`.
+- **`eigfilter.py`** — Clutter filtering on a frame sequence: separate stationary tissue from moving flow using `eigfilter`.
 - **`interpolation.py`** — Reconstruct on a spherical grid, then interpolate back to Cartesian coordinates.
 
 ## Requirements

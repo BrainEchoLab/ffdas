@@ -19,10 +19,10 @@ The output at each target is the sum over all sources of $x_s \cdot G$, computed
 
     ```python
     ffdas.greens(
-        x,            # source field (frequency domain)
         xpos,         # source positions
-        ypos,         # target positions
         wavenums,     # wavenumber per frequency bin
+        x,            # source field (frequency domain)
+        ypos,         # target positions
         *,
         out=None,
     )
@@ -34,20 +34,18 @@ The output at each target is the sum over all sources of $x_s \cdot G$, computed
     y = ffdas.greens(xpos, wavenums, x, ypos)
     ```
 
-Note that the MATLAB argument order differs from Python: positions and wavenumbers come first.
-
 ## Parameters
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `x` | `(batch, sources, frequencies)` | `(frequencies, sources[, batch])` | Complex-valued input field in the frequency domain. |
-| `xpos` | `(sources, 3)` | `(3, sources)` | Source positions. Units are arbitrary (typically meters), but must be consistent with `wavenums`. |
-| `ypos` | `(..., 3)` | `(3, ...)` | Target positions. Same units as `xpos`. |
+| `xpos` | `(sources, 3)` | `(3, sources)` | Source positions. Any unit is fine as long as `wavenums` uses the reciprocal unit. |
 | `wavenums` | `(frequencies,)` | `(frequencies, 1)` | Wavenumber at each frequency bin. For outgoing waves, use $k = -2\pi f / c$. |
+| `x` | `([batch,] sources, frequencies)` | `(frequencies, sources[, batch])` | Complex-valued input field in the frequency domain. |
+| `ypos` | `(..., 3)` | `(3, ...)` | Target positions. Same units as `xpos`. |
 
 ## Returns
 
-Propagated field at the target positions: `(batch, ..., frequencies)` in Python, `(frequencies, num_targets[, batch])` in MATLAB, where `...` / `num_targets` corresponds to the spatial dimensions of `ypos`.
+Propagated field at the target positions: `([batch,] ..., frequencies)` in Python, `(frequencies, ...[, batch])` in MATLAB, where `...` corresponds to the spatial dimensions of `ypos`.
 
 ## Example
 
@@ -61,10 +59,10 @@ Propagated field at the target positions: `(batch, ..., frequencies)` in Python,
 
     # propagate from sources to receivers
     received = ffdas.greens(
-        pulse[None, None, :] * amplitudes,  # (batch, sources, frequencies)
-        source_pos,                          # (sources, 3) in meters
-        receiver_pos,                        # (receivers, 3) in meters
+        source_pos,                          # (sources, 3)
         wavenums,                            # (frequencies,)
+        pulse[None, None, :] * amplitudes,  # (batch, sources, frequencies)
+        receiver_pos,                        # (receivers, 3)
     )
     # received: (batch, receivers, frequencies)
 
@@ -92,5 +90,3 @@ Propagated field at the target positions: `(batch, ..., frequencies)` in Python,
 ## Sign Convention
 
 The kernel computes $e^{ik r}/r$. To get the outgoing-wave Green's function $e^{-i 2\pi f r / c}/r$, pass negative wavenumbers: `wavenums = -2 * pi * freqs / sound_speed`. This convention matches the examples in `simulation.py` and `reconstruct.py`.
-
-The positions passed to `greens` are in physical units (meters), not sampling wavelengths. The wavenumbers encode the relationship between frequency and spatial scale, so no separate unit conversion is needed.

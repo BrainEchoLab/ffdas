@@ -115,6 +115,7 @@ def das(
     y: TensorLike,
     alg: Algorithm,
     compute_type: ComputeType,
+    channels_trailing: bool,
 ) -> None: ...
 def das_sparse(
     handle: Handle,
@@ -130,6 +131,7 @@ def das_sparse(
     sparse_indices: TensorLike,
     alg: Algorithm,
     compute_type: ComputeType,
+    channels_trailing: bool,
 ) -> None: ...
 def contiguous_copy(handle: Handle, x: TensorLike, y: TensorLike) -> None: ...
 def gather(

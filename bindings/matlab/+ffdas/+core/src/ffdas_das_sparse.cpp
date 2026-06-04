@@ -15,7 +15,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 {
     if (nrhs != 12)
         mexErrMsgIdAndTxt("ffdas_das_sparse:nargs",
-            "expected 11 arguments: ffdas_das_sparse(handle, x, xpos, ypos, offsets, weights, sparse_indices, xdir, wavenum, algorithm, use_fp16, channels_leading)");
+            "expected 11 arguments: ffdas_das_sparse(handle, x, xpos, ypos, offsets, weights, sparse_indices, xdir, wavenum, algorithm, use_fp16, channels_trailing)");
     if (nlhs != 1)
         mexErrMsgIdAndTxt("ffdas_das_sparse:nargs", "expected 1 output argument");
 
@@ -33,14 +33,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
     float wavenum = static_cast<float>(mxGetScalar(prhs[8]));
     int algorithm = static_cast<int>(mxGetScalar(prhs[9]));
     bool use_fp16 = static_cast<bool>(mxGetScalar(prhs[10]));
-    bool channels_leading = static_cast<bool>(mxGetScalar(prhs[11]));
+    bool channels_trailing = static_cast<bool>(mxGetScalar(prhs[11]));
 
     // x must have dimensions ([batch,] channels, sequence, samples)
     if (x.ndim_val() < 3 || x.ndim_val() > 4)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "x must have 3 or 4 dimensions (got %d)", x.ndim_val());
 
-    if (!channels_leading) {
+    if (!channels_trailing) {
         if (x.ndim_val() == 3) {
             x.permute({1, 0, 2});
         } else {

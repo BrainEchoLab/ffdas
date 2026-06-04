@@ -2,7 +2,7 @@
 
 Spatial helper functions and GPU timing. The spatial functions use `array_api_compat` in Python and native MATLAB operations, so they work with any supported array backend (CuPy, NumPy, PyTorch).
 
-## cdist {#cdist}
+## cdist
 
 Pairwise Euclidean distance between two sets of points.
 
@@ -42,9 +42,9 @@ The coordinate dimension is last in Python and first in MATLAB, matching the lib
 
 ---
 
-## rect_dist {#rect_dist}
+## rect_dist
 
-Minimum Euclidean distance from 3D points to an axis-aligned rectangle centered at the origin in the $z = 0$ plane. Used to compute the reference distance for diverging-wave transmit delay calculations (the point on the aperture closest to the virtual source).
+Minimum Euclidean distance from 3D points to an axis-aligned rectangle centered at the origin in the $z = 0$ plane. Typically used to compute the reference distance for diverging-wave transmit delay calculations (the point on the aperture closest to the virtual source).
 
 === "Python"
 
@@ -64,7 +64,7 @@ Minimum Euclidean distance from 3D points to an axis-aligned rectangle centered 
 
 ---
 
-## angle {#angle}
+## angle
 
 Angle in radians between vectors `a` and `b`.
 
@@ -105,17 +105,37 @@ Computing the off-axis angle for apodization:
 
 ---
 
-## Timer {#timer}
+## Timer
 
-Python only. Context manager for timing GPU operations using CUDA events. Records events on the library's internal CUDA stream before and after the wrapped block, then synchronizes and reports elapsed GPU time.
+Class for timing GPU operations using CUDA events. Records events on the library's internal CUDA stream before and after the wrapped block, then synchronizes and reports elapsed GPU time.
+
+=== "Python"
+
+    ```python
+    t = ffdas.utils.Timer()
+    t.start()
+    output = ffdas.das(rf, channel_pos, voxel_pos, offsets, weights)
+    t.stop()
+    print(f"{t.elapsed_ms():.1f} ms")
+    ```
+
+=== "MATLAB"
+
+    ```matlab
+    t = ffdas.utils.Timer();
+    t.start();
+    output = ffdas.das(rf, channel_pos, voxel_pos, offsets, weights);
+    t.stop();
+    fprintf('%.1f ms\n', t.elapsed_ms());
+    ```
+
+In Python, the timer can also be used as a context manager:
 
 ```python
 with ffdas.utils.Timer() as t:
     output = ffdas.das(rf, channel_pos, voxel_pos, offsets, weights)
 print(f"{t.elapsed_ms():.1f} ms")
 ```
-
-The timer can also be used without a context manager via `start()` and `stop()`.
 
 ---
 

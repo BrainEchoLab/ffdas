@@ -13,7 +13,7 @@ function y = greens(xpos, wavenums, x, ypos)
 %     YPOS     - Target positions (gpuArray, single), shape (3, ...).
 %
 %   Output:
-%     Y - Propagated field (gpuArray), shape (frequencies, num_targets[, batch]).
+%     Y - Propagated field (gpuArray), shape (frequencies, ...[, batch]).
 
     arguments 
         xpos gpuArray

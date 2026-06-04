@@ -170,6 +170,10 @@ struct ScopedTensorDesc {
         check(ffdas_create_tensor_desc(&desc, ndim, dims.data(), strides.data(), to_ffdas_dtype(a.dtype())));
     }
 
+    ScopedTensorDesc(int64_t ndim, const int64_t *dims, const int64_t *strides, ffdas_datatype_t dtype) {
+        check(ffdas_create_tensor_desc(&desc, ndim, dims, strides, dtype));
+    }
+
     ~ScopedTensorDesc() {
         if (desc) ffdas_destroy_tensor_desc(desc);
     }
@@ -481,8 +485,22 @@ NB_MODULE(_ffdas, m) {
                      nb::ndarray<nb::ro, nb::device::cpu> beta,
                      nb::ndarray<nb::device::cuda> y,
                      ffdas_alg_t alg,
-                     ffdas_compute_type_t compute_type) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+                     ffdas_compute_type_t compute_type,
+                     bool channels_trailing) {
+        int64_t ndim = x.ndim();
+        std::vector<int64_t> x_dims(ndim), x_strides(ndim);
+        for (int64_t i = 0; i < ndim; i++) {
+            x_dims[i] = x.shape(i);
+            x_strides[i] = x.stride(i);
+        }
+        if (channels_trailing) {
+            int64_t c = (ndim == 4) ? 1 : 0;
+            std::swap(x_dims[c], x_dims[c + 1]);
+            std::swap(x_strides[c], x_strides[c + 1]);
+        }
+
+        ScopedTensorDesc x_desc(ndim, x_dims.data(), x_strides.data(), to_ffdas_dtype(x.dtype()));
+        ScopedTensorDesc y_desc(y);
 
         check(ffdas_das(
             handle.h,
@@ -502,7 +520,7 @@ NB_MODULE(_ffdas, m) {
         ));
     }, "handle"_a, "x"_a, "xpos"_a, "ypos"_a, "offsets"_a,
        "weights"_a, nb::arg("xdir").none(), "wavenum"_a, "beta"_a,
-       "y"_a, "alg"_a, "compute_type"_a);
+       "y"_a, "alg"_a, "compute_type"_a, "channels_trailing"_a);
 
     m.def("das_sparse", [](Handle &handle,
                             nb::ndarray<nb::ro, nb::device::cuda> x,
@@ -516,8 +534,23 @@ NB_MODULE(_ffdas, m) {
                             nb::ndarray<nb::device::cuda> y,
                             nb::ndarray<const int, nb::device::cuda, nb::c_contig> sparse_indices,
                             ffdas_alg_t alg,
-                            ffdas_compute_type_t compute_type) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+                            ffdas_compute_type_t compute_type,
+                            bool channels_trailing) {
+        int64_t ndim = x.ndim();
+        std::vector<int64_t> x_dims(ndim), x_strides(ndim);
+        for (int64_t i = 0; i < ndim; i++) {
+            x_dims[i] = x.shape(i);
+            x_strides[i] = x.stride(i);
+        }
+        if (channels_trailing) {
+            int64_t c = (ndim == 4) ? 1 : 0;
+            std::swap(x_dims[c], x_dims[c + 1]);
+            std::swap(x_strides[c], x_strides[c + 1]);
+        }
+
+        ScopedTensorDesc x_desc(ndim, x_dims.data(), x_strides.data(), to_ffdas_dtype(x.dtype()));
+        ScopedTensorDesc y_desc(y);
+
         check(ffdas_das_sparse(
             handle.h,
             reinterpret_cast<const float3 *>(xpos.data()),
@@ -538,7 +571,7 @@ NB_MODULE(_ffdas, m) {
         ));
     }, "handle"_a, "x"_a, "xpos"_a, "ypos"_a, "offsets"_a,
        "weights"_a, nb::arg("xdir").none(), "wavenum"_a, "beta"_a,
-       "y"_a, "sparse_indices"_a, "alg"_a, "compute_type"_a);
+       "y"_a, "sparse_indices"_a, "alg"_a, "compute_type"_a, "channels_trailing"_a);
 
     m.def("contiguous_copy", [](Handle &handle, nb::ndarray<nb::ro, nb::device::cuda> x, 
         nb::ndarray<nb::device::cuda> y) {

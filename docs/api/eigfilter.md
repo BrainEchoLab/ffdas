@@ -1,8 +1,8 @@
 # eigfilter
 
-Eigenspace-based clutter filter. Reconstructs the input using only singular vectors $k_0$ through $k_1$, removing all other components. This is used in slow-time ultrasound sequences (Doppler, flow imaging) to separate tissue clutter from blood flow signal.
+Eigenspace-based clutter filter. Reconstructs the input using only singular vectors $k_0$ through $k_1$, removing all other components. In high frame rate ultrasound (Doppler, flow imaging), the first singular components capture stationary tissue clutter. Removing them isolates the weaker blood flow signal.
 
-The input is internally reshaped to a 2D matrix $(m, n)$ where $m$ is the size of the first dimension (frames / slow time) and $n$ is the product of all remaining dimensions (spatial). The SVD is computed on this matrix, and the output is reconstructed from the selected singular components.
+The input is internally reshaped to a 2D matrix $(m, n)$ where $m$ is the size of the first dimension (the frame axis) and $n$ is the product of all remaining dimensions (spatial). The SVD is computed on this matrix, and the output is reconstructed from the selected singular components.
 
 ## Signature
 
@@ -29,7 +29,7 @@ The input is internally reshaped to a 2D matrix $(m, n)$ where $m$ is the size o
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `x` | at least 2D | at least 2D | Input array. The first dimension (Python) or last dimension (MATLAB) is the slow-time axis. |
+| `x` | at least 2D | at least 2D | Input array. The first dimension (Python) or last dimension (MATLAB) is the frame axis. |
 | `k0` | `int`, 0-based | `int`, 1-based | Index of the first singular vector to keep. |
 | `k1` | `int` or `None` | `int` or `[]` | Index past the last singular vector to keep (exclusive in Python, inclusive in MATLAB). Defaults to $\min(m, n)$. |
 
@@ -39,12 +39,12 @@ Filtered array with the same shape and dtype as the input.
 
 ## Example
 
-In slow-time ultrasound imaging, the first few singular components typically capture stationary tissue (high energy, low rank). Setting `k0` to skip these isolates the weaker flow signal.
+In high frame rate ultrasound imaging, the first few singular components typically capture stationary tissue (high energy, low rank). Setting `k0` to skip these isolates the weaker flow signal.
 
 === "Python"
 
     ```python
-    # volume: (n_frames, nz, ny, nx) — reconstructed slow-time sequence
+    # volume: (n_frames, nz, ny, nx) — reconstructed frame sequence
     # tissue is approximately rank 1; skip the first singular vector
     flow = ffdas.eigfilter(volume, k0=1)
 

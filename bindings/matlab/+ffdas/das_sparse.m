@@ -15,11 +15,12 @@ function y = das_sparse(x, xpos, ypos, offsets, weights, sparse_indices, xdir, w
 %     WEIGHTS - Per-target apodization weights (gpuArray, single),
 %               shape (..., n).
 %     SPARSE_INDICES - Indices into the sequence dimension of X (gpuArray,
-%               int32, 0-based), shape (..., n).
+%               int32, 1-based), shape (..., n).
 %     XDIR    - Channel directivity vectors (gpuArray, single),
 %               shape (4, channels). See DAS.
 %     WAVENUM - Wavenumber for phase rotation (single, default: 0.0).
 %     ALGORITHM      - Algorithm variant (int32, default: 0).
+%                      Possible values: 0 (auto), 1, 2, 4.
 %     USE_FP16       - Use half-precision arithmetic (logical, default: false).
 %     CHANNELS_TRAILING - If true, the channel dimension follows the sequence
 %                         dimension in X. Default: true.
@@ -34,7 +35,7 @@ function y = das_sparse(x, xpos, ypos, offsets, weights, sparse_indices, xdir, w
         offsets gpuArray
         weights gpuArray
         sparse_indices gpuArray
-        xdir gpuArray
+        xdir gpuArray = []
         wavenum single = 0.0
         algorithm int32 = 0
         use_fp16 logical = false
@@ -48,6 +49,7 @@ function y = das_sparse(x, xpos, ypos, offsets, weights, sparse_indices, xdir, w
     offsets = ffdas.core.astype(offsets, 'single');
     weights = ffdas.core.astype(weights, 'single');
     sparse_indices = ffdas.core.astype(sparse_indices, 'int32');
+    sparse_indices = sparse_indices - 1;
     xdir = ffdas.core.astype(xdir, 'single');
 
     y = ffdas.core.ffdas_das_sparse(h, x, xpos, ypos, offsets, weights, sparse_indices, xdir, wavenum, algorithm, use_fp16, channels_trailing);

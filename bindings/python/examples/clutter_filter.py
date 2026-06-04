@@ -69,8 +69,8 @@ pulse = cp.exp(-0.5 * ((freqs - center_freq) / sigma_f) ** 2).astype(cp.complex6
 tissue_amp = 1.0 * cp.exp(
     2j * cp.pi * cp.random.rand(1, n_tissue, 1)
 ).astype(cp.complex64)
-tx_tissue = ffdas.greens(pulse[None, None, :], source, tissue_pos, wavenums)
-rx_tissue = ffdas.greens(tx_tissue * tissue_amp, tissue_pos, channel_pos, wavenums)
+tx_tissue = ffdas.greens(source, wavenums, pulse[None, None, :], tissue_pos)
+rx_tissue = ffdas.greens(tissue_pos, wavenums, tx_tissue * tissue_amp, channel_pos)
 
 # each frame has a different flow scatterer configuration: positions
 # are shifted along the knot by a fraction of the period
@@ -78,8 +78,8 @@ shift_per_frame = 0.1 * 2 * math.pi / n_frames
 rf_list = []
 for i in range(n_frames):
     flow_pos = trefoil(t_base + i * shift_per_frame) + flow_noise  # type: ignore
-    tx_flow = ffdas.greens(pulse[None, None, :], source, flow_pos, wavenums)
-    rx_flow = ffdas.greens(tx_flow, flow_pos, channel_pos, wavenums)
+    tx_flow = ffdas.greens(source, wavenums, pulse[None, None, :], flow_pos)
+    rx_flow = ffdas.greens(flow_pos, wavenums, tx_flow, channel_pos)
     rx_total = rx_tissue + rx_flow
     rf_list.append(cp.fft.ifft(rx_total, axis=-1).astype(cp.complex64).conj())
 

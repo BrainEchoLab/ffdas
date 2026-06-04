@@ -15,7 +15,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 {
     if (nrhs != 11)
         mexErrMsgIdAndTxt("ffdas_das:nargs",
-            "expected 10 arguments: ffdas_das(handle, x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_fp16, channels_leading)");
+            "expected 10 arguments: ffdas_das(handle, x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_fp16, channels_trailing)");
     if (nlhs != 1)
         mexErrMsgIdAndTxt("ffdas_das:nargs", "expected 1 output argument");
 
@@ -32,14 +32,16 @@ void mexFunction(int nlhs, mxArray *plhs[],
     float wavenum = static_cast<float>(mxGetScalar(prhs[7]));
     int algorithm = static_cast<int>(mxGetScalar(prhs[8]));
     bool use_fp16 = static_cast<bool>(mxGetScalar(prhs[9]));
-    bool channels_leading = static_cast<bool>(mxGetScalar(prhs[10]));
+
+    // refers to trailing from matlab's perspective (col-major ordering), so 'true' would require no permutation
+    bool channels_trailing = static_cast<bool>(mxGetScalar(prhs[10]));
 
     // x must have dimensions ([batch,] channels, sequence, samples)
     if (x.ndim_val() < 3 || x.ndim_val() > 4)
         mexErrMsgIdAndTxt("ffdas_das:error",
             "x must have 3 or 4 dimensions (got %d)", x.ndim_val());
 
-    if (!channels_leading) {
+    if (!channels_trailing) {
         if (x.ndim_val() == 3) {
             x.permute({1, 0, 2});
         } else {
