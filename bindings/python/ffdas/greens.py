@@ -56,10 +56,23 @@ def greens(
     ypos = astype(ypos, "float32")
     wavenums = astype(wavenums, "float32")
 
-    full_shape = (x.shape[0], *ypos.shape[:-1], x.shape[2])
-    shape = (x.shape[0], math.prod(ypos.shape[:-1]), x.shape[2])
+    out_shape = (*ypos.shape[:-1], x.shape[-1])
+    flat_shape = (math.prod(ypos.shape[:-1]), x.shape[-1])
+
+    if x.ndim == 3:
+        out_shape = (x.shape[0],) + out_shape
+        flat_shape = (x.shape[0],) + flat_shape
+    elif x.ndim == 2:
+        flat_shape = (1,) + flat_shape
+    else:
+        raise ValueError(f"input must have 2 or 3 dimensions, got shape {tuple(x.shape)}")
+
     if out is None:
-        out = empty_like(x, shape=shape)
+        out = empty_like(x, shape=out_shape)
+    elif out.shape != out_shape:
+        raise ValueError(f"invalid output shape: expected {out_shape}, got {tuple(out.shape)}")
+    
+    out_3d = reshape(out, flat_shape, order="C")
 
     _ffdas.greens_sum(
         get_library_handle(),
@@ -67,7 +80,7 @@ def greens(
         wavenums,
         x,
         ypos,
-        out,
+        out_3d,
     )
 
-    return reshape(out, full_shape)
+    return reshape(out, out_shape)

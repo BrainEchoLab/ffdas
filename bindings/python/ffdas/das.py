@@ -8,6 +8,15 @@ from ._core.tensor_like import TensorLike, T
 from ._core.tensor import empty_like, zeros_like, astype
 
 
+def _ensure_contiguous(x):
+    if x is None or isinstance(x, _ffdas.TensorView):
+        return x
+    if hasattr(x, "flags") and not x.flags["C_CONTIGUOUS"]:
+        xp = array_namespace(x)
+        return xp.ascontiguousarray(x)
+    return x
+
+
 def _compute_type(x, use_fp16):
     if use_fp16:
         return _ffdas.ComputeType.FP16
@@ -113,11 +122,11 @@ def das(
             f"weights shape {weights.shape} must match target layout {spatial_dims}"
         )
 
-    xpos = astype(xpos, "float32")
-    ypos = astype(ypos, "float32")
-    offsets = astype(offsets, "float32")
-    weights = astype(weights, "float32")
-    xdir = astype(xdir, "float32")
+    xpos = _ensure_contiguous(astype(xpos, "float32"))
+    ypos = _ensure_contiguous(astype(ypos, "float32"))
+    offsets = _ensure_contiguous(astype(offsets, "float32"))
+    weights = _ensure_contiguous(astype(weights, "float32"))
+    xdir = _ensure_contiguous(astype(xdir, "float32"))
 
     if out is None:
         out = empty_like(x, shape=out_dims)
@@ -246,12 +255,12 @@ def das_sparse(
             f"offsets and weights leading dimension must match sparse count {sparse_count}"
         )
 
-    xpos = astype(xpos, "float32")
-    ypos = astype(ypos, "float32")
-    offsets = astype(offsets, "float32")
-    weights = astype(weights, "float32")
-    xdir = astype(xdir, "float32")
-    sparse_indices = astype(sparse_indices, "int32")
+    xpos = _ensure_contiguous(astype(xpos, "float32"))
+    ypos = _ensure_contiguous(astype(ypos, "float32"))
+    offsets = _ensure_contiguous(astype(offsets, "float32"))
+    weights = _ensure_contiguous(astype(weights, "float32"))
+    xdir = _ensure_contiguous(astype(xdir, "float32"))
+    sparse_indices = _ensure_contiguous(astype(sparse_indices, "int32"))
 
     if out is None:
         out = empty_like(x, shape=out_dims)
