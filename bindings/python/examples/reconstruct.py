@@ -14,16 +14,16 @@ import ffdas
 
 cp.random.seed(0)
 
+sound_speed = 1540.0
+center_freq = 3e6
+sampling_freq = center_freq  # complex baseband
+n_samples = 512
+
 # probe: 32x32 matrix array in the xy-plane at z=0
 pitch = 300e-6
 el = (cp.arange(32, dtype=cp.float32) - 15.5) * pitch
 ex, ey = cp.meshgrid(el, el, indexing="ij")  # type: ignore
 channel_pos = cp.column_stack([ex.ravel(), ey.ravel(), cp.zeros_like(ex).ravel()])
-
-sound_speed = 1540.0
-center_freq = 3e6
-sampling_freq = center_freq  # complex baseband
-n_samples = 512
 
 
 # simulate rf data for a normal-incidence plane wave.

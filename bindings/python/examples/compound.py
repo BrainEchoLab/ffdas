@@ -17,16 +17,15 @@ import ffdas
 
 cp.random.seed(0)
 
-# same probe and medium as reconstruct.py
-pitch = 300e-6
-el = (cp.arange(32, dtype=cp.float32) - 15.5) * pitch
-ex, ey = cp.meshgrid(el, el, indexing="ij")  # type: ignore
-channel_pos = cp.column_stack([ex.ravel(), ey.ravel(), cp.zeros_like(ex).ravel()])
-
 sound_speed = 1540.0
 center_freq = 3e6
 sampling_freq = center_freq
 n_samples = 512
+
+pitch = 500e-6  # around 1 wavelength
+el = (cp.arange(32, dtype=cp.float32) - 15.5) * pitch
+ex, ey = cp.meshgrid(el, el, indexing="ij")  # type: ignore
+channel_pos = cp.column_stack([ex.ravel(), ey.ravel(), cp.zeros_like(ex).ravel()])
 
 # 2D angle grid: 3 angles along x times 3 along y = 9 compound angles
 angle_range = cp.linspace(-10, 10, 3, dtype=cp.float32) * (cp.pi / 180)  # type: ignore
