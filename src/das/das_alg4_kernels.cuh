@@ -289,7 +289,7 @@ __global__ void das_alg4_kernel(
             const float dy = yp.y - xp.y;
             const float dz = yp.z - xp.z;
 
-            const float rsq = dx * dx + dy * dy + dz * dz;
+            const float rsq = max(dx * dx + dy * dy + dz * dz, 1e-7);  // TODO: maybe take epsilon value as argument
             const float rinv = rsqrtf(rsq);
             const float phase = ofs + rsq * rinv;
 

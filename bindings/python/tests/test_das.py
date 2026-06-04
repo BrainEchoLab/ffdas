@@ -129,4 +129,4 @@ def test_das_single_sample_impulse():
         offsets=cp.full((1, 1), 32.0, dtype="float32"),
         weights=cp.ones((1, 1), dtype="float32"),
     )
-    assert abs(float(result)) > 0.5
+    assert abs(float(result.squeeze())) > 0.5

@@ -1,2 +1,0 @@
-array-api-compat
-cuda-pathfinder
