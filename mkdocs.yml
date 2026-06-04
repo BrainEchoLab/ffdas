@@ -1,7 +1,37 @@
 site_name: ffdas
+repo_url: https://github.com/luukverhoef/ffdas
+repo_name: luukverhoef/ffdas
+
 theme:
   name: material
+
 markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quickstart: getting-started/quickstart.md
+  - Conventions: conventions.md
+  - API Reference:
+    - Overview: api/index.md
+    - das: api/das.md
+    - greens: api/greens.md
+    - eigfilter: api/eigfilter.md
+    - einsum: api/einsum.md
+    - interpolate: api/interpolation.md
+    - gather / scatter: api/tensor.md
+    - Utilities: api/utilities.md

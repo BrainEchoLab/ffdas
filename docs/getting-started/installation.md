@@ -4,14 +4,13 @@
 
 **Required:**
 
-- CMake 3.18 or later
-- CUDA Toolkit (11.0 or later recommended)
+- CMake 3.26 or later
+- CUDA Toolkit (13.x recommended)
 - C++ compiler with C++17 support (GCC 9+, Clang 10+, or MSVC 2019+)
 
 **For Python bindings:**
 
-- Python 3.10 or later
-- NumPy 2.0 or later
+- Python 3.12 or later
 - array-api-compat
 
 **For MATLAB bindings:**
@@ -19,7 +18,7 @@
 - MATLAB R2018b or later
 - Parallel Computing Toolbox (for gpuArray support)
 
-nanobind and NVTX are downloaded automatically during the CMake configure step via FetchContent.
+nanobind can be downloaded automatically during the CMake configure step via FetchContent.
 
 ## Building the Core Library
 

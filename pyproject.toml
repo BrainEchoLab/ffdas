@@ -5,6 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "ffdas-cu13"
 version = "0.1.0"
+readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "array-api-compat",
