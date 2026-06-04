@@ -23,7 +23,7 @@ import ffdas
 cp.random.seed(0)
 
 # 32-by-32 matrix array
-pitch = 150e-6
+pitch = 300e-6
 el = (cp.arange(32, dtype=cp.float32) - 15.5) * pitch
 ex, ey = cp.meshgrid(el, el, indexing="ij")  # type: ignore
 channel_pos = cp.stack(
@@ -31,7 +31,7 @@ channel_pos = cp.stack(
 )
 
 sound_speed = 1540.0
-center_freq = 5e6
+center_freq = 3e6
 sampling_freq = center_freq
 n_samples = 512
 n_frames = 64
@@ -64,7 +64,7 @@ noise1 = cp.random.normal(0, 0.0003, (n_flow, 3)).astype(cp.float32)
 noise2 = cp.random.normal(0, 0.0003, (n_flow, 3)).astype(cp.float32)
 
 # tissue: 1024 stationary scatterers throughout the volume
-n_tissue = 1024
+n_tissue = 16384
 tissue_pos = cp.zeros((n_tissue, 3), dtype=cp.float32)
 tissue_pos[:, 0] = cp.random.uniform(-0.015, 0.015, n_tissue).astype(cp.float32)
 tissue_pos[:, 1] = cp.random.uniform(-0.015, 0.015, n_tissue).astype(cp.float32)
@@ -80,9 +80,8 @@ wavenums = (-2 * math.pi * freqs / sound_speed).astype(cp.float32)
 sigma_f = 0.6 * center_freq / (2 * math.sqrt(2 * math.log(2)))
 pulse = cp.exp(-0.5 * ((freqs - center_freq) / sigma_f) ** 2).astype(cp.complex64)
 
-tissue_amp = 1.0 * cp.exp(
-    2j * cp.pi * cp.random.rand(1, n_tissue, 1)
-).astype(cp.complex64)
+tissue_amp = 10.0 + cp.random.randn(1, n_tissue, 1, dtype=cp.float32) + 1j * cp.random.randn(1, n_tissue, 1, dtype=cp.float32)
+
 tx_tissue = ffdas.greens(source, wavenums, pulse[None, None, :], tissue_pos)
 rx_tissue = ffdas.greens(tissue_pos, wavenums, tx_tissue * tissue_amp, channel_pos)
 
@@ -93,12 +92,14 @@ rf_list = []
 for i in range(n_frames):
     shift = i * shift_per_frame
     flow_pos = cp.concatenate([
-        ring_xz(t_ring1 + shift) + noise1,
-        ring_yz(t_ring2 + shift) + noise2,
+        ring_xz(t_ring1 + shift) + noise1,  # type: ignore
+        ring_yz(t_ring2 + shift) + noise2,  # type: ignore
     ], axis=0)
     tx_flow = ffdas.greens(source, wavenums, pulse[None, None, :], flow_pos)
     rx_flow = ffdas.greens(flow_pos, wavenums, tx_flow, channel_pos)
     rx_total = rx_tissue + rx_flow
+    noise = cp.random.normal(*rx_total.shape, dtype=cp.float32) + 1j * cp.random.normal(*rx_total.shape, dtype=cp.float32)  # type: ignore
+    rx_total = rx_total + 0.05 * noise
     rf_list.append(cp.fft.ifft(rx_total, axis=-1).astype(cp.complex64).conj())
 
 rf = cp.concatenate(rf_list, axis=0)[:, :, None, :]
@@ -153,6 +154,9 @@ after_yz = cp.asnumpy(after_env[:, :, x_mid])
 db_before_xz = 20 * np.log10(before_xz / before_xz.max() + 1e-10)
 db_before_yz = 20 * np.log10(before_yz / before_yz.max() + 1e-10)
 
+db_after_xz = 20 * np.log10(after_xz / after_xz.max() + 1e-10)
+db_after_yz = 20 * np.log10(after_yz / after_yz.max() + 1e-10)
+
 extent_xz = [float(x[0]) * 1e3, float(x[-1]) * 1e3,
              float(z[-1]) * 1e3, float(z[0]) * 1e3]
 extent_yz = [float(y[0]) * 1e3, float(y[-1]) * 1e3,
@@ -160,23 +164,25 @@ extent_yz = [float(y[0]) * 1e3, float(y[-1]) * 1e3,
 
 fig, axes = plt.subplots(2, 2, figsize=(10, 10))
 
-axes[0, 0].imshow(db_before_xz, extent=extent_xz, cmap="gray", vmin=-40,
+axes[0, 0].imshow(db_before_xz, extent=extent_xz, cmap="gray", vmin=-32,
                   vmax=0, aspect="equal")
 axes[0, 0].set_xlabel("x [mm]")
 axes[0, 0].set_ylabel("z [mm]")
 axes[0, 0].set_title("before — xz")
 
-axes[0, 1].imshow(db_before_yz, extent=extent_yz, cmap="gray", vmin=-40,
+axes[0, 1].imshow(db_before_yz, extent=extent_yz, cmap="gray", vmin=-32,
                   vmax=0, aspect="equal")
 axes[0, 1].set_xlabel("y [mm]")
 axes[0, 1].set_title("before — yz")
 
-axes[1, 0].imshow(after_xz, extent=extent_xz, cmap="hot", aspect="equal")
+axes[1, 0].imshow(db_after_xz, extent=extent_xz, cmap="hot", vmin=-32,
+                  vmax=0, aspect="equal")
 axes[1, 0].set_xlabel("x [mm]")
 axes[1, 0].set_ylabel("z [mm]")
 axes[1, 0].set_title(f"after truncate_rank (start={tissue_rank}) — xz")
 
-axes[1, 1].imshow(after_yz, extent=extent_yz, cmap="hot", aspect="equal")
+axes[1, 1].imshow(db_after_yz, extent=extent_yz, cmap="hot", vmin=-32,
+                  vmax=0, aspect="equal")
 axes[1, 1].set_xlabel("y [mm]")
 axes[1, 1].set_title(f"after truncate_rank (start={tissue_rank}) — yz")
 
