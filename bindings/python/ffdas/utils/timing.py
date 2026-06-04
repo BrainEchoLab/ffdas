@@ -12,8 +12,8 @@ class Timer:
     Example::
 
         with Timer() as t:
-            result = ffdas.eigfilter(x, k0=10)
-        print(f"{t.elapsed_ms():.3f} ms")
+            output = ffdas.das(rf, channel_pos, voxel_pos, offsets, weights)
+        print(f"{t.elapsed_ms():.1f} ms")
     """
 
     def __init__(self):

@@ -8,35 +8,34 @@ from ._core.tensor import empty_like, reshape
 
 
 @overload
-def eigfilter(
+def truncate_rank(
     x: T,
-    k0: int,
-    k1: int | None = None,
+    start: int,
+    stop: int | None = None,
     *,
     out: None = ...,
 ) -> T: ...
 @overload
-def eigfilter(
+def truncate_rank(
     x: TensorLike,
-    k0: int,
-    k1: int | None = None,
+    start: int,
+    stop: int | None = None,
     *,
     out: T,
 ) -> T: ...
 
 
-def eigfilter(
+def truncate_rank(
     x: TensorLike,
-    k0: int,
-    k1: int | None = None,
+    start: int,
+    stop: int | None = None,
     *,
     out: TensorLike | None = None,
 ) -> TensorLike:
-    """Eigenvalue-based clutter filter.
+    """Rank truncation filter via truncated SVD reconstruction.
 
-    Reconstructs x using only singular vectors k0 through k1, removing
-    all other components. This is a fast approximation of truncated SVD
-    reconstruction.
+    Reconstructs x using only singular vectors start through stop,
+    removing all other components.
 
     The input is reshaped to a 2D matrix (m, n) where m = x.shape[0] and
     n = product of remaining dimensions. The output has the same shape
@@ -44,8 +43,8 @@ def eigfilter(
 
     Args:
         x: Input array with at least 2 dimensions.
-        k0: Index of the first singular vector to keep (0-based).
-        k1: Index past the last singular vector to keep (exclusive).
+        start: Index of the first singular vector to keep (0-based).
+        stop: Index past the last singular vector to keep (exclusive).
             Defaults to min(m, n).
         out: Pre-allocated output array.
 
@@ -59,13 +58,13 @@ def eigfilter(
     m = shp[0]
     n = math.prod(x.shape[1:])
 
-    if k0 < 0 or k0 >= min(m, n):
-        raise ValueError(f"k0 must be >= 0 and < min(m, n) ({m}, {n}), got {k0}")
-    if k1 is None:
-        k1 = min(m, n)
-    elif k1 <= k0 or k1 > min(m, n):
+    if start < 0 or start >= min(m, n):
+        raise ValueError(f"start must be >= 0 and < min(m, n) ({m}, {n}), got {start}")
+    if stop is None:
+        stop = min(m, n)
+    elif stop <= start or stop > min(m, n):
         raise ValueError(
-            f"k1 must be > k0 ({k0}) and <= min(m, n) ({m}, {n}), got {k1}"
+            f"stop must be > start ({start}) and <= min(m, n) ({m}, {n}), got {stop}"
         )
 
     if out is not None and out.shape != x.shape:
@@ -76,17 +75,15 @@ def eigfilter(
 
     if x.ndim > 2:
         x = reshape(x, (m, n), order="C")
-        # don't reassign out so that we can return the original reference to out
-        # i.e., `result = eigfilter(..., out=out); result is out  # True`
         out_2d = reshape(out, (m, n), order="C")
     else:
         out_2d = out
 
-    _ffdas.eigfilter(
+    _ffdas.truncate_rank(
         get_library_handle(),
         x,
-        k0,
-        k1,
+        start,
+        stop,
         out_2d,
     )
 

@@ -30,7 +30,7 @@ nav:
     - Overview: api/index.md
     - das: api/das.md
     - greens: api/greens.md
-    - eigfilter: api/eigfilter.md
+    - truncate_rank: api/truncate_rank.md
     - einsum: api/einsum.md
     - interpolate: api/interpolation.md
     - gather / scatter: api/tensor.md

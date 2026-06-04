@@ -99,8 +99,8 @@ def interpolation(
     output: TensorLike,
     fill_value: TensorLike,
 ) -> None: ...
-def eigfilter(
-    handle: Handle, x: TensorLike, k0: int, k1: int, y: TensorLike
+def truncate_rank(
+    handle: Handle, x: TensorLike, start: int, stop: int, y: TensorLike
 ) -> None: ...
 def das(
     handle: Handle,

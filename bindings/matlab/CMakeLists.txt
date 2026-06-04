@@ -59,8 +59,8 @@ add_mex_function(ffdas_event_synchronize
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_synchronize.cpp")
 add_mex_function(ffdas_gather
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_gather.cpp")
-add_mex_function(ffdas_eigfilter
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_eigfilter.cpp")
+add_mex_function(ffdas_truncate_rank
+    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_truncate_rank.cpp")
 add_mex_function(ffdas_interpolate
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_interpolate.cpp")
 add_mex_function(ffdas_das

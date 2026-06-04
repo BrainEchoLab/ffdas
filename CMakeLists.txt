@@ -47,7 +47,7 @@ set(FFDAS_SOURCES
     ${SRC_DIR}/context.cu
     ${SRC_DIR}/type_utils.cu
     ${SRC_DIR}/error_utils.cu
-    ${SRC_DIR}/eigfilter.cu
+    ${SRC_DIR}/truncate_rank.cu
     ${SRC_DIR}/contiguous_copy.cu
     ${SRC_DIR}/gather.cu
     ${SRC_DIR}/scatter.cu

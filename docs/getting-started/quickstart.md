@@ -56,8 +56,8 @@ The transmit delay to each target is the difference between the source-to-target
 === "MATLAB"
 
     ```matlab
-    dist = ffdas.util.cdist(source, targets);              % (1, 64, 32, 32)
-    ref = ffdas.util.rect_dist(source, aperture_size);     % scalar
+    dist = ffdas.utils.cdist(source, targets);              % (1, 64, 32, 32)
+    ref = ffdas.utils.rect_dist(source, aperture_size);     % scalar
     delay = squeeze(dist - ref) / sound_speed;               % (64, 32, 32), seconds
     ```
 
@@ -85,7 +85,7 @@ The angular weight controls which targets are considered within the effective be
 
     ```matlab
     direction = gpuArray(single([0; 0; 1]));
-    theta = ffdas.util.angle(targets - source, direction); % (64, 32, 32)
+    theta = ffdas.utils.angle(targets - source, direction); % (64, 32, 32)
 
     ratio = f_number * tan(theta);
     weight = (abs(ratio) <= 0.5) .* (0.5 + 0.5 * cos(2 * pi * ratio));
@@ -116,8 +116,8 @@ For multiple transmit events, stack the source positions along a leading dimensi
     ```matlab
     sources = gpuArray(single([0, -0.005, 0.005; 0, 0, 0; -0.01, -0.01, -0.01]));  % (3, 3)
 
-    dist = ffdas.util.cdist(sources, targets);              % (3, 64, 32, 32)
-    ref = ffdas.util.rect_dist(sources, aperture_size);     % (3, 1)
+    dist = ffdas.utils.cdist(sources, targets);              % (3, 64, 32, 32)
+    ref = ffdas.utils.rect_dist(sources, aperture_size);     % (3, 1)
     delay = (dist - ref) ./ sound_speed;                      % (3, 64, 32, 32)
     ```
 

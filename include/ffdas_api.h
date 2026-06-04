@@ -175,12 +175,12 @@ FFDAS_API ffdas_error_t ffdas_scatter(
     const int *indices
 );
 
-FFDAS_API ffdas_error_t ffdas_eigfilter(
+FFDAS_API ffdas_error_t ffdas_truncate_rank(
     ffdas_handle_t handle, 
     ffdas_tensor_desc_t x_desc,
     const void *x,
-    int64_t k0, 
-    int64_t k1,
+    int64_t start, 
+    int64_t stop,
     ffdas_tensor_desc_t y_desc,
     void *y
 );

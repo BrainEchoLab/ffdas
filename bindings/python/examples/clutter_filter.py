@@ -1,12 +1,12 @@
-"""Clutter filtering with eigfilter.
+"""Clutter filtering with truncate_rank.
 
-In slow-time ultrasound sequences (Doppler, flow imaging), the first
-singular components capture largely static tissue clutter. eigfilter
+In high frame rate ultrasound sequences (Doppler, flow imaging), the first
+singular components capture largely static tissue clutter. truncate_rank
 removes these, isolating the weaker flow signal.
 
 This example simulates a tissue background with stationary scatterers
 (coherent across frames, low rank in slow time) and a flow component
-whose scatterers move along a trefoil knot between frames. eigfilter
+whose scatterers move along a trefoil knot between frames. truncate_rank
 separates the two, revealing the knot shape.
 """
 
@@ -112,14 +112,14 @@ print(
     f"das: {nz}x{ny}x{nx} grid, {n_frames} frames: {t.elapsed_ms():.1f} ms"
 )
 
-# eigfilter decomposes along the first axis (slow time) and
-# reconstructs using singular vectors k0 through k1.
-# tissue is rank 1, so k0=1 removes it entirely
+# truncate_rank decomposes along the first axis (frames) and
+# reconstructs using singular vectors start through stop.
+# tissue is rank 1, so start=1 removes it entirely
 tissue_rank = 1
 
 with ffdas.utils.Timer() as t:
-    filtered = ffdas.eigfilter(volume, k0=tissue_rank)
-print(f"eigfilter: {t.elapsed_ms():.1f} ms")
+    filtered = ffdas.truncate_rank(volume, start=tissue_rank)
+print(f"truncate_rank: {t.elapsed_ms():.1f} ms")
 
 
 before = cp.asnumpy(cp.abs(volume).sum(axis=0).max(axis=0))  # MIP over z
@@ -141,7 +141,7 @@ axes[0].set_title("before filtering")
 axes[1].imshow(after, extent=extent, cmap="hot", aspect="equal")
 axes[1].set_xlabel("x [mm]")
 axes[1].set_ylabel("y [mm]")
-axes[1].set_title(f"after eigfilter (k0={tissue_rank})")
+axes[1].set_title(f"after truncate_rank (start={tissue_rank})")
 
 plt.tight_layout()
-plt.savefig("eigfilter.png", dpi=150)
+plt.savefig("clutter_filter.png", dpi=150)

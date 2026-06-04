@@ -456,23 +456,23 @@ NB_MODULE(_ffdas, m) {
     }, "handle"_a, "plan"_a, "query_points"_a, "values"_a, "output"_a,
        "fill_value"_a);
 
-    m.def("eigfilter", [](Handle &handle,
+    m.def("truncate_rank", [](Handle &handle,
                            nb::ndarray<nb::ro, nb::device::cuda> x, 
-                           int k0, 
-                           int k1,
+                           int start, 
+                           int stop,
                            nb::ndarray<nb::device::cuda> y
     ) {
         ScopedTensorDesc x_desc(x), y_desc(y);
-        check(ffdas_eigfilter(
+        check(ffdas_truncate_rank(
             handle.h, 
             x_desc.desc, 
             x.data(), 
-            k0, 
-            k1,
+            start, 
+            stop,
             y_desc.desc, 
             y.data()
         ));
-    }, "handle"_a, "x"_a, "k0"_a, "k1"_a, "y"_a);
+    }, "handle"_a, "x"_a, "start"_a, "stop"_a, "y"_a);
 
     m.def("das", [](Handle &handle,
                      nb::ndarray<nb::ro, nb::device::cuda> x,

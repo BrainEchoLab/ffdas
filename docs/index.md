@@ -20,7 +20,7 @@ The library provides GPU-accelerated implementations of:
 
 - [`das`](api/das.md), [`das_sparse`](api/das.md#das_sparse) — delay-and-sum with multiple algorithm variants, sparse compounding, half-precision compute, and directivity masking.
 - [`greens`](api/greens.md) — frequency-domain Green's function summation for wave propagation modeling. Requires SM 70+.
-- [`eigfilter`](api/eigfilter.md) — eigenspace-based clutter filtering (truncated SVD reconstruction).
+- [`truncate_rank`](api/truncate_rank.md) — rank truncation filter (truncated SVD reconstruction).
 - [`einsum`](api/einsum.md) — binary tensor contraction using Einstein summation notation.
 - [`interpolate`](api/interpolation.md) — structured 3D grid interpolation (nearest, linear).
 - [`gather`, `scatter`](api/tensor.md) — index-based GPU tensor operations.

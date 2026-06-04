@@ -19,10 +19,10 @@ namespace ffdas::detail {
 
 
 template<typename T, typename Tscal>
-ffdas_error_t eigfilter_execute(
+ffdas_error_t truncate_rank_execute(
     ffdas_context &handle,
     int m, int n,
-    int k0, int k1,
+    int start, int stop,
     const T *x,
     Tscal *w,
     T *V,
@@ -37,10 +37,10 @@ ffdas_error_t eigfilter_execute(
 }
 
 template<>
-ffdas_error_t eigfilter_execute(
+ffdas_error_t truncate_rank_execute(
     ffdas_context &handle,
     int m, int n,
-    int k0, int k1,
+    int start, int stop,
     const float *x,
     float *w,
     float *V,
@@ -92,13 +92,13 @@ ffdas_error_t eigfilter_execute(
 
     alpha = 1.0f;
 
-    // P = V_k * V_k^T (projection onto eigenvectors k0..k1)
+    // P = V_k * V_k^T (projection onto eigenvectors start..stop)
     CUBLAS_CHECK(cublasSsyrk(
         handle.cublas_h,
         CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
-        n, k1 - k0,
+        n, stop - start,
         &alpha,
-        V + (n - k1) * n, n,
+        V + (n - stop) * n, n,
         &beta,
         P, n
     ));
@@ -119,10 +119,10 @@ ffdas_error_t eigfilter_execute(
 }
 
 template<>
-ffdas_error_t eigfilter_execute(
+ffdas_error_t truncate_rank_execute(
     ffdas_context &handle,
     int m, int n,
-    int k0, int k1,
+    int start, int stop,
     const float2 *x,
     float *w,
     float2 *V,
@@ -175,13 +175,13 @@ ffdas_error_t eigfilter_execute(
     float falpha = 1.0f;
     float fbeta = 0.0f;
 
-    // P = V_k * V_k^H (projection onto eigenvectors k0..k1)
+    // P = V_k * V_k^H (projection onto eigenvectors start..stop)
     CUBLAS_CHECK(cublasCherk(
         handle.cublas_h,
         CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
-        n, k1 - k0,
+        n, stop - start,
         &falpha,
-        V + (n - k1) * n, n,
+        V + (n - stop) * n, n,
         &fbeta,
         P, n
     ));
@@ -204,10 +204,10 @@ ffdas_error_t eigfilter_execute(
 }
 
 template<>
-ffdas_error_t eigfilter_execute(
+ffdas_error_t truncate_rank_execute(
     ffdas_context &handle,
     int m, int n,
-    int k0, int k1,
+    int start, int stop,
     const double *x,
     double *w,
     double *V,
@@ -260,9 +260,9 @@ ffdas_error_t eigfilter_execute(
     CUBLAS_CHECK(cublasDsyrk(
         handle.cublas_h,
         CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
-        n, k1 - k0,
+        n, stop - start,
         &alpha,
-        V + (n - k1) * n, n,
+        V + (n - stop) * n, n,
         &beta,
         P, n
     ));
@@ -282,10 +282,10 @@ ffdas_error_t eigfilter_execute(
 }
 
 template<>
-ffdas_error_t eigfilter_execute(
+ffdas_error_t truncate_rank_execute(
     ffdas_context &handle,
     int m, int n,
-    int k0, int k1,
+    int start, int stop,
     const double2 *x,
     double *w,
     double2 *V,
@@ -339,9 +339,9 @@ ffdas_error_t eigfilter_execute(
     CUBLAS_CHECK(cublasZherk(
         handle.cublas_h,
         CUBLAS_FILL_MODE_UPPER, CUBLAS_OP_N,
-        n, k1 - k0,
+        n, stop - start,
         &dalpha,
-        reinterpret_cast<const cuDoubleComplex*>(V) + (n - k1) * n, n,
+        reinterpret_cast<const cuDoubleComplex*>(V) + (n - stop) * n, n,
         &dbeta,
         reinterpret_cast<cuDoubleComplex*>(P), n
     ));
@@ -363,14 +363,14 @@ ffdas_error_t eigfilter_execute(
 }
 
 
-// Eigenfilter: project x onto its top-k eigenvectors.
+// Project x onto its top-k eigenvectors.
 // x and y are column-major with shape (n, m) where n = channels, m = samples.
 template<typename T>
-ffdas_error_t eigfilter_impl(
+ffdas_error_t truncate_rank_impl(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const T* x,
     const ffdas_tensor_desc &y_desc, T* y,
-    int k0, int k1
+    int start, int stop
 ) {
     if (x_desc.ndim() != 2)
         return FFDAS_ERROR_INVALID_DIMS;
@@ -422,9 +422,9 @@ ffdas_error_t eigfilter_impl(
     if (!bufferOnHost)
         return FFDAS_ERROR_FAILED_MALLOC;
 
-    ffdas_error_t err = eigfilter_execute<T, w_type>(
+    ffdas_error_t err = truncate_rank_execute<T, w_type>(
         handle,
-        m, n, k0, k1,
+        m, n, start, stop,
         x,
         w.get(), V.get(), P.get(),
         bufferOnDevice.get(), workspaceInBytesOnDevice,
@@ -438,14 +438,14 @@ ffdas_error_t eigfilter_impl(
 
 
 template<ffdas_datatype_t T_t>
-ffdas_error_t eigfilter_dispatch(
+ffdas_error_t truncate_rank_dispatch(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const void* x,
     const ffdas_tensor_desc &y_desc, void* y,
-    int k0, int k1
+    int start, int stop
 ) {
     using T = typename ffdas_traits<T_t>::type;
-    return eigfilter_impl<T>(handle, x_desc, static_cast<const T*>(x), y_desc, static_cast<T*>(y), k0, k1);
+    return truncate_rank_impl<T>(handle, x_desc, static_cast<const T*>(x), y_desc, static_cast<T*>(y), start, stop);
 }
 
 

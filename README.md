@@ -16,7 +16,7 @@ output = ffdas.das(
 )
 
 # remove tissue clutter for flow imaging
-filtered = ffdas.eigfilter(output, k0=64)
+filtered = ffdas.truncate_rank(output, start=64)
 
 # interpolate to arbitrary positions
 interpolated = ffdas.interpolate(
@@ -56,7 +56,7 @@ The library provides GPU-accelerated implementations of:
 
 - **Delay-and-sum** (`das`, `das_sparse`) with multiple algorithm variants, sparse compounding, half-precision compute paths, and per-channel directivity masking.
 - **Green's function summation** (`greens`) for frequency-domain wave propagation modeling. Requires SM 70+ (Volta or newer).
-- **Eigenspace filtering** (`eigfilter`) for subspace-based clutter rejection.
+- **Rank truncation** (`truncate_rank`) for subspace-based clutter rejection.
 - **Tensor contraction** (`einsum`) for arbitrary binary contractions on GPU arrays.
 - **Structured grid interpolation** (`interpolate`) with nearest-neighbor and linear modes.
 - **Gather/scatter** and contiguous-copy utilities for GPU tensor manipulation.
@@ -75,7 +75,7 @@ The [`bindings/python/examples/`](bindings/python/examples/) directory contains 
 
 - **`reconstruct.py`** — End-to-end volume reconstruction: simulate diverging-wave channel data via Green's function propagation, compute transmit geometry, and reconstruct a 3D image with `das`.
 - **`simulation.py`** — Frequency-domain acoustic simulation with `greens`, followed by a receive-only DAS reconstruction (as in photoacoustics).
-- **`eigfilter.py`** — Clutter filtering on a frame sequence: separate stationary tissue from moving flow using `eigfilter`.
+- **`clutter_filter.py`** — Clutter filtering on a frame sequence: separate stationary tissue from moving flow using `truncate_rank`.
 - **`interpolation.py`** — Reconstruct on a spherical grid, then interpolate back to Cartesian coordinates.
 
 ## Requirements

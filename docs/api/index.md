@@ -9,7 +9,7 @@ All functions accept GPU arrays from any DLPack-compatible library (CuPy, PyTorc
 | [`das`](das.md) | Delay-and-sum, compounding over the sequence dimension |
 | [`das_sparse`](das.md#das_sparse) | Delay-and-sum with per-target sequence subsets |
 | [`greens`](greens.md) | Frequency-domain Green's function summation (requires SM 70+) |
-| [`eigfilter`](eigfilter.md) | Eigenspace-based clutter filtering |
+| [`truncate_rank`](truncate_rank.md) | Rank truncation filter (truncated SVD) |
 | [`einsum`](einsum.md) | Binary tensor contraction |
 | [`interpolate`](interpolation.md) | Structured 3D grid interpolation |
 | [`Interpolator`](interpolation.md#interpolator) | Reusable interpolation plan (Python only) |

@@ -61,7 +61,7 @@ from .das import (  # noqa: E402
     das, 
     das_sparse,
 )
-from .eigfilter import eigfilter  # noqa: E402
+from .truncate_rank import truncate_rank  # noqa: E402
 from .interpolation import (  # noqa: E402
     Interpolator, 
     interpolate,
@@ -105,7 +105,7 @@ __all__ = [
     "contiguous_copy",
     "das", 
     "das_sparse",
-    "eigfilter",
+    "truncate_rank",
     "greens",
     "einsum",
     "Interpolator", 
