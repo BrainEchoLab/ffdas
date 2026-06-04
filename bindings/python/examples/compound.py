@@ -29,7 +29,7 @@ sampling_freq = center_freq
 n_samples = 512
 
 # 2D angle grid: 3 angles along x times 3 along y = 9 compound angles
-angle_range = cp.linspace(-10, 10, 3, dtype=cp.float32) * (cp.pi / 180)
+angle_range = cp.linspace(-10, 10, 3, dtype=cp.float32) * (cp.pi / 180)  # type: ignore
 angle_x, angle_y = cp.meshgrid(angle_range, angle_range, indexing="ij")  # type: ignore
 angle_x = angle_x.ravel()
 angle_y = angle_y.ravel()

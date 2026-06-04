@@ -64,6 +64,7 @@ def greens(
         flat_shape = (x.shape[0],) + flat_shape
     elif x.ndim == 2:
         flat_shape = (1,) + flat_shape
+        x = reshape(x, (1,) + x.shape)  # C API requires a batch dimension
     else:
         raise ValueError(f"input must have 2 or 3 dimensions, got shape {tuple(x.shape)}")
 
