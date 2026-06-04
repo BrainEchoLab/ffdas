@@ -2,11 +2,11 @@
 
 Plane-wave compounding transmits at several steering angles and
 combines the resulting images to improve lateral resolution and
-reduce sidelobe artifacts. ffdas.das handles this natively: the
+reduce artifacts. ffdas.das handles this as follows: the
 sequence dimension of the rf data holds per-angle channel data,
 and the matching offsets array provides the per-angle transmit
 delay at each voxel. DAS sums over the sequence dimension,
-producing a coherently compounded image in a single call.
+producing a coherently compounded image.
 """
 
 import cupy as cp

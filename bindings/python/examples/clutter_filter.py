@@ -6,8 +6,9 @@ removes these, isolating the weaker flow signal.
 
 This example simulates a tissue background with stationary scatterers
 (coherent across frames, low rank in slow time) and a flow component
-whose scatterers move along a trefoil knot between frames. truncate_rank
-separates the two, revealing the knot shape.
+consisting of two circular vessels in perpendicular planes whose
+scatterers shift between frames. truncate_rank separates the two,
+revealing the vessel geometry.
 """
 
 import math
@@ -36,13 +37,31 @@ n_samples = 512
 n_frames = 64
 
 
-def trefoil(t):
+# flow: two circular vessels in perpendicular planes.
+# ring_xz lives in the xz plane and is visible as a circle in the xz slice;
+# ring_yz lives in the yz plane and is visible as a circle in the yz slice
+vessel_radius = 0.004
+
+def ring_xz(t):
     return cp.stack([
-        (cp.sin(t) + 2 * cp.sin(2 * t)) * 0.0025,
-        (cp.cos(t) - 2 * cp.cos(2 * t)) * 0.0025,
-        -cp.sin(3 * t) * 0.0025 + 0.020,
+        vessel_radius * cp.cos(t),
+        cp.zeros_like(t),
+        0.015 + vessel_radius * cp.sin(t),
     ], axis=-1)
 
+def ring_yz(t):
+    return cp.stack([
+        cp.zeros_like(t),
+        vessel_radius * cp.cos(t),
+        0.025 + vessel_radius * cp.sin(t),
+    ], axis=-1)
+
+
+n_flow = 64  # per vessel
+t_ring1 = cp.linspace(0, 2 * math.pi, n_flow, endpoint=False, dtype=cp.float32)
+t_ring2 = cp.linspace(0, 2 * math.pi, n_flow, endpoint=False, dtype=cp.float32)
+noise1 = cp.random.normal(0, 0.0003, (n_flow, 3)).astype(cp.float32)
+noise2 = cp.random.normal(0, 0.0003, (n_flow, 3)).astype(cp.float32)
 
 # tissue: 1024 stationary scatterers throughout the volume
 n_tissue = 1024
@@ -50,11 +69,6 @@ tissue_pos = cp.zeros((n_tissue, 3), dtype=cp.float32)
 tissue_pos[:, 0] = cp.random.uniform(-0.015, 0.015, n_tissue).astype(cp.float32)
 tissue_pos[:, 1] = cp.random.uniform(-0.015, 0.015, n_tissue).astype(cp.float32)
 tissue_pos[:, 2] = cp.random.uniform(0.005, 0.035, n_tissue).astype(cp.float32)
-
-# flow: 128 scatterers on the trefoil knot, shifting position each frame
-n_flow = 128
-t_base = cp.linspace(0, 2 * math.pi, n_flow, endpoint=False, dtype=cp.float32)
-flow_noise = cp.random.normal(0, 0.0003, (n_flow, 3)).astype(cp.float32)
 
 
 # simulate channel data (see simulation.py for details).
@@ -73,11 +87,15 @@ tx_tissue = ffdas.greens(source, wavenums, pulse[None, None, :], tissue_pos)
 rx_tissue = ffdas.greens(tissue_pos, wavenums, tx_tissue * tissue_amp, channel_pos)
 
 # each frame has a different flow scatterer configuration: positions
-# are shifted along the knot by a fraction of the period
+# are shifted along the vessel by a fraction of the period
 shift_per_frame = 0.1 * 2 * math.pi / n_frames
 rf_list = []
 for i in range(n_frames):
-    flow_pos = trefoil(t_base + i * shift_per_frame) + flow_noise  # type: ignore
+    shift = i * shift_per_frame
+    flow_pos = cp.concatenate([
+        ring_xz(t_ring1 + shift) + noise1,
+        ring_yz(t_ring2 + shift) + noise2,
+    ], axis=0)
     tx_flow = ffdas.greens(source, wavenums, pulse[None, None, :], flow_pos)
     rx_flow = ffdas.greens(flow_pos, wavenums, tx_flow, channel_pos)
     rx_total = rx_tissue + rx_flow
@@ -108,9 +126,7 @@ with ffdas.utils.Timer() as t:
         weights,
         wavenum=-2 * math.pi * center_freq / sampling_freq,
     )
-print(
-    f"das: {nz}x{ny}x{nx} grid, {n_frames} frames: {t.elapsed_ms():.1f} ms"
-)
+print(f"das: {nz}x{ny}x{nx} grid, {n_frames} frames: {t.elapsed_ms():.1f} ms")
 
 # truncate_rank decomposes along the first axis (frames) and
 # reconstructs using singular vectors start through stop.
@@ -122,26 +138,47 @@ with ffdas.utils.Timer() as t:
 print(f"truncate_rank: {t.elapsed_ms():.1f} ms")
 
 
-before = cp.asnumpy(cp.abs(volume).sum(axis=0).max(axis=0))  # MIP over z
-db_before = 20 * np.log10(before / before.max() + 1e-10)
+# xz and yz slices through the center of the volume
+y_mid = ny // 2
+x_mid = nx // 2
 
-after = cp.asnumpy(cp.abs(filtered).sum(axis=0).max(axis=0))
+before_env = cp.abs(volume).sum(axis=0)  # (nz, ny, nx)
+after_env = cp.abs(filtered).sum(axis=0)
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+before_xz = cp.asnumpy(before_env[:, y_mid, :])
+before_yz = cp.asnumpy(before_env[:, :, x_mid])
+after_xz = cp.asnumpy(after_env[:, y_mid, :])
+after_yz = cp.asnumpy(after_env[:, :, x_mid])
 
-extent = [float(x[0]) * 1e3, float(x[-1]) * 1e3,
-          float(z[-1]) * 1e3, float(z[0]) * 1e3]
+db_before_xz = 20 * np.log10(before_xz / before_xz.max() + 1e-10)
+db_before_yz = 20 * np.log10(before_yz / before_yz.max() + 1e-10)
 
-axes[0].imshow(db_before, extent=extent, cmap="gray", vmin=-40, vmax=0,
-               aspect="equal")
-axes[0].set_xlabel("x [mm]")
-axes[0].set_ylabel("y [mm]")
-axes[0].set_title("before filtering")
+extent_xz = [float(x[0]) * 1e3, float(x[-1]) * 1e3,
+             float(z[-1]) * 1e3, float(z[0]) * 1e3]
+extent_yz = [float(y[0]) * 1e3, float(y[-1]) * 1e3,
+             float(z[-1]) * 1e3, float(z[0]) * 1e3]
 
-axes[1].imshow(after, extent=extent, cmap="hot", aspect="equal")
-axes[1].set_xlabel("x [mm]")
-axes[1].set_ylabel("y [mm]")
-axes[1].set_title(f"after truncate_rank (start={tissue_rank})")
+fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+
+axes[0, 0].imshow(db_before_xz, extent=extent_xz, cmap="gray", vmin=-40,
+                  vmax=0, aspect="equal")
+axes[0, 0].set_xlabel("x [mm]")
+axes[0, 0].set_ylabel("z [mm]")
+axes[0, 0].set_title("before — xz")
+
+axes[0, 1].imshow(db_before_yz, extent=extent_yz, cmap="gray", vmin=-40,
+                  vmax=0, aspect="equal")
+axes[0, 1].set_xlabel("y [mm]")
+axes[0, 1].set_title("before — yz")
+
+axes[1, 0].imshow(after_xz, extent=extent_xz, cmap="hot", aspect="equal")
+axes[1, 0].set_xlabel("x [mm]")
+axes[1, 0].set_ylabel("z [mm]")
+axes[1, 0].set_title(f"after truncate_rank (start={tissue_rank}) — xz")
+
+axes[1, 1].imshow(after_yz, extent=extent_yz, cmap="hot", aspect="equal")
+axes[1, 1].set_xlabel("y [mm]")
+axes[1, 1].set_title(f"after truncate_rank (start={tissue_rank}) — yz")
 
 plt.tight_layout()
 plt.savefig("clutter_filter.png", dpi=150)
