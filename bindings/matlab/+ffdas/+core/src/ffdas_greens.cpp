@@ -22,8 +22,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     ndarray::ndarray<ndarray::access::read_only, float, ndarray::device::gpu> xpos(prhs[1]);
     ndarray::ndarray<ndarray::access::read_only, float, ndarray::device::gpu, ndarray::require_vector> wavenums(prhs[2]);
-    ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu, ndarray::ndim<3>> x(prhs[3]);
+    ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu> x(prhs[3]);
     ndarray::ndarray<ndarray::access::read_only, float, ndarray::device::gpu> ypos(prhs[4]);
+
+    if (x.ndim_val() == 2) {
+        x.reshape({1, x.shape(0), x.shape(1)});
+    } else if (x.ndim_val() != 3) {
+        mexErrMsgIdAndTxt("ffdas_greens:error", "input must have 2 or 3 dimensions");
+    }
 
     int64_t batch_size = x.shape(0);
     int64_t channels = x.shape(1);
