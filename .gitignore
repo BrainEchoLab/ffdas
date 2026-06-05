@@ -20,7 +20,7 @@ __pycache__/
 # Distribution / packaging
 _build_matlab/
 _build_python/
-_build_wheel/
+_build_wheel_cu*/
 _build/
 bin/
 .Python

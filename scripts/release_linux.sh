@@ -57,15 +57,15 @@ mkdir -p "$DIST_DIR"
 
 if [ "$TARGET" = "matlab" ] || [ "$TARGET" = "all" ]; then
     echo "info: building MATLAB toolbox"
-    cmake -S "$REPO_ROOT" -B "$REPO_ROOT/_build_matlab" \
+    cmake -S "$REPO_ROOT" -B "$REPO_ROOT/_build_matlab_cu$CUDA_MAJOR" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_CUDA_COMPILER="$CUDA_ROOT/bin/nvcc" \
         -DCUDAToolkit_ROOT="$CUDA_ROOT" \
         -DBUILD_MEX=ON \
         -DCMAKE_CUDA_ARCHITECTURES="$CUDA_ARCHITECTURES"
-    cmake --build "$REPO_ROOT/_build_matlab" -j
-    cmake --install "$REPO_ROOT/_build_matlab" --prefix "$DIST_DIR/ffdas-matlab-linux-x86_64"
-    (cd "$DIST_DIR" && zip -qr ffdas-matlab-linux-x86_64.zip ffdas-matlab-linux-x86_64/)
+    cmake --build "$REPO_ROOT/_build_matlab_cu$CUDA_MAJOR" -j
+    cmake --install "$REPO_ROOT/_build_matlab_cu$CUDA_MAJOR" --prefix "$DIST_DIR/ffdas_cu$CUDA_MAJOR-matlab-linux-x86_64"
+    (cd "$DIST_DIR" && zip -qr ffdas_cu$CUDA_MAJOR-matlab-linux-x86_64.zip ffdas_cu$CUDA_MAJOR-matlab-linux-x86_64/)
     echo ""
 fi
 

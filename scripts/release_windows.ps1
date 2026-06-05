@@ -62,13 +62,13 @@ if (-not (Test-Path $DistDir)) { New-Item -ItemType Directory -Path $DistDir | O
 
 if ($Target -eq "matlab" -or $Target -eq "all") {
     Write-Host "info: building MATLAB toolbox"
-    cmake -G Ninja -S $RepoRoot -B "$RepoRoot\_build_matlab" `
+    cmake -G Ninja -S $RepoRoot -B "$RepoRoot\_build_matlab_cu$CudaMajor" `
         -DCMAKE_BUILD_TYPE=Release `
         -DBUILD_MEX=ON `
         -DCMAKE_CUDA_ARCHITECTURES="$CudaArchitectures"
-    cmake --build "$RepoRoot\_build_matlab"
-    cmake --install "$RepoRoot\_build_matlab" --prefix "$DistDir\ffdas-matlab-win-x86_64"
-    Compress-Archive -Path "$DistDir\ffdas-matlab-win-x86_64" -DestinationPath "$DistDir\ffdas-matlab-win-x86_64.zip"
+    cmake --build "$RepoRoot\_build_matlab_cu$CudaMajor"
+    cmake --install "$RepoRoot\_build_matlab_cu$CudaMajor" --prefix "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64"
+    Compress-Archive -Path "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64" -DestinationPath "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64.zip"
     Write-Host ""
 }
 
