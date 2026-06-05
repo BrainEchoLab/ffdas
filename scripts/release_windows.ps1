@@ -6,6 +6,7 @@ $DistDir = "$RepoRoot\dist"
 $CudaMajor = if ($env:CUDA_MAJOR) { $env:CUDA_MAJOR } else { "13" }
 $CudaRoot = if ($env:CUDA_ROOT) { $env:CUDA_ROOT } else { $null }
 $Target = if ($args.Count -gt 0) { $args[0] } else { "all" }
+$ffdasVersion = "0.1.0"
 
 function Fail($msg) { Write-Error $msg; exit 1 }
 
@@ -78,8 +79,8 @@ if ($Target -eq "matlab" -or $Target -eq "all") {
     }
     cmake @MatlabCmakeArgs
     cmake --build "$RepoRoot\_build_matlab_cu$CudaMajor"
-    cmake --install "$RepoRoot\_build_matlab_cu$CudaMajor" --prefix "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64"
-    Compress-Archive -Path "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64" -DestinationPath "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64.zip"
+    cmake --install "$RepoRoot\_build_matlab_cu$CudaMajor" --prefix "$DistDir\ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64"
+    Compress-Archive -Path "$DistDir\ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64" -DestinationPath "$DistDir\ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64.zip"
     Write-Host ""
 }
 

@@ -18,7 +18,9 @@ if [ "$CUDA_MAJOR" = "13" ]; then
     AUDITWHEEL_EXCLUDES=(
         --exclude libcudart.so.13
         --exclude libcublas.so.13
-        --exclude libcusolver.so.13
+        --exclude libcusolver.so.12
+        --exclude libcublasLt.so.13
+        --exclude libcusparse.so.12
         --exclude libnvToolsExt.so.1
     )
 elif [ "$CUDA_MAJOR" = "12" ]; then
@@ -27,6 +29,8 @@ elif [ "$CUDA_MAJOR" = "12" ]; then
         --exclude libcudart.so.12
         --exclude libcublas.so.12
         --exclude libcusolver.so.11
+        --exclude libcublasLt.so.12
+        --exclude libcusparse.so.12
         --exclude libnvToolsExt.so.1
     )
 else
