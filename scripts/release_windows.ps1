@@ -5,7 +5,6 @@ $DistDir = "$RepoRoot\dist"
 
 $CudaMajor = if ($env:CUDA_MAJOR) { $env:CUDA_MAJOR } else { "13" }
 $CudaRoot = if ($env:CUDA_ROOT) { $env:CUDA_ROOT } else { $null }
-$CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90-real;100-real;120" }
 $Target = if ($args.Count -gt 0) { $args[0] } else { "all" }
 
 function Fail($msg) { Write-Error $msg; exit 1 }
@@ -14,6 +13,7 @@ function Fail($msg) { Write-Error $msg; exit 1 }
 # should NOT be bundled into the wheel (provided by the system toolkit or
 # pip cuda packages at runtime).
 if ($CudaMajor -eq "13") {
+    $CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90-real;100-real;120" }
     $DelvewheelExcludes = @(
         "--exclude", "cublas64_13.dll",
         "--exclude", "cublasLt64_13.dll",
@@ -21,6 +21,7 @@ if ($CudaMajor -eq "13") {
         "--exclude", "cusparse64_12.dll"
     )
 } elseif ($CudaMajor -eq "12") {
+    $CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90" }
     $DelvewheelExcludes = @(
         "--exclude", "cublas64_12.dll",
         "--exclude", "cublasLt64_12.dll",
@@ -53,11 +54,11 @@ if ($Target -eq "python" -or $Target -eq "all") {
     if (-not (Get-Command delvewheel -ErrorAction SilentlyContinue)) { Fail "delvewheel not found (pip install delvewheel)" }
 }
 
-Write-Host "cuda major:    $CudaMajor"
-if ($CudaRoot) { Write-Host "cuda root:     $CudaRoot" }
-Write-Host "architectures: $CudaArchitectures"
-Write-Host "target:        $Target"
-Write-Host "output:        $DistDir"
+Write-Host "info: CUDA_MAJOR=$CudaMajor"
+if ($CudaRoot) { Write-Host "info: CUDA_ROOT=$CudaRoot" }
+Write-Host "info: CUDA_ARCHITECTURES=$CudaArchitectures"
+Write-Host "info: TARGET=$Target"
+Write-Host "info: DIST_DIR=$DistDir"
 Write-Host ""
 
 if (-not (Test-Path $DistDir)) { New-Item -ItemType Directory -Path $DistDir | Out-Null }
