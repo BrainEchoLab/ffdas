@@ -32,7 +32,7 @@ By default, the pip package does not install CUDA runtime libraries. If you do n
 
 ## MATLAB
 
-Download the prebuilt MEX binaries for your platform from the [GitHub Releases](https://github.com/luukverhoef/ffdas/releases) page and add the bindings directory to your MATLAB path:
+Download the prebuilt MEX binaries for your platform from the [GitHub Releases](https://github.com/brainecholab/ffdas/releases) page and add the bindings directory to your MATLAB path:
 
 ```matlab
 addpath("/path/to/ffdas/bindings/matlab")
@@ -97,7 +97,7 @@ Specifying the exact architecture for your GPU avoids compiling unused PTX/SASS 
 The recommended way to build and install the Python bindings for development is directly through CMake:
 
 ```bash
-git clone https://github.com/luukverhoef/ffdas.git
+git clone https://github.com/brainecholab/ffdas.git
 cd ffdas
 pip install nanobind array-api-compat
 cmake -S . -B build -DBUILD_PYTHON=ON
