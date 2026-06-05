@@ -40,38 +40,38 @@ def _regular_grid(nz, ny, nx):
 def test_exact_at_grid_points(mode):
     nz, ny, nx = 3, 4, 5
     grid = _regular_grid(nz, ny, nx)
-    values = cp.arange(nz * ny * nx, dtype="float32").reshape(nz, ny, nx)
+    x = cp.arange(nz * ny * nx, dtype="float32").reshape(nz, ny, nx)
     interp = ffdas.Interpolator(grid, mode=mode)
     queries = grid.reshape(-1, 3)
-    result = interp(values, queries)
-    assert_allclose(cp.asnumpy(result), cp.asnumpy(values).flatten(), atol=1e-4)
+    result = interp(x, queries)
+    assert_allclose(cp.asnumpy(result), cp.asnumpy(x).flatten(), atol=1e-4)
 
 
 def test_linear_midpoint():
     nz, ny, nx = 2, 2, 2
     grid = _regular_grid(nz, ny, nx)
-    values = cp.zeros((nz, ny, nx), dtype="float32")
-    values[0, 0, 0] = 0.0
-    values[0, 0, 1] = 1.0
+    x = cp.zeros((nz, ny, nx), dtype="float32")
+    x[0, 0, 0] = 0.0
+    x[0, 0, 1] = 1.0
     interp = ffdas.Interpolator(grid, mode="linear")
-    result = interp(values, cp.array([[0.5, 0.0, 0.0]], dtype="float32"))
+    result = interp(x, cp.array([[0.5, 0.0, 0.0]], dtype="float32"))
     assert_allclose(cp.asnumpy(result), [0.5], atol=1e-4)
 
 
 @pytest.mark.parametrize("mode", ["nearest", "linear"])
 def test_fill_value_outside_grid(mode):
     grid = _regular_grid(2, 2, 2)
-    values = cp.ones((2, 2, 2), dtype="float32")
+    x = cp.ones((2, 2, 2), dtype="float32")
     interp = ffdas.Interpolator(grid, mode=mode)
-    result = interp(values, cp.array([[5.0, 5.0, 5.0]], dtype="float32"), fill=-1.0)
+    result = interp(x, cp.array([[5.0, 5.0, 5.0]], dtype="float32"), fill=-1.0)
     assert_allclose(cp.asnumpy(result), [-1.0], atol=1e-5)
 
 
 def test_output_shape():
     grid = _regular_grid(2, 3, 4)
-    values = cp.ones((2, 3, 4), dtype="float32")
+    x = cp.ones((2, 3, 4), dtype="float32")
     queries = cp.zeros((10, 3), dtype="float32")
-    result = ffdas.Interpolator(grid, mode="linear")(values, queries)
+    result = ffdas.Interpolator(grid, mode="linear")(x, queries)
     assert result.shape == (10,)
 
 
@@ -79,20 +79,20 @@ def test_output_shape():
 def test_batch_dim(mode):
     batch_size, nz, ny, nx = 4, 3, 4, 5
     grid = _regular_grid(nz, ny, nx)
-    values = cp.arange(batch_size * nz * ny * nx, dtype="float32").reshape(batch_size, nz, ny, nx)
+    x = cp.arange(batch_size * nz * ny * nx, dtype="float32").reshape(batch_size, nz, ny, nx)
     interp = ffdas.Interpolator(grid, mode=mode)
     queries = grid.reshape(-1, 3)
-    result = interp(values, queries)
-    assert_allclose(cp.asnumpy(result), cp.asnumpy(values).reshape(batch_size, -1), atol=1e-4)
+    result = interp(x, queries)
+    assert_allclose(cp.asnumpy(result), cp.asnumpy(x).reshape(batch_size, -1), atol=1e-4)
 
 
 def test_convenience_function():
     nz, ny, nx = 3, 4, 5
     grid = _regular_grid(nz, ny, nx)
-    values = cp.arange(nz * ny * nx, dtype="float32").reshape(nz, ny, nx)
+    x = cp.arange(nz * ny * nx, dtype="float32").reshape(nz, ny, nx)
     queries = grid.reshape(-1, 3)
-    result = ffdas.interpolate(grid, values, queries, mode="nearest")
-    assert_allclose(cp.asnumpy(result), cp.asnumpy(values).flatten(), atol=1e-5)
+    result = ffdas.interpolate(grid, x, queries, mode="nearest")
+    assert_allclose(cp.asnumpy(result), cp.asnumpy(x).flatten(), atol=1e-5)
 
 
 def test_values_leading_dims_mismatch():

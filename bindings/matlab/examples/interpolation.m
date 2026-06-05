@@ -19,12 +19,12 @@ r     = gpuArray(single(linspace(0.005, 0.035, nr)));
 theta = gpuArray(single(linspace(-0.4, 0.4, ntheta)));
 phi   = gpuArray(single(linspace(-0.4, 0.4, nphi)));
 
-% MATLAB convention: grid_points is (3, nx, ny, nz) = (3, nphi, ntheta, nr)
+% MATLAB convention: gridpos is (3, nx, ny, nz) = (3, nphi, ntheta, nr)
 [pp, tt, rr] = ndgrid(phi, theta, r);
-grid_points = zeros(3, nphi, ntheta, nr, "single", "gpuArray");
-grid_points(1,:,:,:) = rr .* sin(tt);
-grid_points(2,:,:,:) = rr .* sin(pp);
-grid_points(3,:,:,:) = rr .* cos(tt) .* cos(pp);
+gridpos = zeros(3, nphi, ntheta, nr, "single", "gpuArray");
+gridpos(1,:,:,:) = rr .* sin(tt);
+gridpos(2,:,:,:) = rr .* sin(pp);
+gridpos(3,:,:,:) = rr .* cos(tt) .* cos(pp);
 
 
 % simulate and reconstruct (see reconstruct.m for details)
@@ -63,12 +63,12 @@ rf = conj(ifft(rx, [], 1));
 rf = reshape(rf, n_samples, 1, [], batch_size);
 
 k = sampling_freq / sound_speed;
-d = ffdas.utils.cdist(source, grid_points);
+d = ffdas.utils.cdist(source, gridpos);
 offsets = reshape(d * k, nphi, ntheta, nr, 1);
 weights = ones(size(offsets), "single", "gpuArray");
 
 volume = ffdas.das( ...
-    rf, channel_pos * k, grid_points * k, offsets, weights, ...
+    rf, channel_pos * k, gridpos * k, offsets, weights, ...
     [], single(-2 * pi * center_freq / sampling_freq));
 
 envelope = abs(volume);  % (nphi, ntheta, nr, batch)
@@ -87,7 +87,7 @@ cart_points(3,:,:,:) = czz;
 
 timer = ffdas.utils.Timer();
 timer.start();
-cart_volume = ffdas.interpolate(grid_points, envelope, cart_points, "linear", 0.0);
+cart_volume = ffdas.interpolate(gridpos, envelope, cart_points, "linear", 0.0);
 timer.stop();
 fprintf("interpolate to %dx%dx%d: %.1f ms\n", ...
     cart_nz, cart_ny, cart_nx, timer.elapsed_ms());

@@ -112,17 +112,17 @@ with ffdas.utils.Timer() as t:
         voxel_pos * ks,
         offsets,
         weights,
-        xdir=None,
+        srcdir=None,
         wavenum=-2 * cp.pi * center_freq / sampling_freq,
     )
-print(f"das (xdir=None): {nz}x{ny}x{nx}, {channel_pos.shape[0]} ch, batch {batch_size}: {t.elapsed_ms():.1f} ms")
+print(f"das (srcdir=None): {nz}x{ny}x{nx}, {channel_pos.shape[0]} ch, batch {batch_size}: {t.elapsed_ms():.1f} ms")
 
 # element directivity: (channels, 4) where columns 0-2 are the element
 # normal and column 3 is the cosine cutoff. voxels outside the cone
 # receive zero weight from that channel
-xdir = cp.zeros((channel_pos.shape[0], 4), dtype=cp.float32)
-xdir[:, 2] = 1.0  # normals point in +z
-xdir[:, 3] = 0.707  # 60 degree half-angle
+srcdir = cp.zeros((channel_pos.shape[0], 4), dtype=cp.float32)
+srcdir[:, 2] = 1.0  # normals point in +z
+srcdir[:, 3] = 0.707  # 60 degree half-angle
 
 with ffdas.utils.Timer() as t:
     image = ffdas.das(
@@ -131,10 +131,10 @@ with ffdas.utils.Timer() as t:
         voxel_pos * ks,
         offsets,
         weights,
-        xdir=xdir,
+        srcdir=srcdir,
         wavenum=-2 * cp.pi * center_freq / sampling_freq,
     )
-print(f"das (with xdir): {nz}x{ny}x{nx}, {channel_pos.shape[0]} ch, batch {batch_size}: {t.elapsed_ms():.1f} ms")
+print(f"das (with srcdir): {nz}x{ny}x{nx}, {channel_pos.shape[0]} ch, batch {batch_size}: {t.elapsed_ms():.1f} ms")
 
 
 magnitude = cp.abs(image[0])

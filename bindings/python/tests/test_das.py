@@ -10,8 +10,8 @@ def _das_args(**overrides):
     n_ch, n_seq, n_samp, n_tgt = 4, 2, 16, 8
     args = dict(
         x=cp.zeros((n_ch, n_seq, n_samp), dtype="float32"),
-        xpos=cp.zeros((n_ch, 3), dtype="float32"),
-        ypos=cp.zeros((n_tgt, 3), dtype="float32"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((n_tgt, 3), dtype="float32"),
         offsets=cp.zeros((n_seq, n_tgt), dtype="float32"),
         weights=cp.ones((n_seq, n_tgt), dtype="float32"),
     )
@@ -23,8 +23,8 @@ def _das_sparse_args(**overrides):
     n_ch, n_seq, n_samp, n_tgt, n_sparse = 4, 8, 16, 6, 3
     args = dict(
         x=cp.zeros((n_ch, n_seq, n_samp), dtype="float32"),
-        xpos=cp.zeros((n_ch, 3), dtype="float32"),
-        ypos=cp.zeros((n_tgt, 3), dtype="float32"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((n_tgt, 3), dtype="float32"),
         offsets=cp.zeros((n_sparse, n_tgt), dtype="float32"),
         weights=cp.ones((n_sparse, n_tgt), dtype="float32"),
         sparse_indices=cp.zeros((n_sparse, n_tgt), dtype="int32"),
@@ -38,12 +38,12 @@ def _das_sparse_args(**overrides):
 
 def test_das_ypos_wrong_trailing_dim():
     with pytest.raises(ValueError):
-        ffdas.das(**_das_args(ypos=cp.zeros((8, 2), dtype="float32")))
+        ffdas.das(**_das_args(dstpos=cp.zeros((8, 2), dtype="float32")))
 
 
 def test_das_ypos_1d():
     with pytest.raises(ValueError):
-        ffdas.das(**_das_args(ypos=cp.zeros((3,), dtype="float32")))
+        ffdas.das(**_das_args(dstpos=cp.zeros((3,), dtype="float32")))
 
 
 def test_das_offsets_shape_mismatch():
@@ -98,8 +98,8 @@ def test_das_output_shape_3d():
     nz, nx = 8, 6
     result = ffdas.das(
         x=cp.zeros((n_ch, n_seq, n_samp), dtype="float32"),
-        xpos=cp.zeros((n_ch, 3), dtype="float32"),
-        ypos=cp.zeros((nz, nx, 3), dtype="float32"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((nz, nx, 3), dtype="float32"),
         offsets=cp.zeros((n_seq, nz, nx), dtype="float32"),
         weights=cp.ones((n_seq, nz, nx), dtype="float32"),
     )
@@ -110,8 +110,8 @@ def test_das_output_shape_4d_batched():
     batch, n_ch, n_seq, n_samp, n_tgt = 3, 4, 2, 32, 8
     result = ffdas.das(
         x=cp.zeros((batch, n_ch, n_seq, n_samp), dtype="float32"),
-        xpos=cp.zeros((n_ch, 3), dtype="float32"),
-        ypos=cp.zeros((n_tgt, 3), dtype="float32"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((n_tgt, 3), dtype="float32"),
         offsets=cp.zeros((n_seq, n_tgt), dtype="float32"),
         weights=cp.ones((n_seq, n_tgt), dtype="float32"),
     )
@@ -124,8 +124,8 @@ def test_das_single_sample_impulse():
     x[0, 0, 32] = 1.0
     result = ffdas.das(
         x=x,
-        xpos=cp.zeros((1, 3), dtype="float32"),
-        ypos=cp.zeros((1, 3), dtype="float32"),
+        srcpos=cp.zeros((1, 3), dtype="float32"),
+        dstpos=cp.zeros((1, 3), dtype="float32"),
         offsets=cp.full((1, 1), 32.0, dtype="float32"),
         weights=cp.ones((1, 1), dtype="float32"),
     )

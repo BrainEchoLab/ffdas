@@ -16,16 +16,16 @@ template<typename Tx, typename Ty, typename Tcompute, int tile_width, bool is_sp
 ffdas_error_t das_alg1_launch(
     ffdas_context &handle,
     const das_problem_params& params,
-    const float3 *xpos,
-    const float4 *xdir,
+    const float3 *srcpos,
+    const float4 *srcdir,
     float wavenum,
     const Tx* x, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float* offsets, 
     const float* weights,
     const int *sparse_indices, 
     Ty beta, 
-    Ty* y
+    Ty* out
 ) {
     const void *input_ptr = x;
     device_ptr<Tcompute> xcomp_ptr;
@@ -95,7 +95,7 @@ ffdas_error_t das_alg1_launch(
         }
     }
 
-    bool dir_check = (xdir != NULL);
+    bool dir_check = (srcdir != NULL);
 
     dim3 block_dim(128);
     dim3 grid_dim((params.ny + block_dim.x - 1) / block_dim.x,
@@ -108,18 +108,18 @@ ffdas_error_t das_alg1_launch(
             params.samples, 
             params.seqlen, 
             params.channels,
-            xpos,
-            xdir,
+            srcpos,
+            srcdir,
             wavenum, 
             static_cast<const Tcompute*>(input_ptr), 
             params.ny, 
             params.ystride,
-            ypos, 
+            dstpos, 
             offsets, 
             weights, 
             sparse_indices, 
             beta, 
-            y, 
+            out, 
             params.batch_size
         );
     } else {
@@ -129,18 +129,18 @@ ffdas_error_t das_alg1_launch(
             params.samples, 
             params.seqlen, 
             params.channels,
-            xpos,
+            srcpos,
             NULL,
             wavenum, 
             static_cast<const Tcompute*>(input_ptr), 
             params.ny, 
             params.ystride,
-            ypos, 
+            dstpos, 
             offsets, 
             weights, 
             sparse_indices, 
             beta, 
-            y, 
+            out, 
             params.batch_size
         );
     }
@@ -155,54 +155,54 @@ template<typename Tx, typename Ty, int tile_width, bool is_sparse>
 ffdas_error_t das_alg1_dispatch_compute(
     ffdas_context &handle,
     const das_problem_params& params,
-    const float3 *xpos,
-    const float4 *xdir,
+    const float3 *srcpos,
+    const float4 *srcdir,
     float wavenum,
     const Tx* x, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float* offsets, 
     const float* weights,
     const int *sparse_indices, 
     Ty beta, 
-    Ty* y,
+    Ty* out,
     ffdas_compute_type_t compute_type
 ) {
     if (compute_type == FFDAS_COMPUTE_16F) {
         if constexpr (std::is_same_v<Tx, float>) {
-            return das_alg1_launch<Tx, Ty, __half, tile_width, is_sparse>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y);
+            return das_alg1_launch<Tx, Ty, __half, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
         } else if constexpr (std::is_same_v<Tx, float2>) {
-            return das_alg1_launch<Tx, Ty, __half2, tile_width, is_sparse>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y);
+            return das_alg1_launch<Tx, Ty, __half2, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
         }
         return FFDAS_ERROR_UNSUPPORTED_TYPE;
     } else if (compute_type == FFDAS_COMPUTE_32F) {
         if constexpr (std::is_same_v<Tx, double>) {
-            return das_alg1_launch<Tx, Ty, float, tile_width, is_sparse>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y);
+            return das_alg1_launch<Tx, Ty, float, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
         } else if constexpr (std::is_same_v<Tx, double2>) {
-            return das_alg1_launch<Tx, Ty, float2, tile_width, is_sparse>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y);
+            return das_alg1_launch<Tx, Ty, float2, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
         }
     }
 
-    return das_alg1_launch<Tx, Ty, Tx, tile_width, is_sparse>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y);
+    return das_alg1_launch<Tx, Ty, Tx, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
 }
 
 template<typename Tx, typename Ty>
 ffdas_error_t das_alg1_strided(
     ffdas_context &handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     Ty beta, 
-    const ffdas_tensor_desc &y_desc, 
-    Ty* y,
+    const ffdas_tensor_desc &out_desc, 
+    Ty* out,
     ffdas_compute_type_t compute_type
 ) {
     das_problem_params params;
-    FFDAS_CHECK(get_das_problem_params(x_desc, y_desc, params));
+    FFDAS_CHECK(get_das_problem_params(x_desc, out_desc, params));
 
     int tile_width;
     const char* env = std::getenv("FFDAS_ALG1_TILE_SIZE");
@@ -224,15 +224,15 @@ ffdas_error_t das_alg1_strided(
 
     switch (tile_width) {
         case 1:
-            return das_alg1_dispatch_compute<Tx, Ty, 1, false>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, NULL, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 1, false>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, NULL, beta, out, compute_type);
         case 2:
-            return das_alg1_dispatch_compute<Tx, Ty, 2, false>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, NULL, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 2, false>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, NULL, beta, out, compute_type);
         case 4:
-            return das_alg1_dispatch_compute<Tx, Ty, 4, false>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, NULL, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 4, false>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, NULL, beta, out, compute_type);
         case 8:
-            return das_alg1_dispatch_compute<Tx, Ty, 8, false>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, NULL, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 8, false>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, NULL, beta, out, compute_type);
         case 16:
-            return das_alg1_dispatch_compute<Tx, Ty, 16, false>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, NULL, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 16, false>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, NULL, beta, out, compute_type);
         default:
             break;
     }
@@ -244,23 +244,23 @@ ffdas_error_t das_alg1_strided(
 template<typename Tx, typename Ty>
 ffdas_error_t das_alg1_sparse(
     ffdas_context &handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     int sparse_count,
     const int *sparse_indices, 
     Ty beta, 
-    const ffdas_tensor_desc &y_desc, 
-    Ty* y,
+    const ffdas_tensor_desc &out_desc, 
+    Ty* out,
     ffdas_compute_type_t compute_type
 ) {
     das_problem_params params;
-    FFDAS_CHECK(get_das_problem_params(x_desc, y_desc, params));
+    FFDAS_CHECK(get_das_problem_params(x_desc, out_desc, params));
 
     if (sparse_count <= 0)
         return FFDAS_ERROR_INVALID_ARGUMENT;
@@ -287,15 +287,15 @@ ffdas_error_t das_alg1_sparse(
 
     switch (tile_width) {
         case 1:
-            return das_alg1_dispatch_compute<Tx, Ty, 1, true>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 1, true>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out, compute_type);
         case 2:
-            return das_alg1_dispatch_compute<Tx, Ty, 2, true>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 2, true>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out, compute_type);
         case 4:
-            return das_alg1_dispatch_compute<Tx, Ty, 4, true>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 4, true>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out, compute_type);
         case 8:
-            return das_alg1_dispatch_compute<Tx, Ty, 8, true>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 8, true>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out, compute_type);
         case 16:
-            return das_alg1_dispatch_compute<Tx, Ty, 16, true>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, sparse_indices, beta, y, compute_type);
+            return das_alg1_dispatch_compute<Tx, Ty, 16, true>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out, compute_type);
         default:
             break;
     }

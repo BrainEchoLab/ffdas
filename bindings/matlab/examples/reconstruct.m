@@ -65,16 +65,16 @@ weights = ones(size(offsets), "single", "gpuArray");
 
 % element directivity: (4, channels), rows 1-3 are the normal, row 4
 % is the cosine of the sensitivity half-angle
-xdir = zeros(4, 1024, "single", "gpuArray");
-xdir(3,:) = 1.0;
-xdir(4,:) = 0.5;
+srcdir = zeros(4, 1024, "single", "gpuArray");
+srcdir(3,:) = 1.0;
+srcdir(4,:) = 0.5;
 
 wavenum = single(-2 * pi * center_freq / sampling_freq);
 
 timer = ffdas.utils.Timer();
 timer.start();
 image = ffdas.das( ...
-    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, xdir, wavenum);
+    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, srcdir, wavenum);
 timer.stop();
 fprintf("das: %dx%dx%d, %d ch, batch %d: %.1f ms\n", ...
     nz, ny, nx, 1024, batch_size, timer.elapsed_ms());

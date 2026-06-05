@@ -44,10 +44,10 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     x.reshape({n, m});
 
-    ndarray::ndarray y = ndarray::make_ndarray_like(x);
+    ndarray::ndarray out = ndarray::make_ndarray_like(x);
 
     ScopedTensorDesc x_desc(x);
-    ScopedTensorDesc y_desc(y);
+    ScopedTensorDesc out_desc(out);
 
     check(ffdas_truncate_rank(
         handle, 
@@ -55,11 +55,11 @@ void mexFunction(int nlhs, mxArray *plhs[],
         x.data(), 
         start, 
         stop, 
-        y_desc.desc, 
-        y.data()
+        out_desc.desc, 
+        out.data()
     ));
 
-    y.reshape(orig_shape);
+    out.reshape(orig_shape);
 
-    plhs[0] = y.release();
+    plhs[0] = out.release();
 }

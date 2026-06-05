@@ -13,19 +13,19 @@
 namespace ffdas::detail {
 
 
-// The kernel writes y in (samples, ny, batch_size) layout. After the kernel,
+// The kernel writes out in (samples, ny, batch_size) layout. After the kernel,
 // a contiguous copy transposes this into the user's (batch_size, ny, samples)
 // layout.
 template<>
 ffdas_error_t greens_sum_impl<half2, float2>(
     ffdas_context &handle,
-    const float3 *xpos,
+    const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const half2* x,
-    const float3 *ypos,
-    const ffdas_tensor_desc &y_desc,
-    float2* y
+    const float3 *dstpos,
+    const ffdas_tensor_desc &out_desc,
+    float2* out
 ) {
     if (x_desc.ndim() != 3)
         return FFDAS_ERROR_INVALID_DIMS;
@@ -41,13 +41,13 @@ ffdas_error_t greens_sum_impl<half2, float2>(
     int channels   = static_cast<int>(channels64);
     int samples    = static_cast<int>(samples64);
 
-    if (y_desc.ndim() != 3 || y_desc.dims[0] != batch_size64 || y_desc.dims[2] != samples64)
+    if (out_desc.ndim() != 3 || out_desc.dims[0] != batch_size64 || out_desc.dims[2] != samples64)
         return FFDAS_ERROR_INVALID_DIMS;
 
-    int ny = static_cast<int>(y_desc.dims[1]);
+    int ny = static_cast<int>(out_desc.dims[1]);
 
     device_ptr<float2> work(handle);
-    FFDAS_CHECK(work.alloc(y_desc.nbytes()));
+    FFDAS_CHECK(work.alloc(out_desc.nbytes()));
 
     constexpr int M = 16;
     constexpr int N = 16;
@@ -65,21 +65,21 @@ ffdas_error_t greens_sum_impl<half2, float2>(
 
     greens_sum_kernel<warps_per_block, M, N, K><<<grid_dim, block_dim, 0, handle.stream>>>(
         samples, channels,
-        xpos, wavenums, x,
-        ny, ypos, work.get(),
+        srcpos, wavenums, x,
+        ny, dstpos, work.get(),
         batch_size
     );
 
     CUDA_LAUNCH_CHECK();
 
     // kernel output is (batch, ny, samples) with strides (1, batch_size, batch_size*ny)
-    ffdas_tensor_desc out_desc(
+    ffdas_tensor_desc work_desc(
         {batch_size64, (int64_t)ny, samples64},
         {1LL, batch_size64, batch_size64 * (int64_t)ny},
         builtin_traits<float2>::ffdas_datatype
     );
 
-    return contiguous_copy_impl<float2, float2>(handle, out_desc, work.get(), y);
+    return contiguous_copy_impl<float2, float2>(handle, work_desc, work.get(), out);
 }
 
 
@@ -87,13 +87,13 @@ ffdas_error_t greens_sum_impl<half2, float2>(
 template<>
 ffdas_error_t greens_sum_impl<float2, float2>(
     ffdas_context &handle,
-    const float3 *xpos,
+    const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const float2* x,
-    const float3 *ypos,
-    const ffdas_tensor_desc &y_desc,
-    float2* y
+    const float3 *dstpos,
+    const ffdas_tensor_desc &out_desc,
+    float2* out
 ) {
     device_ptr<void> x_half(handle);
     FFDAS_CHECK(x_half.alloc(x_desc.nbytes() / 2));
@@ -103,9 +103,9 @@ ffdas_error_t greens_sum_impl<float2, float2>(
 
     if (err == FFDAS_SUCCESS) {
         err = greens_sum_impl<half2, float2>(
-            handle, xpos, wavenums, x_desc,
+            handle, srcpos, wavenums, x_desc,
             static_cast<half2*>(x_half.get()),
-            ypos, y_desc, y);
+            dstpos, out_desc, out);
     }
 
     return err;
@@ -117,38 +117,38 @@ ffdas_error_t greens_sum_impl<float2, float2>(
 
 ffdas_error_t ffdas_greens_sum(
     ffdas_handle_t handle,
-    const float3 *xpos,
+    const float3 *srcpos,
     const float *wavenums,
     ffdas_tensor_desc_t x_desc,
     const void* x,
-    const float3 *ypos,
-    ffdas_tensor_desc_t y_desc,
-    void* y
+    const float3 *dstpos,
+    ffdas_tensor_desc_t out_desc,
+    void* out
 ) {
     CHECK_HANDLE(handle);
     CHECK_NULL_PTR(x_desc);
-    CHECK_NULL_PTR(y_desc);
+    CHECK_NULL_PTR(out_desc);
     FFDAS_CHECK(handle->check_device());
 
     ffdas::detail::nvtx_range nvtx(*handle, "greens");
 
     const ffdas_tensor_desc &x_tensor = *x_desc;
-    const ffdas_tensor_desc &y_tensor = *y_desc;
+    const ffdas_tensor_desc &out_tensor = *out_desc;
 
     switch (x_tensor.dtype) {
     case FFDAS_C_16F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_C_32F:
             return ffdas::detail::greens_sum_dispatch<FFDAS_C_16F, FFDAS_C_32F>(
-                *handle, xpos, wavenums, x_tensor, x, ypos, y_tensor, y);
+                *handle, srcpos, wavenums, x_tensor, x, dstpos, out_tensor, out);
         default: break;
         }
         break;
     case FFDAS_C_32F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_C_32F:
             return ffdas::detail::greens_sum_dispatch<FFDAS_C_32F, FFDAS_C_32F>(
-                *handle, xpos, wavenums, x_tensor, x, ypos, y_tensor, y);
+                *handle, srcpos, wavenums, x_tensor, x, dstpos, out_tensor, out);
         default: break;
         }
         break;

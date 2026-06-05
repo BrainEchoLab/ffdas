@@ -71,48 +71,48 @@ class ContractionPlan:
 
 def create_contraction(
     handle: Handle,
-    x: TensorLike,
-    x_modes: Sequence[int],
     a: TensorLike,
     a_modes: Sequence[int],
-    y: TensorLike,
-    y_modes: Sequence[int],
+    b: TensorLike,
+    b_modes: Sequence[int],
+    out: TensorLike,
+    out_modes: Sequence[int],
 ) -> ContractionPlan: ...
 def contraction(
-    handle: Handle, plan: ContractionPlan, x: TensorLike, a: TensorLike, y: TensorLike
+    handle: Handle, plan: ContractionPlan, a: TensorLike, b: TensorLike, out: TensorLike
 ) -> None: ...
 
 class InterpolationPlan:
     pass
 
 def create_interpolation_plan(
-    handle: Handle, nx: int, ny: int, nz: int, grid_points: TensorLike, mode: InterpMode
+    handle: Handle, nx: int, ny: int, nz: int, gridpos: TensorLike, mode: InterpMode
 ) -> InterpolationPlan: ...
 def interpolation_preprocess(
-    handle: Handle, plan: InterpolationPlan, query_points: TensorLike
+    handle: Handle, plan: InterpolationPlan, querypos: TensorLike
 ) -> None: ...
 def interpolation(
     handle: Handle,
     plan: InterpolationPlan,
-    query_points: TensorLike,
-    values: TensorLike,
+    querypos: TensorLike,
+    x: TensorLike,
     output: TensorLike,
     fill_value: TensorLike,
 ) -> None: ...
 def truncate_rank(
-    handle: Handle, x: TensorLike, start: int, stop: int, y: TensorLike
+    handle: Handle, x: TensorLike, start: int, stop: int, out: TensorLike
 ) -> None: ...
 def das(
     handle: Handle,
     x: TensorLike,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
-    xdir: TensorLike | None,
+    srcdir: TensorLike | None,
     wavenum: float,
     beta: TensorLike,
-    y: TensorLike,
+    out: TensorLike,
     alg: Algorithm,
     compute_type: ComputeType,
     channels_trailing: bool,
@@ -120,31 +120,31 @@ def das(
 def das_sparse(
     handle: Handle,
     x: TensorLike,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
-    xdir: TensorLike | None,
+    srcdir: TensorLike | None,
     wavenum: float,
     beta: TensorLike,
-    y: TensorLike,
+    out: TensorLike,
     sparse_indices: TensorLike,
     alg: Algorithm,
     compute_type: ComputeType,
     channels_trailing: bool,
 ) -> None: ...
-def contiguous_copy(handle: Handle, x: TensorLike, y: TensorLike) -> None: ...
+def contiguous_copy(handle: Handle, x: TensorLike, out: TensorLike) -> None: ...
 def gather(
-    handle: Handle, x: TensorLike, y: TensorLike, mode: int, indices: TensorLike
+    handle: Handle, x: TensorLike, out: TensorLike, mode: int, indices: TensorLike
 ) -> None: ...
 def scatter(
-    handle: Handle, x: TensorLike, y: TensorLike, mode: int, indices: TensorLike
+    handle: Handle, x: TensorLike, out: TensorLike, mode: int, indices: TensorLike
 ) -> None: ...
 def greens_sum(
     handle: Handle,
-    xpos: TensorLike,
+    srcpos: TensorLike,
     wavenums: TensorLike,
     x: TensorLike,
-    ypos: TensorLike,
-    y: TensorLike,
+    dstpos: TensorLike,
+    out: TensorLike,
 ) -> None: ...

@@ -150,16 +150,16 @@ FFDAS_API ffdas_error_t ffdas_contiguous_copy(
     ffdas_handle_t handle,
     ffdas_tensor_desc_t x_desc,
     const void *x,
-    ffdas_tensor_desc_t y_desc,
-    void *y
+    ffdas_tensor_desc_t out_desc,
+    void *out
 );
 
 FFDAS_API ffdas_error_t ffdas_gather(
     ffdas_handle_t handle,
     ffdas_tensor_desc_t x_desc,
     const void *x,
-    ffdas_tensor_desc_t y_desc,
-    void *y,
+    ffdas_tensor_desc_t out_desc,
+    void *out,
     int64_t mode,
     size_t num_indices,
     const int *indices
@@ -169,8 +169,8 @@ FFDAS_API ffdas_error_t ffdas_scatter(
     ffdas_handle_t handle,
     ffdas_tensor_desc_t x_desc,
     const void *x,
-    ffdas_tensor_desc_t y_desc,
-    void *y,
+    ffdas_tensor_desc_t out_desc,
+    void *out,
     int64_t mode,
     const int *indices
 );
@@ -181,42 +181,42 @@ FFDAS_API ffdas_error_t ffdas_truncate_rank(
     const void *x,
     int64_t start, 
     int64_t stop,
-    ffdas_tensor_desc_t y_desc,
-    void *y
+    ffdas_tensor_desc_t out_desc,
+    void *out
 );
 
 FFDAS_API ffdas_error_t ffdas_das(
     ffdas_handle_t handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     ffdas_tensor_desc_t x_desc, 
     const void* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     const void *beta, 
-    ffdas_tensor_desc_t y_desc, 
-    void* y,
+    ffdas_tensor_desc_t out_desc, 
+    void* out,
     ffdas_compute_type_t compute_type,
     ffdas_alg_t alg
 );
 
 FFDAS_API ffdas_error_t ffdas_das_sparse(
     ffdas_handle_t handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     ffdas_tensor_desc_t x_desc, 
     const void* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     int sparse_count,
     const int *sparse_indices, 
     const void *beta, 
-    ffdas_tensor_desc_t y_desc, 
-    void* y,
+    ffdas_tensor_desc_t out_desc, 
+    void* out,
     ffdas_compute_type_t compute_type,
     ffdas_alg_t alg
 );
@@ -224,20 +224,20 @@ FFDAS_API ffdas_error_t ffdas_das_sparse(
 FFDAS_API ffdas_error_t ffdas_create_contraction(
     ffdas_handle_t handle,
     ffdas_contraction_plan_t *plan,
-    ffdas_tensor_desc_t x_desc,
-    const int *x_modes,
     ffdas_tensor_desc_t a_desc,
     const int *a_modes,
-    ffdas_tensor_desc_t y_desc,
-    const int *y_modes
+    ffdas_tensor_desc_t b_desc,
+    const int *b_modes,
+    ffdas_tensor_desc_t out_desc,
+    const int *out_modes
 );
 
 FFDAS_API ffdas_error_t ffdas_contraction(
     ffdas_handle_t handle,
     ffdas_contraction_plan_t plan,
-    const void *x,
     const void *a,
-    void *y
+    const void *b,
+    void *out
 );
 
 FFDAS_API ffdas_error_t ffdas_destroy_contraction(
@@ -249,25 +249,25 @@ FFDAS_API ffdas_error_t ffdas_create_interpolation_plan(
     ffdas_handle_t handle,
     ffdas_interpolation_plan_t *plan,
     int64_t nx, int64_t ny, int64_t nz,
-    const float *grid_points,
+    const float *gridpos,
     ffdas_interp_mode_t mode
 );
 
 FFDAS_API ffdas_error_t ffdas_interpolation_preprocess(
     ffdas_handle_t handle,
     ffdas_interpolation_plan_t plan,
-    int64_t num_query_points,
-    const float *query_points
+    int64_t num_querypos,
+    const float *querypos
 );
 
 FFDAS_API ffdas_error_t ffdas_interpolation(
     ffdas_handle_t handle,
     ffdas_interpolation_plan_t plan,
-    int64_t num_query_points,
-    const float *query_points,
-    ffdas_tensor_desc_t values_desc,
-    const void *values,
-    void *output,
+    int64_t num_querypos,
+    const float *querypos,
+    ffdas_tensor_desc_t x_desc,
+    const void *x,
+    void *out,
     const void *fill_value
 );
 
@@ -278,13 +278,13 @@ FFDAS_API ffdas_error_t ffdas_destroy_interpolation_plan(
 
 FFDAS_API ffdas_error_t ffdas_greens_sum(
     ffdas_handle_t handle,
-    const float3 *xpos, 
+    const float3 *srcpos, 
     const float *wavenums,
     ffdas_tensor_desc_t x_desc, 
     const void* x,
-    const float3 *ypos, 
-    ffdas_tensor_desc_t y_desc, 
-    void* y
+    const float3 *dstpos, 
+    ffdas_tensor_desc_t out_desc, 
+    void* out
 );
 
 FFDAS_API ffdas_error_t ffdas_event_create(

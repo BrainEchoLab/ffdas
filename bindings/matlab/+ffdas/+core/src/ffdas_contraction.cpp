@@ -16,50 +16,39 @@ void mexFunction(int nlhs, mxArray *plhs[],
 {
     if (nrhs != 6)
         mexErrMsgIdAndTxt("ffdas_contraction:nargs",
-            "expected 6 arguments: ffdas_contraction(handle, x, x_modes, a, a_modes, y_modes)");
+            "expected 6 arguments: ffdas_contraction(handle, a, a_modes, b, b_modes, out_modes)");
     if (nlhs != 1)
         mexErrMsgIdAndTxt("ffdas_contraction:nargs", "expected 1 output argument");
 
     ffdas_handle_t handle = get_handle(prhs[0]);
 
-    ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu> x(prhs[1]);
+    ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu> a(prhs[1]);
     ndarray::ndarray<int32_t, ndarray::access::read_only, ndarray::device::host, ndarray::require_vector> x_modes_arr(prhs[2]);
-    ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu> a(prhs[3]);
+    ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu> b(prhs[3]);
     ndarray::ndarray<int32_t, ndarray::access::read_only, ndarray::device::host, ndarray::require_vector> a_modes_arr(prhs[4]);
     ndarray::ndarray<int32_t, ndarray::access::read_only, ndarray::device::host, ndarray::require_vector> y_modes_arr(prhs[5]);
 
-    std::vector<int> x_modes(x_modes_arr.data(), x_modes_arr.data() + x_modes_arr.numel());
-    std::vector<int> a_modes(a_modes_arr.data(), a_modes_arr.data() + a_modes_arr.numel());
-    std::vector<int> y_modes(y_modes_arr.data(), y_modes_arr.data() + y_modes_arr.numel());
+    std::vector<int> a_modes(x_modes_arr.data(), x_modes_arr.data() + x_modes_arr.numel());
+    std::vector<int> b_modes(a_modes_arr.data(), a_modes_arr.data() + a_modes_arr.numel());
+    std::vector<int> out_modes(y_modes_arr.data(), y_modes_arr.data() + y_modes_arr.numel());
 
-    std::reverse(x_modes.begin(), x_modes.end());
     std::reverse(a_modes.begin(), a_modes.end());
-    std::reverse(y_modes.begin(), y_modes.end());
+    std::reverse(b_modes.begin(), b_modes.end());
+    std::reverse(out_modes.begin(), out_modes.end());
 
-    if ((int)x_modes.size() != x.ndim_val())
-        mexErrMsgIdAndTxt("ffdas_contraction:error",
-            "x_modes length (%zu) must match x dimensions (%d)",
-            x_modes.size(), x.ndim_val());
     if ((int)a_modes.size() != a.ndim_val())
         mexErrMsgIdAndTxt("ffdas_contraction:error",
             "a_modes length (%zu) must match a dimensions (%d)",
             a_modes.size(), a.ndim_val());
-    if (x.class_id != a.class_id || x.complexity != a.complexity)
+    if ((int)b_modes.size() != b.ndim_val())
+        mexErrMsgIdAndTxt("ffdas_contraction:error",
+            "b_modes length (%zu) must match b dimensions (%d)",
+            b_modes.size(), b.ndim_val());
+    if (a.class_id != b.class_id || a.complexity != b.complexity)
         mexErrMsgIdAndTxt("ffdas_contraction:error",
             "input datatypes must match exactly");
 
     std::map<int, int> mode_to_dim;
-
-    for (int i = 0; i < x.ndim_val(); i++) {
-        int mode = x_modes[i];
-        int dim = x.shape(i);
-        auto it = mode_to_dim.find(mode);
-        if (it != mode_to_dim.end() && it->second != dim)
-            mexErrMsgIdAndTxt("ffdas_contraction:error",
-                "mode %d has conflicting dimensions: %d vs %d",
-                mode, it->second, dim);
-        mode_to_dim[mode] = dim;
-    }
 
     for (int i = 0; i < a.ndim_val(); i++) {
         int mode = a_modes[i];
@@ -72,8 +61,19 @@ void mexFunction(int nlhs, mxArray *plhs[],
         mode_to_dim[mode] = dim;
     }
 
+    for (int i = 0; i < b.ndim_val(); i++) {
+        int mode = b_modes[i];
+        int dim = b.shape(i);
+        auto it = mode_to_dim.find(mode);
+        if (it != mode_to_dim.end() && it->second != dim)
+            mexErrMsgIdAndTxt("ffdas_contraction:error",
+                "mode %d has conflicting dimensions: %d vs %d",
+                mode, it->second, dim);
+        mode_to_dim[mode] = dim;
+    }
+
     std::vector<int64_t> out_dims;
-    for (int mode : y_modes) {
+    for (int mode : out_modes) {
         auto it = mode_to_dim.find(mode);
         if (it == mode_to_dim.end())
             mexErrMsgIdAndTxt("ffdas_contraction:error",
@@ -81,21 +81,21 @@ void mexFunction(int nlhs, mxArray *plhs[],
         out_dims.push_back(it->second);
     }
 
-    ndarray::ndarray y = ndarray::make_ndarray(out_dims, x.class_id, x.complexity);
+    ndarray::ndarray out = ndarray::make_ndarray(out_dims, a.class_id, a.complexity);
 
-    ScopedTensorDesc x_desc(x);
     ScopedTensorDesc a_desc(a);
-    ScopedTensorDesc y_desc(y);
+    ScopedTensorDesc b_desc(b);
+    ScopedTensorDesc out_desc(out);
 
     ffdas_contraction_plan_t plan;
     check(ffdas_create_contraction(
         handle, &plan,
-        x_desc.desc, x_modes.data(),
         a_desc.desc, a_modes.data(),
-        y_desc.desc, y_modes.data()));
+        b_desc.desc, b_modes.data(),
+        out_desc.desc, out_modes.data()));
 
     ffdas_error_t err = ffdas_contraction(
-        handle, plan, x.data(), a.data(), y.data());
+        handle, plan, a.data(), b.data(), out.data());
 
     ffdas_destroy_contraction(handle, plan);
 
@@ -104,5 +104,5 @@ void mexFunction(int nlhs, mxArray *plhs[],
             "ffdas_contraction returned error %d: %s",
             err, ffdas_error_string(err));
 
-    plhs[0] = y.release();
+    plhs[0] = out.release();
 }

@@ -59,21 +59,21 @@ void mexFunction(int nlhs, mxArray *plhs[],
         out_dims[i] = (i == axis) ? indices.numel() : x.shape(i);
     }
 
-    ndarray::ndarray y = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
+    ndarray::ndarray out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
 
     ScopedTensorDesc x_desc(x);
-    ScopedTensorDesc y_desc(y);
+    ScopedTensorDesc out_desc(out);
 
     check(ffdas_gather(
         handle,
         x_desc.desc, 
         x.data(),
-        y_desc.desc, 
-        y.data(),
+        out_desc.desc, 
+        out.data(),
         axis,
         indices.numel(),
         indices.data()
     ));
 
-    plhs[0] = y.release();
+    plhs[0] = out.release();
 }

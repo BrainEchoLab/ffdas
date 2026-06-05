@@ -11,13 +11,13 @@ namespace ffdas::detail {
 template<typename Tx, typename Ty>
 ffdas_error_t greens_sum_impl(
     ffdas_context &handle,
-    const float3 *xpos,
+    const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const Tx* x,
-    const float3 *ypos,
-    const ffdas_tensor_desc &y_desc,
-    Ty* y
+    const float3 *dstpos,
+    const ffdas_tensor_desc &out_desc,
+    Ty* out
 ) {
     return FFDAS_ERROR_UNSUPPORTED_TYPE;
 }
@@ -26,21 +26,21 @@ ffdas_error_t greens_sum_impl(
 template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>
 ffdas_error_t greens_sum_dispatch(
     ffdas_context &handle,
-    const float3 *xpos,
+    const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const void* x,
-    const float3 *ypos,
-    const ffdas_tensor_desc &y_desc,
-    void* y
+    const float3 *dstpos,
+    const ffdas_tensor_desc &out_desc,
+    void* out
 ) {
     using Tx = typename ffdas_traits<Tx_t>::type;
     using Ty = typename ffdas_traits<Ty_t>::type;
 
     return greens_sum_impl<Tx, Ty>(
-        handle, xpos, wavenums,
+        handle, srcpos, wavenums,
         x_desc, static_cast<const Tx*>(x),
-        ypos, y_desc, static_cast<Ty*>(y)
+        dstpos, out_desc, static_cast<Ty*>(out)
     );
 }
 

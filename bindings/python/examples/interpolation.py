@@ -81,7 +81,7 @@ theta = cp.linspace(-0.5, 0.5, ntheta, dtype=cp.float32)
 phi = cp.linspace(-0.5, 0.5, nphi, dtype=cp.float32)
 
 rr, tt, pp = cp.meshgrid(r, theta, phi, indexing="ij")  # type: ignore
-grid_points = cp.stack(
+gridpos = cp.stack(
     [
         rr * cp.sin(tt),
         rr * cp.sin(pp),
@@ -91,13 +91,13 @@ grid_points = cp.stack(
 )
 
 ks = sampling_freq / sound_speed
-offsets = ffdas.cdist(source, grid_points) * ks
+offsets = ffdas.cdist(source, gridpos) * ks
 weights = cp.ones_like(offsets)
 
 spherical = ffdas.das(
     rf,
     channel_pos * ks,
-    grid_points * ks,
+    gridpos * ks,
     offsets,
     weights,
     wavenum=-2 * cp.pi * center_freq / sampling_freq,
@@ -108,7 +108,7 @@ envelope = cp.abs(spherical)  # (batch, nr, ntheta, nphi)
 
 # the Interpolator builds a lookup structure over the grid vertices
 # and can be reused for multiple query point sets
-interp = ffdas.Interpolator(grid_points)
+interp = ffdas.Interpolator(gridpos)
 
 cart_nz, cart_ny, cart_nx = 128, 128, 128
 cx = cp.linspace(xmin, xmax, cart_nx, dtype=cp.float32)

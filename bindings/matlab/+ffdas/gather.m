@@ -1,13 +1,13 @@
-function y = gather(x, indices, axis, permutation, dtype)
+function out = gather(x, indices, axis, permutation, dtype)
 % GATHER Gather elements along a dimension.
-%   Y = GATHER(X, INDICES, AXIS) gathers elements from X at positions
+%   OUT = GATHER(X, INDICES, AXIS) gathers elements from X at positions
 %   INDICES along dimension AXIS. INDICES are 1-based.
 %
-%   Y = GATHER(X, INDICES, AXIS, PERMUTATION) simultaneously permutes X
+%   OUT = GATHER(X, INDICES, AXIS, PERMUTATION) simultaneously permutes X
 %   during the gather, avoiding the extra copy that MATLAB's permute
 %   would create.
 %
-%   Y = GATHER(..., DTYPE) casts the output to DTYPE. Supported types:
+%   OUT = GATHER(..., DTYPE) casts the output to DTYPE. Supported types:
 %   'single', 'int16', 'int32'. Complexity is inferred from the input.
 %
 %   Inputs:
@@ -18,7 +18,7 @@ function y = gather(x, indices, axis, permutation, dtype)
 %     DTYPE       - Optional output datatype (char).
 %
 %   Output:
-%     Y - Gathered array (gpuArray). Same shape as X except along AXIS,
+%     OUT - Gathered array (gpuArray). Same shape as X except along AXIS,
 %         where the size equals length(INDICES).
 
     arguments 
@@ -35,10 +35,10 @@ function y = gather(x, indices, axis, permutation, dtype)
     indices = indices - 1;
 
     if isempty(permutation) && isempty(dtype)
-        y = ffdas.core.ffdas_gather(h, x, indices, axis);
+        out = ffdas.core.ffdas_gather(h, x, indices, axis);
     elseif ~isempty(permutation) && isempty(dtype)
-        y = ffdas.core.ffdas_gather(h, x, indices, axis, permutation);
+        out = ffdas.core.ffdas_gather(h, x, indices, axis, permutation);
     else
-        y = ffdas.core.ffdas_gather(h, x, indices, axis, permutation, dtype);
+        out = ffdas.core.ffdas_gather(h, x, indices, axis, permutation, dtype);
     end
 end

@@ -31,7 +31,7 @@ ffdas_error_t truncate_rank_execute(
     size_t d_syevdbuf_size,
     void *h_syevdbuf,
     size_t h_syevdbuf_size,
-    T *y
+    T *out
 ) {
     return FFDAS_ERROR_UNSUPPORTED_TYPE;
 }
@@ -49,7 +49,7 @@ ffdas_error_t truncate_rank_execute(
     size_t d_syevdbuf_size,
     void *h_syevdbuf,
     size_t h_syevdbuf_size,
-    float *y
+    float *out
 ) {
     float alpha = 1.0f / (float)m;
     float beta = 0.0f;
@@ -103,7 +103,7 @@ ffdas_error_t truncate_rank_execute(
         P, n
     ));
 
-    // y = x * P
+    // out = x * P
     CUBLAS_CHECK(cublasSsymm(
         handle.cublas_h,
         CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_UPPER,
@@ -112,7 +112,7 @@ ffdas_error_t truncate_rank_execute(
         P, n,
         x, m,
         &beta,
-        y, m
+        out, m
     ));
 
     return FFDAS_SUCCESS;
@@ -131,7 +131,7 @@ ffdas_error_t truncate_rank_execute(
     size_t d_syevdbuf_size,
     void *h_syevdbuf,
     size_t h_syevdbuf_size,
-    float2 *y
+    float2 *out
 ) {
     float2 calpha = make_float2(1.0f / (float)m, 0.0f);
     float2 cbeta = make_float2(0.0f, 0.0f);
@@ -188,7 +188,7 @@ ffdas_error_t truncate_rank_execute(
 
     calpha = make_float2(1.0f, 0.0f);
 
-    // y = x * P
+    // out = x * P
     CUBLAS_CHECK(cublasChemm(
         handle.cublas_h,
         CUBLAS_SIDE_RIGHT, CUBLAS_FILL_MODE_UPPER,
@@ -197,7 +197,7 @@ ffdas_error_t truncate_rank_execute(
         P, n,
         x, m,
         &cbeta,
-        y, m
+        out, m
     ));
 
     return FFDAS_SUCCESS;
@@ -216,7 +216,7 @@ ffdas_error_t truncate_rank_execute(
     size_t d_syevdbuf_size,
     void *h_syevdbuf,
     size_t h_syevdbuf_size,
-    double *y
+    double *out
 ) {
     double alpha = 1.0 / (double)m;
     double beta = 0.0;
@@ -275,7 +275,7 @@ ffdas_error_t truncate_rank_execute(
         P, n,
         x, m,
         &beta,
-        y, m
+        out, m
     ));
 
     return FFDAS_SUCCESS;
@@ -294,7 +294,7 @@ ffdas_error_t truncate_rank_execute(
     size_t d_syevdbuf_size,
     void *h_syevdbuf,
     size_t h_syevdbuf_size,
-    double2 *y
+    double2 *out
 ) {
     cuDoubleComplex calpha = make_cuDoubleComplex(1.0 / (double)m, 0.0);
     cuDoubleComplex cbeta = make_cuDoubleComplex(0.0, 0.0);
@@ -356,7 +356,7 @@ ffdas_error_t truncate_rank_execute(
         reinterpret_cast<const cuDoubleComplex*>(P), n,
         reinterpret_cast<const cuDoubleComplex*>(x), m,
         &cbeta,
-        reinterpret_cast<cuDoubleComplex*>(y), m
+        reinterpret_cast<cuDoubleComplex*>(out), m
     ));
 
     return FFDAS_SUCCESS;
@@ -364,19 +364,19 @@ ffdas_error_t truncate_rank_execute(
 
 
 // Project x onto its top-k eigenvectors.
-// x and y are column-major with shape (n, m) where n = channels, m = samples.
+// x and out are column-major with shape (n, m) where n = channels, m = samples.
 template<typename T>
 ffdas_error_t truncate_rank_impl(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const T* x,
-    const ffdas_tensor_desc &y_desc, T* y,
+    const ffdas_tensor_desc &out_desc, T* out,
     int start, int stop
 ) {
     if (x_desc.ndim() != 2)
         return FFDAS_ERROR_INVALID_DIMS;
-    if (!x_desc.same_dims(y_desc))
+    if (!x_desc.same_dims(out_desc))
         return FFDAS_ERROR_INVALID_DIMS;
-    if (x_desc.dtype != y_desc.dtype)
+    if (x_desc.dtype != out_desc.dtype)
         return FFDAS_ERROR_UNSUPPORTED_TYPE;
 
     int64_t n64 = x_desc.dims[0];
@@ -429,7 +429,7 @@ ffdas_error_t truncate_rank_impl(
         w.get(), V.get(), P.get(),
         bufferOnDevice.get(), workspaceInBytesOnDevice,
         bufferOnHost, workspaceInBytesOnHost,
-        y
+        out
     );
 
     free(bufferOnHost);
@@ -441,11 +441,11 @@ template<ffdas_datatype_t T_t>
 ffdas_error_t truncate_rank_dispatch(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const void* x,
-    const ffdas_tensor_desc &y_desc, void* y,
+    const ffdas_tensor_desc &out_desc, void* out,
     int start, int stop
 ) {
     using T = typename ffdas_traits<T_t>::type;
-    return truncate_rank_impl<T>(handle, x_desc, static_cast<const T*>(x), y_desc, static_cast<T*>(y), start, stop);
+    return truncate_rank_impl<T>(handle, x_desc, static_cast<const T*>(x), out_desc, static_cast<T*>(out), start, stop);
 }
 
 

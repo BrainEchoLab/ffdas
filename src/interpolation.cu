@@ -21,7 +21,7 @@ template<typename T>
 ffdas_error_t interpolate_nearest(
     ffdas_context &handle,
     const T *x,
-    T *y,
+    T *out,
     int64_t num_indices,
     const int *indices,
     int64_t batch_size,
@@ -33,7 +33,7 @@ ffdas_error_t interpolate_nearest(
         (num_indices + block_dim.x - 1) / block_dim.x, 
         batch_size
     );
-    interp_nearest_kernel<<<grid_dim, block_dim, 0, handle.stream>>>(x, y, (int)num_indices, indices, (int)batch_size, (int)batch_stride, fill_value);
+    interp_nearest_kernel<<<grid_dim, block_dim, 0, handle.stream>>>(x, out, (int)num_indices, indices, (int)batch_size, (int)batch_stride, fill_value);
 
     CUDA_LAUNCH_CHECK();
 
@@ -45,7 +45,7 @@ template<typename T>
 ffdas_error_t interpolate_linear(
     ffdas_context &handle,
     const T *x,
-    T *y,
+    T *out,
     int64_t num_indices,
     const int4 *indices,
     const float4 *weights,
@@ -55,7 +55,7 @@ ffdas_error_t interpolate_linear(
 ) {
     dim3 block_dim(256);
     dim3 grid_dim((num_indices + block_dim.x - 1) / block_dim.x, batch_size);
-    interp_linear_kernel<<<grid_dim, block_dim, 0, handle.stream>>>(x, y, (int)num_indices, indices, weights, (int)batch_size, (int)batch_stride, fill_value);
+    interp_linear_kernel<<<grid_dim, block_dim, 0, handle.stream>>>(x, out, (int)num_indices, indices, weights, (int)batch_size, (int)batch_stride, fill_value);
 
     CUDA_LAUNCH_CHECK();
 
@@ -67,16 +67,16 @@ template<typename T>
 ffdas_error_t interpolation_impl(
     ffdas_context &handle,
     ffdas_interpolation_plan &plan,
-    int64_t num_query_points,
-    const float *query_points,
-    const ffdas_tensor_desc &values_desc,
-    const T *values,
-    T *output,
+    int64_t num_querypos,
+    const float *querypos,
+    const ffdas_tensor_desc &x_desc,
+    const T *x,
+    T *out,
     const T &fill_value
 ) {
     // Check if we can use preprocessed data
     bool use_preprocessed = plan.is_preprocessed && 
-                           plan.cached_num_query_points == num_query_points;
+                           plan.cached_num_querypos == num_querypos;
     
     // Use pointers to avoid copying device_vectors and causing double-free
     thrust::device_vector<int>* nearest_indices_ptr = nullptr;
@@ -99,8 +99,8 @@ ffdas_error_t interpolation_impl(
         }
     } else {
         // Create device vector directly from input data (avoid copy)
-        const float3* query_points_f3 = reinterpret_cast<const float3*>(query_points);
-        device_query_points.assign(query_points_f3, query_points_f3 + num_query_points);
+        const float3* query_points_f3 = reinterpret_cast<const float3*>(querypos);
+        device_query_points.assign(query_points_f3, query_points_f3 + num_querypos);
         
         ffdas_error_t err;
         if (plan.mode == FFDAS_INTERP_NEAREST) {
@@ -121,22 +121,22 @@ ffdas_error_t interpolation_impl(
     int64_t batch_size = 1;
     int64_t batch_stride = plan.nz * plan.ny * plan.nx;
 
-    if (values_desc.ndim() == 4) {
-        batch_size = values_desc.dims[0];
+    if (x_desc.ndim() == 4) {
+        batch_size = x_desc.dims[0];
     }
     
     // Perform interpolation
     if (plan.mode == FFDAS_INTERP_NEAREST) {
         return interpolate_nearest<T>(
             handle,
-            values, output, num_query_points,
+            x, out, num_querypos,
             thrust::raw_pointer_cast(nearest_indices_ptr->data()),
             batch_size, batch_stride, fill_value
         );
     } else {
         return interpolate_linear<T>(
             handle,
-            values, output, num_query_points,
+            x, out, num_querypos,
             thrust::raw_pointer_cast(simplex_indices_ptr->data()),
             thrust::raw_pointer_cast(barycentric_coords_ptr->data()),
             batch_size, batch_stride, fill_value
@@ -153,12 +153,12 @@ ffdas_error_t ffdas_create_interpolation_plan(
     int64_t nx, 
     int64_t ny, 
     int64_t nz,
-    const float *grid_points,
+    const float *gridpos,
     ffdas_interp_mode_t mode
 ) {
     CHECK_HANDLE(handle);
     CHECK_NULL_PTR(plan);
-    CHECK_NULL_PTR(grid_points);
+    CHECK_NULL_PTR(gridpos);
 
     if (nz <= 0 || ny <= 0 || nx <= 0)
         return FFDAS_ERROR_INVALID_DIMS;
@@ -181,17 +181,17 @@ ffdas_error_t ffdas_create_interpolation_plan(
     (*plan)->nx = nx;
     (*plan)->mode = mode;
     (*plan)->is_preprocessed = false;
-    (*plan)->cached_num_query_points = 0;
+    (*plan)->cached_num_querypos = 0;
 
     // Copy grid points to device
     int64_t num_points = nz * ny * nx;
     thrust::device_vector<float3> device_grid_points(num_points);
     
-    // The input grid_points is a flat array of floats with 3*num_points elements
-    // representing (x,y,z) coordinates
+    // The input gridpos is a flat array of floats with 3*num_points elements
+    // representing (x,out,z) coordinates
     CUDA_CHECK(cudaMemcpyAsync(
         thrust::raw_pointer_cast(device_grid_points.data()),
-        grid_points,
+        gridpos,
         num_points * 3 * sizeof(float),
         cudaMemcpyDeviceToDevice,
         handle->stream
@@ -212,67 +212,67 @@ ffdas_error_t ffdas_create_interpolation_plan(
 ffdas_error_t ffdas_interpolation(
     ffdas_handle_t handle,
     ffdas_interpolation_plan_t plan,
-    int64_t num_query_points,
-    const float *query_points,
-    ffdas_tensor_desc_t values_desc,
-    const void *values,
-    void *output,
+    int64_t num_querypos,
+    const float *querypos,
+    ffdas_tensor_desc_t x_desc,
+    const void *x,
+    void *out,
     const void *fill_value
 ) {
     CHECK_HANDLE(handle);
     CHECK_NULL_PTR(plan);
-    CHECK_NULL_PTR(values_desc);
-    CHECK_NULL_PTR(values);
-    CHECK_NULL_PTR(output);
+    CHECK_NULL_PTR(x_desc);
+    CHECK_NULL_PTR(x);
+    CHECK_NULL_PTR(out);
     CHECK_NULL_PTR(fill_value);
     
-    // query_points can be NULL when using preprocessing
-    if (!query_points && !plan->is_preprocessed)
+    // querypos can be NULL when using preprocessing
+    if (!querypos && !plan->is_preprocessed)
         return FFDAS_ERROR_INVALID_ARGUMENT;
-    if (num_query_points <= 0)
+    if (num_querypos <= 0)
         return FFDAS_ERROR_INVALID_DIMS;
 
     ffdas::detail::nvtx_range nvtx(*handle, "interpolation");
 
-    // Validate values tensor descriptor
-    ffdas_tensor_desc val_desc = *values_desc;
+    // Validate x tensor descriptor
+    ffdas_tensor_desc x_tensor = *x_desc;
     
     // Values shape: (nz, ny, nx) or (batch, nz, ny, nx)
-    if (val_desc.ndim() == 3) {
-        if (val_desc.dims[0] != plan->nz ||
-            val_desc.dims[1] != plan->ny ||
-            val_desc.dims[2] != plan->nx)
+    if (x_tensor.ndim() == 3) {
+        if (x_tensor.dims[0] != plan->nz ||
+            x_tensor.dims[1] != plan->ny ||
+            x_tensor.dims[2] != plan->nx)
             return FFDAS_ERROR_INVALID_DIMS;
-    } else if (val_desc.ndim() == 4) {
-        if (val_desc.dims[1] != plan->nz ||
-            val_desc.dims[2] != plan->ny ||
-            val_desc.dims[3] != plan->nx)
+    } else if (x_tensor.ndim() == 4) {
+        if (x_tensor.dims[1] != plan->nz ||
+            x_tensor.dims[2] != plan->ny ||
+            x_tensor.dims[3] != plan->nx)
             return FFDAS_ERROR_INVALID_DIMS;
     } else {
         return FFDAS_ERROR_INVALID_DIMS;
     }
 
     // Dispatch based on data type
-    switch (val_desc.dtype) {
+    switch (x_tensor.dtype) {
         case FFDAS_R_32F:
             return ffdas::detail::interpolation_dispatch<FFDAS_R_32F>(
-                *handle, *plan, num_query_points, query_points,
-                val_desc, values, output, fill_value
+                *handle, *plan, num_querypos, querypos,
+                x_tensor, x, out, fill_value
             );
         case FFDAS_C_32F:
             return ffdas::detail::interpolation_dispatch<FFDAS_C_32F>(
-                *handle, *plan, num_query_points, query_points,
-                val_desc, values, output, fill_value
+                *handle, *plan, num_querypos, querypos,
+                x_tensor, x, out, fill_value
             );
         case FFDAS_R_64F:
             return ffdas::detail::interpolation_dispatch<FFDAS_R_64F>(
-                *handle, *plan, num_query_points, query_points,
-                val_desc, values, output, fill_value
+                *handle, *plan, num_querypos, querypos,
+                x_tensor, x, out, fill_value
             );
         case FFDAS_C_64F:
             return ffdas::detail::interpolation_dispatch<FFDAS_C_64F>(
-                *handle, *plan, num_query_points, query_points,
-                val_desc, values, output, fill_value
+                *handle, *plan, num_querypos, querypos,
+                x_tensor, x, out, fill_value
             );
         default:
             return FFDAS_ERROR_UNSUPPORTED_TYPE;
@@ -300,23 +300,23 @@ ffdas_error_t ffdas_destroy_interpolation_plan(
 ffdas_error_t ffdas_interpolation_preprocess(
     ffdas_handle_t handle,
     ffdas_interpolation_plan_t plan,
-    int64_t num_query_points,
-    const float *query_points
+    int64_t num_querypos,
+    const float *querypos
 ) {
     CHECK_HANDLE(handle);
     CHECK_NULL_PTR(plan);
-    CHECK_NULL_PTR(query_points);
+    CHECK_NULL_PTR(querypos);
 
-    if (num_query_points <= 0)
+    if (num_querypos <= 0)
         return FFDAS_ERROR_INVALID_DIMS;
 
     ffdas::detail::nvtx_range nvtx(*handle, "interpolation_preprocess");
 
     try {
         // Create device vector directly from input data (avoid copy)
-        const float3* query_points_f3 = reinterpret_cast<const float3*>(query_points);
-        plan->cached_query_points.assign(query_points_f3, query_points_f3 + num_query_points);
-        plan->cached_num_query_points = num_query_points;
+        const float3* query_points_f3 = reinterpret_cast<const float3*>(querypos);
+        plan->cached_querypos.assign(query_points_f3, query_points_f3 + num_querypos);
+        plan->cached_num_querypos = num_querypos;
     } catch (const std::exception& e) {
         return FFDAS_ERROR_ALLOCATION_FAILED;
     }
@@ -327,7 +327,7 @@ ffdas_error_t ffdas_interpolation_preprocess(
         FFDAS_CHECK(ffdas::detail::find_nearest_vertex(
             *handle,
             plan->hash,
-            plan->cached_query_points,
+            plan->cached_querypos,
             plan->cached_nearest_indices
         ));
     } else {
@@ -335,7 +335,7 @@ ffdas_error_t ffdas_interpolation_preprocess(
         FFDAS_CHECK(ffdas::detail::find_simplex(
             *handle,
             plan->hash,
-            plan->cached_query_points,
+            plan->cached_querypos,
             plan->cached_simplex_indices,
             plan->cached_barycentric_coords
         ));

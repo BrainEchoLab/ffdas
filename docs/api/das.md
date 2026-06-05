@@ -11,12 +11,12 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
     ```python
     ffdas.das(
         x,                    # channel data
-        xpos,                 # channel positions
-        ypos,                 # target positions
+        srcpos,                 # channel positions
+        dstpos,                 # target positions
         offsets,              # transmit delays
         weights,              # apodization weights
         *,
-        xdir=None,            # channel directivity
+        srcdir=None,            # channel directivity
         wavenum=0.0,          # phase rotation wavenumber
         algorithm=Algorithm.DEFAULT,
         out=None,
@@ -27,8 +27,8 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 === "MATLAB"
 
     ```matlab
-    y = ffdas.das(x, xpos, ypos, offsets, weights)
-    y = ffdas.das(x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_fp16, channels_trailing)
+    y = ffdas.das(x, srcpos, dstpos, offsets, weights)
+    y = ffdas.das(x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
     ```
 
 ## Parameters
@@ -36,11 +36,11 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
 | `x` | `([batch,] channels, seq, samples)` | `(samples, seq, channels[, batch])` | Channel data (RF or IQ). |
-| `xpos` | `(channels, 3)` | `(3, channels)` | Channel positions in sampling wavelengths. |
-| `ypos` | `(..., 3)` | `(3, ...)` | Target positions in sampling wavelengths. |
-| `offsets` | `(seq, ...)` | `(..., seq)` | Per-target transmit time offsets in samples. Spatial dimensions must match `ypos`. |
+| `srcpos` | `(channels, 3)` | `(3, channels)` | Channel positions in sampling wavelengths. |
+| `dstpos` | `(..., 3)` | `(3, ...)` | Target positions in sampling wavelengths. |
+| `offsets` | `(seq, ...)` | `(..., seq)` | Per-target transmit time offsets in samples. Spatial dimensions must match `dstpos`. |
 | `weights` | `(seq, ...)` | `(..., seq)` | Per-target apodization weights. Same shape as `offsets`. |
-| `xdir` | `(channels, 4)` or `None` | `(4, channels)` or `[]` | Directivity vectors. The first three components are the unit surface normal of each channel element; the fourth is the cosine of the sensitivity half-angle. Targets outside a channel's cone receive zero contribution from that channel. |
+| `srcdir` | `(channels, 4)` or `None` | `(4, channels)` or `[]` | Directivity vectors. The first three components are the unit surface normal of each channel element; the fourth is the cosine of the sensitivity half-angle. Targets outside a channel's cone receive zero contribution from that channel. |
 | `wavenum` | `float` | `single` | Wavenumber for phase rotation, typically `-2*pi*fc/fs` for IQ data. Set to `0` to disable. |
 | `algorithm` | `Algorithm` | `int32` | Algorithm variant. `DEFAULT` (0) selects automatically. |
 | `use_fp16` | `bool` | `logical` | Use half-precision arithmetic. |
@@ -48,7 +48,7 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 
 ## Returns
 
-Reconstructed output with the spatial dimensions of `ypos`: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
+Reconstructed output with the spatial dimensions of `dstpos`: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
 
 ## Example
 
@@ -103,10 +103,10 @@ The `offsets` and `weights` arrays have shape `(n, ...)` in Python and `(..., n)
 
     ```python
     ffdas.das_sparse(
-        x, xpos, ypos,
+        x, srcpos, dstpos,
         offsets, weights, sparse_indices,
         *,
-        xdir=None, wavenum=0.0,
+        srcdir=None, wavenum=0.0,
         algorithm=Algorithm.DEFAULT,
         out=None, use_fp16=False,
     )
@@ -115,6 +115,6 @@ The `offsets` and `weights` arrays have shape `(n, ...)` in Python and `(..., n)
 === "MATLAB"
 
     ```matlab
-    y = ffdas.das_sparse(x, xpos, ypos, offsets, weights, sparse_indices)
-    y = ffdas.das_sparse(x, xpos, ypos, offsets, weights, sparse_indices, xdir, wavenum, algorithm, use_fp16, channels_trailing)
+    y = ffdas.das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices)
+    y = ffdas.das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
     ```

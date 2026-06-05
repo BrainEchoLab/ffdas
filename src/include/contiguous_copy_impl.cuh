@@ -18,7 +18,7 @@ template<typename Tx, typename Ty>
 ffdas_error_t contiguous_copy_impl(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const Tx* x,
-    Ty* y
+    Ty* out
 ) {
     if (!ffdas::detail::can_use_int32_indexing(x_desc))
         return FFDAS_ERROR_INVALID_DIMS;
@@ -50,7 +50,7 @@ ffdas_error_t contiguous_copy_impl(
     dim3 block_dim(512);
     dim3 grid_dim((x_desc.numel() + block_dim.x - 1) / block_dim.x);
 
-    strided_copy_kernel<Tx, Ty><<<grid_dim, block_dim, 0, handle.stream>>>((int)x_desc.numel(), (int)ndim, d_dims.get(), d_x_strides.get(), x, d_y_strides.get(), y);
+    strided_copy_kernel<Tx, Ty><<<grid_dim, block_dim, 0, handle.stream>>>((int)x_desc.numel(), (int)ndim, d_dims.get(), d_x_strides.get(), x, d_y_strides.get(), out);
 
     CUDA_LAUNCH_CHECK();
 
@@ -62,12 +62,12 @@ template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>
 ffdas_error_t contiguous_copy_dispatch(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const void* x,
-    const ffdas_tensor_desc &y_desc, void* y
+    const ffdas_tensor_desc &out_desc, void* out
 ) {
     using Tx = typename ffdas_traits<Tx_t>::type;
     using Ty = typename ffdas_traits<Ty_t>::type;
 
-    return contiguous_copy_impl<Tx, Ty>(handle, x_desc, static_cast<const Tx*>(x), static_cast<Ty*>(y));
+    return contiguous_copy_impl<Tx, Ty>(handle, x_desc, static_cast<const Tx*>(x), static_cast<Ty*>(out));
 }
 
 

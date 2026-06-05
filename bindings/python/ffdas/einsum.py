@@ -7,12 +7,10 @@ from ._core.tensor import reshape, empty_like
 
 
 def implicit_output_modes(modes: list[str]):
-    # count number of times modes appear across all operands
     mode_count = {}
     for mode in "".join(modes):
         mode_count[mode] = mode_count.get(mode, 0) + 1
 
-    # output modes appear exactly once, and are ordered by first appearance
     output_modes = []
     seen = set()
     for mode in "".join(modes):
@@ -27,7 +25,7 @@ def implicit_output_modes(modes: list[str]):
 def einsum(
     subscripts: str,
     a: T,
-    x: T,
+    b: T,
     *,
     out: None = None,
 ) -> T: ...
@@ -35,7 +33,7 @@ def einsum(
 def einsum(
     subscripts: str,
     a: TensorLike,
-    x: TensorLike,
+    b: TensorLike,
     *,
     out: T,
 ) -> T: ...
@@ -43,7 +41,7 @@ def einsum(
 def einsum(
     subscripts: str,
     a: TensorLike,
-    x: TensorLike,
+    b: TensorLike,
     *,
     out: TensorLike | None = None,
 ) -> TensorLike:
@@ -58,7 +56,7 @@ def einsum(
     Args:
         subscripts: Subscript string, e.g. "ij,jk->ik".
         a: First operand.
-        x: Second operand.
+        b: Second operand.
         out: Pre-allocated output array.
 
     Returns:
@@ -67,24 +65,22 @@ def einsum(
     sides = subscripts.split("->")
 
     if len(sides) == 1:
-        # No '->' found, infer output modes
         modes = sides[0].split(",")
         if len(modes) != 2:
             raise ValueError(
                 f"subscripts must contain exactly one ',' (got '{subscripts}')"
             )
-        am, xm = modes
-        ym = implicit_output_modes(modes)
+        am, bm = modes
+        outm = implicit_output_modes(modes)
     elif len(sides) == 2:
-        # Explicit output modes provided
         modes = sides[0].split(",")
         if len(modes) != 2:
             raise ValueError(
                 f"subscripts must contain exactly one ',' (got '{subscripts}')"
             )
 
-        am, xm = modes
-        ym = sides[1]
+        am, bm = modes
+        outm = sides[1]
     else:
         raise ValueError(
             f"subscripts must contain at most one '->' (got '{subscripts}')"
@@ -92,57 +88,53 @@ def einsum(
 
     dims = {m: d for m, d in zip(am, a.shape)}
 
-    for m, d in zip(xm, x.shape):
+    for m, d in zip(bm, b.shape):
         prev = dims.setdefault(m, d)
         if prev != d:
             raise ValueError(f"input dimensions don't match for subscript '{m}'")
 
-    if len(set(ym) - set(dims.keys())) > 0:
-        raise ValueError(f"unexpected modes in output: {set(ym) - dims.keys()}")
+    if len(set(outm) - set(dims.keys())) > 0:
+        raise ValueError(f"unexpected modes in output: {set(outm) - dims.keys()}")
 
-    # Handle scalar output case by adding a dummy dimension
-    scalar_output = len(ym) == 0
+    scalar_output = len(outm) == 0
     if scalar_output:
-        # Add a dummy mode and reshape one of the operands to have an extra dimension of size 1
-        dummy_mode = chr(max(ord(m) for m in am + xm) + 1)  # Find an unused mode
-        ym = dummy_mode
-        # Add dummy dimension to the second operand (x)
-        x = reshape(x, x.shape + (1,))
-        xm = xm + dummy_mode
+        dummy_mode = chr(max(ord(m) for m in am + bm) + 1)
+        outm = dummy_mode
+        b = reshape(b, b.shape + (1,))
+        bm = bm + dummy_mode
         dims[dummy_mode] = 1
 
-    out_shape = tuple(dims[m] for m in ym)
+    out_shape = tuple(dims[m] for m in outm)
 
     if out is None:
-        out = empty_like(x, shape=out_shape)
+        out = empty_like(b, shape=out_shape)
     elif out.shape != out_shape:
         raise ValueError(
             f"invalid output shape: {tuple(out.shape)} (expected {out_shape})"
         )
 
     am = [ord(m) for m in am]
-    xm = [ord(m) for m in xm]
-    ym = [ord(m) for m in ym]
+    bm = [ord(m) for m in bm]
+    outm = [ord(m) for m in outm]
 
     plan = _ffdas.create_contraction(
         get_library_handle(),
-        x,
-        xm,
         a,
         am,
+        b,
+        bm,
         out,
-        ym,
+        outm,
     )
 
     _ffdas.contraction(
         get_library_handle(),
         plan,
-        x,
         a,
+        b,
         out,
     )
 
-    # Remove dummy dimension for scalar output
     if scalar_output:
         out = reshape(out, (1,))
 

@@ -19,10 +19,10 @@ The output at each target is the sum over all sources of $x_s \cdot G$, computed
 
     ```python
     ffdas.greens(
-        xpos,         # source positions
+        srcpos,         # source positions
         wavenums,     # wavenumber per frequency bin
         x,            # source field (frequency domain)
-        ypos,         # target positions
+        dstpos,         # target positions
         *,
         out=None,
     )
@@ -31,21 +31,21 @@ The output at each target is the sum over all sources of $x_s \cdot G$, computed
 === "MATLAB"
 
     ```matlab
-    y = ffdas.greens(xpos, wavenums, x, ypos)
+    y = ffdas.greens(srcpos, wavenums, x, dstpos)
     ```
 
 ## Parameters
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `xpos` | `(sources, 3)` | `(3, sources)` | Source positions. Any unit is fine as long as `wavenums` uses the reciprocal unit. |
+| `srcpos` | `(sources, 3)` | `(3, sources)` | Source positions. Any unit is fine as long as `wavenums` uses the reciprocal unit. |
 | `wavenums` | `(frequencies,)` | `(frequencies, 1)` | Wavenumber at each frequency bin. For outgoing waves, use $k = -2\pi f / c$. |
 | `x` | `([batch,] sources, frequencies)` | `(frequencies, sources[, batch])` | Complex-valued input field in the frequency domain. |
-| `ypos` | `(..., 3)` | `(3, ...)` | Target positions. Same units as `xpos`. |
+| `dstpos` | `(..., 3)` | `(3, ...)` | Target positions. Same units as `srcpos`. |
 
 ## Returns
 
-Propagated field at the target positions: `([batch,] ..., frequencies)` in Python, `(frequencies, ...[, batch])` in MATLAB, where `...` corresponds to the spatial dimensions of `ypos`.
+Propagated field at the target positions: `([batch,] ..., frequencies)` in Python, `(frequencies, ...[, batch])` in MATLAB, where `...` corresponds to the spatial dimensions of `dstpos`.
 
 ## Example
 

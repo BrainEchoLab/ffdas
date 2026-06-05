@@ -5,28 +5,28 @@ from numpy.testing import assert_allclose
 import ffdas
 
 
-def _greens_reference(xpos, wavenums, x, ypos):
+def _greens_reference(srcpos, wavenums, x, dstpos):
     """Reference: y[b,t,f] = sum_s x[b,s,f] * exp(i*k[f]*r[s,t]) / r[s,t]."""
-    flat_ypos = ypos.reshape(-1, 3)
-    diff = xpos[None, :, :] - flat_ypos[:, None, :]
+    flat_ypos = dstpos.reshape(-1, 3)
+    diff = srcpos[None, :, :] - flat_ypos[:, None, :]
     r = np.maximum(np.sqrt(np.sum(diff ** 2, axis=-1)), 1e-10)
     phase = wavenums[None, None, :] * r[:, :, None]
     kernel = np.exp(1j * phase) / r[:, :, None]
     out = np.einsum("bsf,tsf->btf", x, kernel)
-    return out.reshape(x.shape[0], *ypos.shape[:-1], x.shape[2])
+    return out.reshape(x.shape[0], *dstpos.shape[:-1], x.shape[2])
 
 
 def test_greens_against_reference(rng):
     batch_size, nin, nk, nout = 1, 4, 8, 6
-    xpos = rng.standard_normal((nin, 3)).astype("float32")
-    ypos = rng.standard_normal((nout, 3)).astype("float32")
+    srcpos = rng.standard_normal((nin, 3)).astype("float32")
+    dstpos = rng.standard_normal((nout, 3)).astype("float32")
     wavenums = rng.uniform(1.0, 10.0, (nk,)).astype("float32")
     x = (rng.standard_normal((batch_size, nin, nk))
          + 1j * rng.standard_normal((batch_size, nin, nk))).astype("complex64")
 
-    expected = _greens_reference(xpos, wavenums, x, ypos)
+    expected = _greens_reference(srcpos, wavenums, x, dstpos)
     result = ffdas.greens(
-        cp.array(xpos), cp.array(wavenums), cp.array(x), cp.array(ypos),
+        cp.array(srcpos), cp.array(wavenums), cp.array(x), cp.array(dstpos),
     )
     assert_allclose(cp.asnumpy(result), expected, rtol=1e-3, atol=1e-4)
 

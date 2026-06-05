@@ -15,12 +15,12 @@ template<int warps_per_block, int M = 16, int N = 16, int K = 16>
 __global__ void greens_sum_kernel(
     int samples,  // S samples (frequency bins)
     int channels,  // M channels (sources)
-    const float3 *xpos,  // [M]: positions of each source
+    const float3 *srcpos,  // [M]: positions of each source
     const float *wavenums,  // [S]: wave number k per sample
     const half2 *x,  // [M * S]: half2 samples (real, imag)
     int ny,
-    const float3 *ypos,  // [N]: positions of each target point
-    float2 *y,  // [N * S]: output complex float per target-sample
+    const float3 *dstpos,  // [N]: positions of each target point
+    float2 *out,  // [N * S]: output complex float per target-sample
     int batch_size
 ) {
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -39,7 +39,7 @@ __global__ void greens_sum_kernel(
     const float wavenum = wavenums[k];
     __shared__ float3 ypos_shared[warps_per_block * M];
     if (lane_id < M && nbase + lane_id < ny) {
-        ypos_shared[(threadIdx.x / warpSize)*M + lane_id] = ypos[nbase + lane_id];
+        ypos_shared[(threadIdx.x / warpSize)*M + lane_id] = dstpos[nbase + lane_id];
     }
 
     __syncthreads();
@@ -72,7 +72,7 @@ __global__ void greens_sum_kernel(
         for (int i = row; i < M; i+=num_rows_per_warp) {
             for (int j = col; j < K; j+=num_cols_per_warp) {
                 if (nbase + i < ny && mbase + j < channels) {
-                    float3 xp = xpos[mbase + j];
+                    float3 xp = srcpos[mbase + j];
                     float3 yp = ypos_shared[(threadIdx.x / warpSize)*M + i];
 
                     float dx = yp.x - xp.x;
@@ -152,7 +152,7 @@ __global__ void greens_sum_kernel(
                 RI_sh[smem_index + i * N + j] + IR_sh[smem_index + i * N + j]
             );
 
-            y[k * (ny * batch_size) + (nbase + i) * batch_size + batch + j] = v;
+            out[k * (ny * batch_size) + (nbase + i) * batch_size + batch + j] = v;
         }
     }
 }

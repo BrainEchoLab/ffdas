@@ -18,16 +18,16 @@ __global__ void das_alg2_kernel(
     int samples, 
     int seqlen,
     int channels,
-    const float4 *xdir, 
+    const float4 *srcdir, 
     float wavenum,
     const Tx *x, 
     int ny, 
     int ystride, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     Ty beta, 
-    Ty *y, 
+    Ty *out, 
     int batch_size
 ) {
     static_assert(M<=32, "M must be <= 32");
@@ -70,7 +70,7 @@ __global__ void das_alg2_kernel(
     const int row = lane / cols_per_subtile;
     const int col = batch_base + (lane % cols_per_subtile) * vec_size;
 
-    const float3 yp = ypos[min(target_base + (lane % M), ny-1)];
+    const float3 yp = dstpos[min(target_base + (lane % M), ny-1)];
     __shared__ Ty shared_weight[warps_per_block][32];
 
     Ty accum[elem_per_thread]{};
@@ -104,7 +104,7 @@ __global__ void das_alg2_kernel(
             bool inbounds = (ipart >= 0) & (ipart < (samples-1));
 
             if constexpr (dir_check) {
-                float4 xd = xdir[lane_ch];
+                float4 xd = srcdir[lane_ch];
                 float proj = (dx * xd.x + dy * xd.y + dz * xd.z) * rinv;
                 inbounds &= (proj > xd.w);
             }
@@ -169,7 +169,7 @@ __global__ void das_alg2_kernel(
                 int out_ofs = target_base + m + n * ystride;
                 
                 for (int i = 0; i < vec_size; i++) {
-                    accumulate_inplace(&y[out_ofs + i*ystride], *acc_ptr++, beta);
+                    accumulate_inplace(&out[out_ofs + i*ystride], *acc_ptr++, beta);
                 }
             }
         }

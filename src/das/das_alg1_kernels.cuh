@@ -15,18 +15,18 @@ __global__ void das_alg1_kernel(
     int samples, 
     int seqlen,
     int channels,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     const Tx *x, 
     int ny, 
     int ystride, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     const int *sparse_indices, 
     Ty beta, 
-    Ty *y, 
+    Ty *out, 
     int batch_size
 ) {
     const int n = blockIdx.x * blockDim.x + threadIdx.x;
@@ -35,7 +35,7 @@ __global__ void das_alg1_kernel(
     if (n >= ny || batch_base >= batch_size) 
         return;
 
-    const float3 yp = ypos[n];
+    const float3 yp = dstpos[n];
 
     // clamp the batch size for this block to the total batch size
     const int actual_batch_size = min(tile_width, batch_size - batch_base);
@@ -53,7 +53,7 @@ __global__ void das_alg1_kernel(
         const float scl = weights[n + seqidx * ystride];
 
         for (int m = 0; m < channels; m++) {
-            const float3 xp = xpos[m];
+            const float3 xp = srcpos[m];
             const float dx = yp.x - xp.x;
             const float dy = yp.y - xp.y;
             const float dz = yp.z - xp.z;
@@ -67,7 +67,7 @@ __global__ void das_alg1_kernel(
             bool inbounds = (k >= 0) & (k < (samples - 1));
 
             if constexpr (dir_check) {
-                float4 xd = xdir[m];
+                float4 xd = srcdir[m];
                 float proj = (dx * xd.x + dy * xd.y + dz * xd.z) * rinv;
                 inbounds &= (proj > xd.w);
             }
@@ -99,6 +99,6 @@ __global__ void das_alg1_kernel(
 
     for (int b = 0; b < actual_batch_size; b++) {
         int idx = n + (batch_base + b) * ystride;
-        accumulate_inplace(&y[idx], accum[b], beta);
+        accumulate_inplace(&out[idx], accum[b], beta);
     }
 }

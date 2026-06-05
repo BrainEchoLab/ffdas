@@ -1,9 +1,9 @@
-function y = truncate_rank(x, start, stop)
+function out = truncate_rank(x, start, stop)
 % TRUNCATE_RANK Rank truncation filter via truncated SVD reconstruction.
-%   Y = TRUNCATE_RANK(X, START) reconstructs X using only singular vectors
+%   OUT = TRUNCATE_RANK(X, START) reconstructs X using only singular vectors
 %   from START onward, removing the first START-1 components.
 %
-%   Y = TRUNCATE_RANK(X, START, STOP) keeps only singular vectors START
+%   OUT = TRUNCATE_RANK(X, START, STOP) keeps only singular vectors START
 %   through STOP.
 %
 %   The input is reshaped to a 2D matrix (m, n) where n is the last
@@ -32,6 +32,6 @@ function y = truncate_rank(x, start, stop)
     end
 
     h = ffdas.core.get_handle();
-    y = ffdas.core.ffdas_truncate_rank(h, x, start, stop);
-    y = reshape(y, shp);
+    out = ffdas.core.ffdas_truncate_rank(h, x, start, stop);
+    out = reshape(out, shp);
 end

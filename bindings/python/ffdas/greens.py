@@ -9,28 +9,28 @@ from ._core.tensor import empty_like, reshape, astype
 
 @overload
 def greens(
-    xpos: TensorLike,
+    srcpos: TensorLike,
     wavenums: TensorLike,
     x: T,
-    ypos: TensorLike,
+    dstpos: TensorLike,
     *,
     out: None = ...,
 ) -> T: ...
 @overload
 def greens(
-    xpos: TensorLike,
+    srcpos: TensorLike,
     wavenums: TensorLike,
     x: TensorLike,
-    ypos: TensorLike,
+    dstpos: TensorLike,
     *,
     out: T,
 ) -> T: ...
 
 def greens(
-    xpos: TensorLike,
+    srcpos: TensorLike,
     wavenums: TensorLike,
     x: TensorLike,
-    ypos: TensorLike,
+    dstpos: TensorLike,
     *,
     out: TensorLike | None = None,
 ) -> TensorLike:
@@ -42,29 +42,29 @@ def greens(
     frequency.
 
     Args:
-        xpos: Source positions, shape (sources, 3).
+        srcpos: Source positions, shape (sources, 3).
         wavenums: Wavenumber per frequency bin, shape (frequencies,).
         x: Input field, shape (batch, sources, frequencies) Complex-valued (frequency domain).
-        ypos: Target positions, shape (..., 3).
+        dstpos: Destination (target) positions, shape (..., 3).
         out: Pre-allocated output array.
 
     Returns:
         Propagated field, shape (batch, num_targets, frequencies), where
-        num_targets = product of ypos.shape[:-1].
+        num_targets = product of dstpos.shape[:-1].
     """
-    xpos = astype(xpos, "float32")
-    ypos = astype(ypos, "float32")
+    srcpos = astype(srcpos, "float32")
+    dstpos = astype(dstpos, "float32")
     wavenums = astype(wavenums, "float32")
 
-    out_shape = (*ypos.shape[:-1], x.shape[-1])
-    flat_shape = (math.prod(ypos.shape[:-1]), x.shape[-1])
+    out_shape = (*dstpos.shape[:-1], x.shape[-1])
+    flat_shape = (math.prod(dstpos.shape[:-1]), x.shape[-1])
 
     if x.ndim == 3:
         out_shape = (x.shape[0],) + out_shape
         flat_shape = (x.shape[0],) + flat_shape
     elif x.ndim == 2:
         flat_shape = (1,) + flat_shape
-        x = reshape(x, (1,) + x.shape)  # C API requires a batch dimension
+        x = reshape(x, (1,) + x.shape)
     else:
         raise ValueError(f"input must have 2 or 3 dimensions, got shape {tuple(x.shape)}")
 
@@ -77,10 +77,10 @@ def greens(
 
     _ffdas.greens_sum(
         get_library_handle(),
-        xpos,
+        srcpos,
         wavenums,
         x,
-        ypos,
+        dstpos,
         out_3d,
     )
 

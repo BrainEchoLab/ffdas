@@ -17,30 +17,30 @@ namespace ffdas::detail {
 template<typename Tx, typename Ty>
 ffdas_error_t das_sparse_impl(
     ffdas_context &handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     int sparse_count,
     const int *sparse_indices, 
     Ty beta, 
-    const ffdas_tensor_desc &y_desc, 
-    Ty* y,
+    const ffdas_tensor_desc &out_desc, 
+    Ty* out,
     ffdas_compute_type_t compute_type,
     ffdas_alg_t alg
 ) {
-    if (!can_use_int32_indexing(x_desc) || !can_use_int32_indexing(y_desc))
+    if (!can_use_int32_indexing(x_desc) || !can_use_int32_indexing(out_desc))
         return FFDAS_ERROR_INVALID_DIMS;
 
     switch (alg)
     {
     case FFDAS_ALG_DEFAULT:
     case FFDAS_ALG1:
-        return das_alg1_sparse<Tx, Ty>(handle, xpos, xdir, wavenum, x_desc, x, ypos, offsets, weights, sparse_count, sparse_indices, beta, y_desc, y, compute_type);
+        return das_alg1_sparse<Tx, Ty>(handle, srcpos, srcdir, wavenum, x_desc, x, dstpos, offsets, weights, sparse_count, sparse_indices, beta, out_desc, out, compute_type);
     default:
         break;
     }
@@ -52,19 +52,19 @@ ffdas_error_t das_sparse_impl(
 template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>
 ffdas_error_t ffdas_das_sparse_dispatch(
     ffdas_context &handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const void* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     int sparse_count,
     const int *sparse_indices, 
     const void *beta, 
-    const ffdas_tensor_desc &y_desc, 
-    void* y,
+    const ffdas_tensor_desc &out_desc, 
+    void* out,
     ffdas_compute_type_t compute_type,
     ffdas_alg_t alg
 ) {
@@ -73,19 +73,19 @@ ffdas_error_t ffdas_das_sparse_dispatch(
 
     return das_sparse_impl<Tx, Ty>(
         handle,
-        xpos,
-        xdir,
+        srcpos,
+        srcdir,
         wavenum,
         x_desc,
         static_cast<const Tx*>(x),
-        ypos,
+        dstpos,
         offsets,
         weights,
         sparse_count,
         sparse_indices,
         *reinterpret_cast<const Ty*>(beta),
-        y_desc,
-        static_cast<Ty*>(y),
+        out_desc,
+        static_cast<Ty*>(out),
         compute_type,
         alg
     );

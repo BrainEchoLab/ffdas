@@ -21,28 +21,28 @@ template<typename Tx, typename Ty>
 ffdas_error_t gather_impl(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const Tx* x,
-    const ffdas_tensor_desc &y_desc, Ty* y,
+    const ffdas_tensor_desc &out_desc, Ty* out,
     int mode,
     size_t num_indices,
     const int *indices
 ) {
     size_t ndim = x_desc.ndim();
 
-    if (y_desc.ndim() != ndim)
+    if (out_desc.ndim() != ndim)
         return FFDAS_ERROR_INVALID_DIMS;
     if (mode < 0 || mode >= ndim)
         return FFDAS_ERROR_INVALID_ARGUMENT;
-    if (y_desc.dims[mode] != num_indices)
+    if (out_desc.dims[mode] != num_indices)
         return FFDAS_ERROR_INVALID_DIMS;
-    if (!y_desc.is_contiguous())
+    if (!out_desc.is_contiguous())
         return FFDAS_ERROR_INVALID_DIMS;
-    if (!can_use_int32_indexing(x_desc) || !can_use_int32_indexing(y_desc))
+    if (!can_use_int32_indexing(x_desc) || !can_use_int32_indexing(out_desc))
         return FFDAS_ERROR_INVALID_DIMS;
 
     std::vector<int> h_dims(ndim);
     std::vector<int> h_strides(ndim);
     for(int i = 0; i < ndim; i++){
-        h_dims[i] = static_cast<int>(y_desc.dims[i]);
+        h_dims[i] = static_cast<int>(out_desc.dims[i]);
         h_strides[i] = static_cast<int>(x_desc.strides[i]);
     }
 
@@ -66,9 +66,9 @@ ffdas_error_t gather_impl(
     CUDA_CHECK(cudaMemcpyToSymbolAsync(gather_radix_magic, radix_magic.data(), ndim * sizeof(magic_pair), 0, cudaMemcpyHostToDevice, handle.stream));
 
     dim3 block_dim(256);
-    dim3 grid_dim((y_desc.numel() + block_dim.x - 1) / block_dim.x);
+    dim3 grid_dim((out_desc.numel() + block_dim.x - 1) / block_dim.x);
 
-    gather_copy_kernel<Tx, Ty><<<grid_dim, block_dim, 0, handle.stream>>>((int)y_desc.numel(), (int)ndim, mode, indices, x, y);
+    gather_copy_kernel<Tx, Ty><<<grid_dim, block_dim, 0, handle.stream>>>((int)out_desc.numel(), (int)ndim, mode, indices, x, out);
 
     CUDA_LAUNCH_CHECK();
 
@@ -80,7 +80,7 @@ template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>
 ffdas_error_t ffdas_gather_dispatch(
     ffdas_context &handle,
     const ffdas_tensor_desc &x_desc, const void* x,
-    const ffdas_tensor_desc &y_desc, void* y,
+    const ffdas_tensor_desc &out_desc, void* out,
     int mode,
     size_t num_indices,
     const int *indices
@@ -88,7 +88,7 @@ ffdas_error_t ffdas_gather_dispatch(
     using Tx = typename ffdas_traits<Tx_t>::type;
     using Ty = typename ffdas_traits<Ty_t>::type;
 
-    return gather_impl<Tx, Ty>(handle, x_desc, static_cast<const Tx*>(x), y_desc, static_cast<Ty*>(y), mode, num_indices, indices);
+    return gather_impl<Tx, Ty>(handle, x_desc, static_cast<const Tx*>(x), out_desc, static_cast<Ty*>(out), mode, num_indices, indices);
 }
 
 }  // namespace ffdas::detail

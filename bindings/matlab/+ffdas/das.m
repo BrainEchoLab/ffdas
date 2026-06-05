@@ -1,6 +1,6 @@
-function y = das(x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_fp16, channels_trailing)
+function out = das(x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
 % DAS Delay-and-sum beamforming, compounding over the sequence dimension.
-%   Y = DAS(X, XPOS, YPOS, OFFSETS, WEIGHTS) beamforms input data X by
+%   OUT = DAS(X, SRCPOS, DSTPOS, OFFSETS, WEIGHTS) beamforms input data X by
 %   computing a weighted sum of interpolated samples from all channels and
 %   sequence events for each target position.
 %
@@ -11,13 +11,13 @@ function y = das(x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_
 %     X       - Input RF data (gpuArray). Shape:
 %               (samples, sequence, channels[, batch]) if CHANNELS_TRAILING, or
 %               (samples, channels, sequence[, batch]) otherwise.
-%     XPOS    - Channel positions (gpuArray, single), shape (3, channels).
-%     YPOS    - Target positions (gpuArray, single), shape (3, ...).
+%     SRCPOS  - Source (channel) positions (gpuArray, single), shape (3, channels).
+%     DSTPOS  - Destination (target) positions (gpuArray, single), shape (3, ...).
 %     OFFSETS - Per-target time offsets in samples (gpuArray, single),
 %               shape (..., sequence).
 %     WEIGHTS - Per-target apodization weights (gpuArray, single),
 %               shape (..., sequence).
-%     XDIR    - Channel directivity vectors (gpuArray, single),
+%     SRCDIR  - Source directivity vectors (gpuArray, single),
 %               shape (4, channels). The first three rows are the unit
 %               surface normal; the fourth is the cosine of the sensitivity
 %               half-angle. Default: [] (disabled).
@@ -29,15 +29,15 @@ function y = das(x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_
 %                         dimension in X. Default: true.
 %
 %   Output:
-%     Y - Beamformed output (gpuArray), shape (...[, batch]).
+%     OUT - Beamformed output (gpuArray), shape (...[, batch]).
 
     arguments 
         x gpuArray
-        xpos gpuArray
-        ypos gpuArray
+        srcpos gpuArray
+        dstpos gpuArray
         offsets gpuArray
         weights gpuArray
-        xdir gpuArray = []
+        srcdir gpuArray = []
         wavenum single = 0.0
         algorithm int32 = 0
         use_fp16 logical = false
@@ -46,11 +46,11 @@ function y = das(x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_
 
     h = ffdas.core.get_handle();
 
-    xpos = ffdas.core.astype(xpos, 'single');
-    ypos = ffdas.core.astype(ypos, 'single');
+    srcpos = ffdas.core.astype(srcpos, 'single');
+    dstpos = ffdas.core.astype(dstpos, 'single');
     offsets = ffdas.core.astype(offsets, 'single');
     weights = ffdas.core.astype(weights, 'single');
-    xdir = ffdas.core.astype(xdir, 'single');
+    srcdir = ffdas.core.astype(srcdir, 'single');
 
-    y = ffdas.core.ffdas_das(h, x, xpos, ypos, offsets, weights, xdir, wavenum, algorithm, use_fp16, channels_trailing);
+    out = ffdas.core.ffdas_das(h, x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorithm, use_fp16, channels_trailing);
 end

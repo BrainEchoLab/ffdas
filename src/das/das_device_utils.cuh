@@ -16,10 +16,10 @@ float clampf(float x, float amin, float amax) {
 }
 
 __device__ __forceinline__
-float distf(float3 x, float3 y, float3 *delta, float *rinv) {
-    delta->x = x.x - y.x;
-    delta->y = x.y - y.y;
-    delta->z = x.z - y.z;
+float distf(float3 x, float3 out, float3 *delta, float *rinv) {
+    delta->x = x.x - out.x;
+    delta->y = x.y - out.y;
+    delta->z = x.z - out.z;
     float r_sq = delta->x * delta->x + delta->y * delta->y + delta->z * delta->z;
     *rinv = rsqrtf(r_sq);
     return r_sq * (*rinv);
@@ -28,11 +28,11 @@ float distf(float3 x, float3 y, float3 *delta, float *rinv) {
 
 template<typename T>
 static __device__ __forceinline__ 
-void accumulate_inplace(T* y, T acc, T beta) {
+void accumulate_inplace(T* out, T acc, T beta) {
     if (builtin_traits<T>::is_zero(beta)) {
-        *y = acc;
+        *out = acc;
     } else {
-        *y = cmadd(beta, *y, acc);
+        *out = cmadd(beta, *out, acc);
     }
 }
 

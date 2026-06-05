@@ -14,9 +14,9 @@ One-shot interpolation. Creates an internal plan, evaluates the query points, an
 
     ```python
     ffdas.interpolate(
-        grid_points,       # grid vertex positions
+        gridpos,       # grid vertex positions
         values,            # values on the grid
-        query_points,      # evaluation points
+        querypos,      # evaluation points
         *,
         mode="linear",     # "nearest" or "linear"
         fill=None,         # fill value for out-of-grid points (default 0)
@@ -27,23 +27,23 @@ One-shot interpolation. Creates an internal plan, evaluates the query points, an
 === "MATLAB"
 
     ```matlab
-    result = ffdas.interpolate(grid_points, values, query_points)
-    result = ffdas.interpolate(grid_points, values, query_points, mode, fill_value)
+    result = ffdas.interpolate(gridpos, values, querypos)
+    result = ffdas.interpolate(gridpos, values, querypos, mode, fill_value)
     ```
 
 ### Parameters
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `grid_points` | `(nz, ny, nx, 3)` | `(3, nx, ny, nz)` | Grid vertex positions. |
-| `values` | `([batch,] nz, ny, nx)` | `(nx, ny, nz[, batch])` | Values defined on the grid. |
-| `query_points` | `(..., 3)` | `(3, ...)` | Points at which to evaluate. |
+| `gridpos` | `(nz, ny, nx, 3)` | `(3, nx, ny, nz)` | Grid vertex positions. |
+| `x` | `([batch,] nz, ny, nx)` | `(nx, ny, nz[, batch])` | Values defined on the grid. |
+| `querypos` | `(..., 3)` | `(3, ...)` | Points at which to evaluate. |
 | `mode` | `str` | `char` | `"nearest"` or `"linear"` (default). |
 | `fill` | `float` or `None` | `numeric` | Value assigned to query points outside the grid. Default `0`. |
 
 ### Returns
 
-Interpolated values at the query points, with shape matching the spatial dimensions of `query_points` and an optional batch dimension: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
+Interpolated values at the query points, with shape matching the spatial dimensions of `querypos` and an optional batch dimension: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
 
 ---
 
@@ -54,24 +54,24 @@ Python only. Creates a reusable interpolation plan for a fixed grid. Avoids rebu
 ### Constructor
 
 ```python
-interp = ffdas.Interpolator(grid_points, mode="linear")
+interp = ffdas.Interpolator(gridpos, mode="linear")
 ```
 
 | Parameter | Shape | Description |
 |---|---|---|
-| `grid_points` | `(nz, ny, nx, 3)` | Grid vertex positions (`float32`). |
+| `gridpos` | `(nz, ny, nx, 3)` | Grid vertex positions (`float32`). |
 | `mode` | `str` | `"nearest"` or `"linear"`. |
 
 ### Calling
 
 ```python
-result = interp(values, query_points, *, fill=None, out=None, preprocess=False)
+result = interp(values, querypos, *, fill=None, out=None, preprocess=False)
 ```
 
 | Parameter | Shape | Description |
 |---|---|---|
-| `values` | `([batch,] nz, ny, nx)` | Values on the grid. |
-| `query_points` | `(..., 3)` | Evaluation points. |
+| `x` | `([batch,] nz, ny, nx)` | Values on the grid. |
+| `querypos` | `(..., 3)` | Evaluation points. |
 | `fill` | `float` or `None` | Fill value for out-of-grid points. Default `0`. |
 | `preprocess` | `bool` | If `True`, cache lookup structures for these query points so that subsequent calls with different values skip this step. |
 

@@ -358,7 +358,7 @@ NB_MODULE(_ffdas, m) {
                                     std::vector<int> a_modes,
                                     nb::ndarray<nb::device::cuda> y, 
                                     std::vector<int> y_modes) {
-        ScopedTensorDesc x_desc(x), a_desc(a), y_desc(y);
+        ScopedTensorDesc x_desc(x), a_desc(a), out_desc(y);
         auto *cp = new ContractionPlan();
         cp->owner = &handle;
         check(ffdas_create_contraction(
@@ -368,11 +368,11 @@ NB_MODULE(_ffdas, m) {
             x_modes.data(),
             a_desc.desc, 
             a_modes.data(),
-            y_desc.desc, 
+            out_desc.desc, 
             y_modes.data()
         ));
         return cp;
-    }, "handle"_a, "x"_a, "x_modes"_a, "a"_a, "a_modes"_a, "y"_a, "y_modes"_a,
+    }, "handle"_a, "x"_a, "x_modes"_a, "a"_a, "a_modes"_a, "y"_a, "out_modes"_a,
        nb::rv_policy::take_ownership, nb::keep_alive<0, 1>());
 
     m.def("contraction", [](Handle &handle, 
@@ -396,7 +396,7 @@ NB_MODULE(_ffdas, m) {
         int64_t nx, 
         int64_t ny, 
         int64_t nz,
-        nb::ndarray<const float, nb::device::cuda, nb::c_contig> grid_points,
+        nb::ndarray<const float, nb::device::cuda, nb::c_contig> gridpos,
         ffdas_interp_mode_t mode
     ) {
         auto *ip = new InterpolationPlan();
@@ -407,53 +407,53 @@ NB_MODULE(_ffdas, m) {
             nx, 
             ny, 
             nz,
-            grid_points.data(), 
+            gridpos.data(), 
             mode
         ));
         return ip;
-    }, "handle"_a, "nx"_a, "ny"_a, "nz"_a, "grid_points"_a, "mode"_a,
+    }, "handle"_a, "nx"_a, "ny"_a, "nz"_a, "gridpos"_a, "mode"_a,
        nb::rv_policy::take_ownership, nb::keep_alive<0, 1>());
 
     m.def("interpolation_preprocess", [](
         Handle &handle,
         InterpolationPlan &plan,
-        nb::ndarray<const float, nb::device::cuda, nb::c_contig> query_points
+        nb::ndarray<const float, nb::device::cuda, nb::c_contig> querypos
     ) {
         int num = 1;
-        for (size_t i = 0; i < query_points.ndim() - 1; i++) {
-            num *= query_points.shape(i);
+        for (size_t i = 0; i < querypos.ndim() - 1; i++) {
+            num *= querypos.shape(i);
         }
         check(ffdas_interpolation_preprocess(
             handle.h, 
             plan.plan,
             num,
-            query_points.data()
+            querypos.data()
         ));
-    }, "handle"_a, "plan"_a, "query_points"_a);
+    }, "handle"_a, "plan"_a, "querypos"_a);
 
     m.def("interpolation", [](
         Handle &handle,
         InterpolationPlan &plan,
-        nb::ndarray<const float, nb::device::cuda, nb::c_contig> query_points,
+        nb::ndarray<const float, nb::device::cuda, nb::c_contig> querypos,
         nb::ndarray<nb::ro, nb::device::cuda> values,
         nb::ndarray<nb::device::cuda> output,
         nb::ndarray<nb::ro, nb::device::cpu> fill_value
     ) {
-        ScopedTensorDesc values_desc(values);
+        ScopedTensorDesc x_desc(values);
         int num = 1;
-        for (size_t i = 0; i < query_points.ndim() - 1; i++) {
-            num *= query_points.shape(i);
+        for (size_t i = 0; i < querypos.ndim() - 1; i++) {
+            num *= querypos.shape(i);
         }
         check(ffdas_interpolation(
             handle.h, 
             plan.plan,
             num,
-            query_points.data(),
-            values_desc.desc, values.data(),
+            querypos.data(),
+            x_desc.desc, values.data(),
             output.data(), 
             fill_value.data()
         ));
-    }, "handle"_a, "plan"_a, "query_points"_a, "values"_a, "output"_a,
+    }, "handle"_a, "plan"_a, "querypos"_a, "x"_a, "out"_a,
        "fill_value"_a);
 
     m.def("truncate_rank", [](Handle &handle,
@@ -462,25 +462,25 @@ NB_MODULE(_ffdas, m) {
                            int stop,
                            nb::ndarray<nb::device::cuda> y
     ) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+        ScopedTensorDesc x_desc(x), out_desc(y);
         check(ffdas_truncate_rank(
             handle.h, 
             x_desc.desc, 
             x.data(), 
             start, 
             stop,
-            y_desc.desc, 
+            out_desc.desc, 
             y.data()
         ));
     }, "handle"_a, "x"_a, "start"_a, "stop"_a, "y"_a);
 
     m.def("das", [](Handle &handle,
                      nb::ndarray<nb::ro, nb::device::cuda> x,
-                     nb::ndarray<const float, nb::device::cuda, nb::c_contig> xpos,
-                     nb::ndarray<const float, nb::device::cuda, nb::c_contig> ypos,
+                     nb::ndarray<const float, nb::device::cuda, nb::c_contig> srcpos,
+                     nb::ndarray<const float, nb::device::cuda, nb::c_contig> dstpos,
                      nb::ndarray<const float, nb::device::cuda, nb::c_contig> offsets,
                      nb::ndarray<const float, nb::device::cuda, nb::c_contig> weights,
-                     std::optional<nb::ndarray<const float, nb::device::cuda, nb::c_contig>> xdir,
+                     std::optional<nb::ndarray<const float, nb::device::cuda, nb::c_contig>> srcdir,
                      float wavenum,
                      nb::ndarray<nb::ro, nb::device::cpu> beta,
                      nb::ndarray<nb::device::cuda> y,
@@ -500,35 +500,35 @@ NB_MODULE(_ffdas, m) {
         }
 
         ScopedTensorDesc x_desc(ndim, x_dims.data(), x_strides.data(), to_ffdas_dtype(x.dtype()));
-        ScopedTensorDesc y_desc(y);
+        ScopedTensorDesc out_desc(y);
 
         check(ffdas_das(
             handle.h,
-            reinterpret_cast<const float3*>(xpos.data()),
-            xdir.has_value() ? reinterpret_cast<const float4 *>((*xdir).data()) : nullptr,
+            reinterpret_cast<const float3*>(srcpos.data()),
+            srcdir.has_value() ? reinterpret_cast<const float4 *>((*srcdir).data()) : nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),
-            reinterpret_cast<const float3*>(ypos.data()),
+            reinterpret_cast<const float3*>(dstpos.data()),
             offsets.data(),
             weights.data(),
             beta.data(),
-            y_desc.desc, 
+            out_desc.desc, 
             y.data(),
             compute_type,
             alg
         ));
-    }, "handle"_a, "x"_a, "xpos"_a, "ypos"_a, "offsets"_a,
-       "weights"_a, nb::arg("xdir").none(), "wavenum"_a, "beta"_a,
+    }, "handle"_a, "x"_a, "srcpos"_a, "dstpos"_a, "offsets"_a,
+       "weights"_a, nb::arg("srcdir").none(), "wavenum"_a, "beta"_a,
        "y"_a, "alg"_a, "compute_type"_a, "channels_trailing"_a);
 
     m.def("das_sparse", [](Handle &handle,
                             nb::ndarray<nb::ro, nb::device::cuda> x,
-                            nb::ndarray<const float, nb::device::cuda, nb::c_contig> xpos,
-                            nb::ndarray<const float, nb::device::cuda, nb::c_contig> ypos,
+                            nb::ndarray<const float, nb::device::cuda, nb::c_contig> srcpos,
+                            nb::ndarray<const float, nb::device::cuda, nb::c_contig> dstpos,
                             nb::ndarray<const float, nb::device::cuda, nb::c_contig> offsets,
                             nb::ndarray<const float, nb::device::cuda, nb::c_contig> weights,
-                            std::optional<nb::ndarray<const float, nb::device::cuda, nb::c_contig>> xdir,
+                            std::optional<nb::ndarray<const float, nb::device::cuda, nb::c_contig>> srcdir,
                             float wavenum,
                             nb::ndarray<nb::ro, nb::device::cpu> beta,
                             nb::ndarray<nb::device::cuda> y,
@@ -549,38 +549,38 @@ NB_MODULE(_ffdas, m) {
         }
 
         ScopedTensorDesc x_desc(ndim, x_dims.data(), x_strides.data(), to_ffdas_dtype(x.dtype()));
-        ScopedTensorDesc y_desc(y);
+        ScopedTensorDesc out_desc(y);
 
         check(ffdas_das_sparse(
             handle.h,
-            reinterpret_cast<const float3 *>(xpos.data()),
-            xdir.has_value() ? reinterpret_cast<const float4 *>((*xdir).data()) : nullptr,
+            reinterpret_cast<const float3 *>(srcpos.data()),
+            srcdir.has_value() ? reinterpret_cast<const float4 *>((*srcdir).data()) : nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),
-            reinterpret_cast<const float3 *>(ypos.data()),
+            reinterpret_cast<const float3 *>(dstpos.data()),
             offsets.data(),
             weights.data(),
             sparse_indices.shape(0),
             sparse_indices.data(),
             beta.data(),
-            y_desc.desc, 
+            out_desc.desc, 
             y.data(),
             compute_type,
             alg
         ));
-    }, "handle"_a, "x"_a, "xpos"_a, "ypos"_a, "offsets"_a,
-       "weights"_a, nb::arg("xdir").none(), "wavenum"_a, "beta"_a,
+    }, "handle"_a, "x"_a, "srcpos"_a, "dstpos"_a, "offsets"_a,
+       "weights"_a, nb::arg("srcdir").none(), "wavenum"_a, "beta"_a,
        "y"_a, "sparse_indices"_a, "alg"_a, "compute_type"_a, "channels_trailing"_a);
 
     m.def("contiguous_copy", [](Handle &handle, nb::ndarray<nb::ro, nb::device::cuda> x, 
         nb::ndarray<nb::device::cuda> y) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+        ScopedTensorDesc x_desc(x), out_desc(y);
         check(ffdas_contiguous_copy(
             handle.h, 
             x_desc.desc, 
             x.data(),
-            y_desc.desc, 
+            out_desc.desc, 
             y.data()
         ));
     }, "handle"_a, "x"_a, "y"_a);
@@ -590,11 +590,11 @@ NB_MODULE(_ffdas, m) {
                         nb::ndarray<nb::device::cuda> y,
                         int mode,
                         nb::ndarray<const int, nb::device::cuda, nb::ndim<1>, nb::c_contig> indices) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+        ScopedTensorDesc x_desc(x), out_desc(y);
         check(ffdas_gather(
             handle.h, 
             x_desc.desc, x.data(),
-            y_desc.desc, y.data(),
+            out_desc.desc, y.data(),
             mode, 
             indices.shape(0), indices.data()
         ));
@@ -604,33 +604,33 @@ NB_MODULE(_ffdas, m) {
                          nb::ndarray<nb::ro, nb::device::cuda> x, nb::ndarray<nb::device::cuda> y,
                          int mode,
                          nb::ndarray<const int, nb::device::cuda, nb::ndim<1>, nb::c_contig> indices) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+        ScopedTensorDesc x_desc(x), out_desc(y);
         check(ffdas_scatter(
             handle.h, 
             x_desc.desc, x.data(),
-            y_desc.desc, y.data(),
+            out_desc.desc, y.data(),
             mode, 
             indices.data()
         ));
     }, "handle"_a, "x"_a, "y"_a, "mode"_a, "indices"_a);
 
     m.def("greens_sum", [](Handle &handle,
-        nb::ndarray<const float, nb::device::cuda, nb::c_contig> xpos,
+        nb::ndarray<const float, nb::device::cuda, nb::c_contig> srcpos,
         nb::ndarray<const float, nb::device::cuda, nb::c_contig> wavenums,
         nb::ndarray<nb::ro, nb::device::cuda> x,
-        nb::ndarray<const float, nb::device::cuda, nb::c_contig> ypos,
+        nb::ndarray<const float, nb::device::cuda, nb::c_contig> dstpos,
         nb::ndarray<nb::device::cuda> y
     ) {
-        ScopedTensorDesc x_desc(x), y_desc(y);
+        ScopedTensorDesc x_desc(x), out_desc(y);
         check(ffdas_greens_sum(
             handle.h,
-            reinterpret_cast<const float3 *>(xpos.data()),
+            reinterpret_cast<const float3 *>(srcpos.data()),
             wavenums.data(),
             x_desc.desc, 
             x.data(),
-            reinterpret_cast<const float3 *>(ypos.data()),
-            y_desc.desc, 
+            reinterpret_cast<const float3 *>(dstpos.data()),
+            out_desc.desc, 
             y.data()
         ));
-    }, "handle"_a, "x"_a, "xpos"_a, "ypos"_a, "wavenums"_a, "y"_a);
+    }, "handle"_a, "x"_a, "srcpos"_a, "dstpos"_a, "wavenums"_a, "y"_a);
 }

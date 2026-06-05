@@ -15,20 +15,20 @@ void mexFunction(int nlhs, mxArray *plhs[],
 {
     if (nrhs != 12)
         mexErrMsgIdAndTxt("ffdas_das_sparse:nargs",
-            "expected 11 arguments: ffdas_das_sparse(handle, x, xpos, ypos, offsets, weights, sparse_indices, xdir, wavenum, algorithm, use_fp16, channels_trailing)");
+            "expected 11 arguments: ffdas_das_sparse(handle, x, srcpos, dstpos, offsets, weights, sparse_indices, srcdir, wavenum, algorithm, use_fp16, channels_trailing)");
     if (nlhs != 1)
         mexErrMsgIdAndTxt("ffdas_das_sparse:nargs", "expected 1 output argument");
 
     ffdas_handle_t handle = get_handle(prhs[0]);
 
     ndarray::ndarray<ndarray::access::read_only, ndarray::device::gpu> x(prhs[1]);
-    ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> xpos(prhs[2]);
-    ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> ypos(prhs[3]);
+    ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> srcpos(prhs[2]);
+    ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> dstpos(prhs[3]);
     ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> offsets(prhs[4]);
     ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> weights(prhs[5]);
     ndarray::ndarray<ndarray::access::read_only, int32_t, ndarray::device::gpu> sparse_indices(prhs[6]);
 
-    ndarray::ndarray<ndarray::access::read_only, float> xdir(prhs[7]);
+    ndarray::ndarray<ndarray::access::read_only, float> srcdir(prhs[7]);
 
     float wavenum = static_cast<float>(mxGetScalar(prhs[8]));
     int algorithm = static_cast<int>(mxGetScalar(prhs[9]));
@@ -56,39 +56,39 @@ void mexFunction(int nlhs, mxArray *plhs[],
     bool have_batch = (x.ndim_val() == 4);
     int64_t sequence = channels_trailing ? x.shape(x.ndim_val()-2) : x.shape(x.ndim_val()-3);
 
-    if (xpos.ndim_val() != 2 || xpos.shape(1) != 3)
+    if (srcpos.ndim_val() != 2 || srcpos.shape(1) != 3)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-            "xpos must have shape (3, channels)");
+            "srcpos must have shape (3, channels)");
 
-    if (xdir.numel() > 0) {
-        if (xdir.class_id != mxSINGLE_CLASS || xdir.complexity != mxREAL || !xdir.is_on_gpu() || xdir.ndim_val() != 2 || xdir.shape(1) != 4)
+    if (srcdir.numel() > 0) {
+        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || srcdir.ndim_val() != 2 || srcdir.shape(1) != 4)
             mexErrMsgIdAndTxt("ffdas_das:error",
-                "xdir must be a single array of shape (4, channels)");
+                "srcdir must be a single array of shape (4, channels)");
     }
 
-    // ypos must have dimensions (..., 3)
-    int64_t ynd = ypos.ndim_val();
-    if (ynd < 2 || ypos.shape(ynd - 1) != 3)
+    // dstpos must have dimensions (..., 3)
+    int64_t ynd = dstpos.ndim_val();
+    if (ynd < 2 || dstpos.shape(ynd - 1) != 3)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-            "ypos must have shape (3, ...)");
+            "dstpos must have shape (3, ...)");
 
-    // offset, weight and sparse_indices must all have dimensions (..., n) matching the leading dims of ypos
+    // offset, weight and sparse_indices must all have dimensions (..., n) matching the leading dims of dstpos
     if (offsets.dims != weights.dims || offsets.dims != sparse_indices.dims)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "offsets, weights and sparse_indices must have the same shape");
     if (sequence == 1 && offsets.ndim_val() != (ynd-1))  // matlab squeezed the sequence dimension from offsets/weights
         mexErrMsgIdAndTxt("ffdas_das:error",
-            "offsets and weights must have the same number of dimensions as ypos");
+            "offsets and weights must have the same number of dimensions as dstpos");
     if (sequence > 1 && (offsets.ndim_val()-1) != (ynd-1))  // check number of spatial dimensions
         mexErrMsgIdAndTxt("ffdas_das:error",
-            "offsets and weights must have the same number of dimensions as ypos");
+            "offsets and weights must have the same number of dimensions as dstpos");
     for (int i = 0; i < ynd-1; i++) {
-        if (offsets.shape((sequence > 1) ? i+1 : i) != ypos.shape(i))
+        if (offsets.shape((sequence > 1) ? i+1 : i) != dstpos.shape(i))
             mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-                "spatial dimensions of offsets, weights and sparse_indices must match ypos");
+                "spatial dimensions of offsets, weights and sparse_indices must match dstpos");
     }
 
-    // y will have dimensions ([batch,] ...)
+    // out will have dimensions ([batch,] ...)
     int64_t ynd_spatial = ynd - 1;
     int64_t out_ndim = ynd_spatial + (have_batch ? 1 : 0);
 
@@ -97,15 +97,15 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if (have_batch)
         out_dims[o++] = x.shape(0);
     for (int i = 0; i < ynd_spatial; i++)
-        out_dims[o++] = ypos.shape(i);
+        out_dims[o++] = dstpos.shape(i);
 
-    // y follows the input data type
+    // out follows the input data type
     mxClassID out_cls = x.class_id;
     mxComplexity out_cplx = x.complexity;
-    ndarray::ndarray y = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
+    ndarray::ndarray out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
 
     ScopedTensorDesc x_desc(x);
-    ScopedTensorDesc y_desc(y);
+    ScopedTensorDesc out_desc(out);
 
     ffdas_datatype_t out_dtype = to_ffdas_dtype(out_cls, out_cplx);
     void *beta = calloc(1, ffdas_type_size(out_dtype));
@@ -120,19 +120,19 @@ void mexFunction(int nlhs, mxArray *plhs[],
         
     ffdas_error_t err = ffdas_das_sparse(
         handle,
-        reinterpret_cast<const float3*>(xpos.data()),
-        xdir.numel() > 0 ? reinterpret_cast<const float4*>(xdir.data()) : nullptr,
+        reinterpret_cast<const float3*>(srcpos.data()),
+        srcdir.numel() > 0 ? reinterpret_cast<const float4*>(srcdir.data()) : nullptr,
         wavenum,
         x_desc.desc, 
         x.data(),
-        reinterpret_cast<const float3*>(ypos.data()),
+        reinterpret_cast<const float3*>(dstpos.data()),
         static_cast<const float*>(offsets.data()),
         static_cast<const float*>(weights.data()),
         sparse_indices.shape(0),
         sparse_indices.data(),
         beta,
-        y_desc.desc, 
-        y.data(),
+        out_desc.desc, 
+        out.data(),
         compute_type,
         static_cast<ffdas_alg_t>(algorithm)
     );
@@ -144,5 +144,5 @@ void mexFunction(int nlhs, mxArray *plhs[],
             "ffdas_das_sparse returned error %d: %s",
             err, ffdas_error_string(err));
 
-    plhs[0] = y.release();
+    plhs[0] = out.release();
 }

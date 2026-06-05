@@ -241,16 +241,16 @@ __global__ void das_alg4_kernel(
     int samples, 
     int seqlen,
     int channels,
-    const float4 *xdir, 
+    const float4 *srcdir, 
     float wavenum,
     const Tx *x, 
     int ny, 
     int ystride, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     Ty beta, 
-    Ty *y, 
+    Ty *out, 
     int batch_size
 ) {
 #if FFDAS_HAVE_SP_MMA
@@ -271,7 +271,7 @@ __global__ void das_alg4_kernel(
 
     __shared__ int index_table[warps_per_block][32];
 
-    float3 yp = ypos[min(n, ny-1)];
+    float3 yp = dstpos[min(n, ny-1)];
     float2 acc[2*vec_size]{};
 
     for (int o = 0; o < seqlen; o++) {
@@ -299,7 +299,7 @@ __global__ void das_alg4_kernel(
             bool inbounds = (k >= 0) & (k < (samples-1));
 
             if constexpr (dir_check) {
-                float4 xd = xdir[m];
+                float4 xd = srcdir[m];
                 float proj = (dx * xd.x + dy * xd.y + dz * xd.z) * rinv;
                 inbounds &= (proj > xd.w);
             }
@@ -419,11 +419,11 @@ __global__ void das_alg4_kernel(
             const int b = (blockIdx.y * N) + (lane % 4) * vec_size * 2 + i;
 
             if (b < batch_size) {
-                accumulate_inplace(&y[n + b*ystride], acc[i*2], beta);
+                accumulate_inplace(&out[n + b*ystride], acc[i*2], beta);
             }
 
             if (b+vec_size < batch_size) {
-                accumulate_inplace(&y[n + (b+vec_size)*ystride], acc[i*2+1], beta);
+                accumulate_inplace(&out[n + (b+vec_size)*ystride], acc[i*2+1], beta);
             }
         }
     }

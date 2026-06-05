@@ -19,15 +19,15 @@ template<typename Tx, typename Ty, typename Tcompute, int vec_size, int M, int N
 ffdas_error_t das_alg2_launch(
     ffdas_context &handle,
     const das_problem_params& params,
-    const float3 *xpos,
-    const float4 *xdir,
+    const float3 *srcpos,
+    const float4 *srcdir,
     float wavenum,
     const Tx* x, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float* offsets, 
     const float* weights,
     Ty beta, 
-    Ty* y
+    Ty* out
 ) {
     static_assert(((M * N) % 32) == 0, "M*N must be a multiple of 32");
 
@@ -36,7 +36,7 @@ ffdas_error_t das_alg2_launch(
 
     CUDA_CHECK(cudaMemcpyToSymbolAsync(
         alg2_channel_pos, 
-        xpos, 
+        srcpos, 
         params.channels * sizeof(float3),
         0,
         cudaMemcpyDeviceToDevice,
@@ -71,7 +71,7 @@ ffdas_error_t das_alg2_launch(
     constexpr int block = 1024;
     constexpr int warps_per_block = block / 32;
 
-    bool dir_check = (xdir != NULL);
+    bool dir_check = (srcdir != NULL);
 
     dim3 block_dim(block);
     dim3 grid_dim(
@@ -85,16 +85,16 @@ ffdas_error_t das_alg2_launch(
             params.samples, 
             params.seqlen, 
             params.channels,
-            xdir,
+            srcdir,
             wavenum, 
             x_ld_batch_ptr.get(), 
             params.ny, 
             params.ystride,
-            ypos, 
+            dstpos, 
             offsets, 
             weights, 
             beta, 
-            y, 
+            out, 
             params.batch_size
         );
     } else {
@@ -108,11 +108,11 @@ ffdas_error_t das_alg2_launch(
             x_ld_batch_ptr.get(), 
             params.ny, 
             params.ystride,
-            ypos, 
+            dstpos, 
             offsets, 
             weights, 
             beta, 
-            y, 
+            out, 
             params.batch_size
         );
     }
@@ -126,15 +126,15 @@ template<typename Tx, typename Ty, typename Tcompute, int M, int N>
 ffdas_error_t das_alg2_dispatch_vec_size(
     ffdas_context &handle,
     const das_problem_params& params,
-    const float3 *xpos,
-    const float4 *xdir,
+    const float3 *srcpos,
+    const float4 *srcdir,
     float wavenum,
     const Tx* x, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float* offsets, 
     const float* weights,
     Ty beta, 
-    Ty* y
+    Ty* out
 ) {
     constexpr int dtype_max = 16 / sizeof(Tcompute);
     constexpr int load_max = 4;
@@ -148,44 +148,44 @@ ffdas_error_t das_alg2_dispatch_vec_size(
         return das_alg2_launch<Tx, Ty, Tcompute, 1, M, N>(
             handle,
             params,
-            xpos,
-            xdir,
+            srcpos,
+            srcdir,
             wavenum,
             x,
-            ypos,
+            dstpos,
             offsets,
             weights,
             beta,
-            y
+            out
         );
     case 2:
         return das_alg2_launch<Tx, Ty, Tcompute, 2, M, N>(
             handle,
             params,
-            xpos,
-            xdir,
+            srcpos,
+            srcdir,
             wavenum,
             x,
-            ypos,
+            dstpos,
             offsets,
             weights,
             beta,
-            y
+            out
         );
     case 4:
         if constexpr (sizeof(Tcompute) <= 4) {
             return das_alg2_launch<Tx, Ty, Tcompute, 4, M, N>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y
+                out
             );
         }
         break;
@@ -200,29 +200,29 @@ template<typename Tx, typename Ty, int M, int N>
 ffdas_error_t das_alg2_dispatch_compute(
     ffdas_context &handle,
     const das_problem_params& params,
-    const float3 *xpos,
-    const float4 *xdir,
+    const float3 *srcpos,
+    const float4 *srcdir,
     float wavenum,
     const Tx* x, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float* offsets, 
     const float* weights,
     Ty beta, 
-    Ty* y,
+    Ty* out,
     ffdas_compute_type_t compute_type
 ) {
     bool use_half_precision = (compute_type == FFDAS_COMPUTE_16F);
 
     if (use_half_precision) {
         if constexpr (std::is_same_v<Tx, float>) {
-            return das_alg2_dispatch_vec_size<Tx, Ty, __half, M, N>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, beta, y);
+            return das_alg2_dispatch_vec_size<Tx, Ty, __half, M, N>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, beta, out);
         } else if constexpr (std::is_same_v<Tx, float2>) {
-            return das_alg2_dispatch_vec_size<Tx, Ty, __half2, M, N>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, beta, y);
+            return das_alg2_dispatch_vec_size<Tx, Ty, __half2, M, N>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, beta, out);
         }
         return FFDAS_ERROR_UNSUPPORTED_TYPE;
     }
 
-    return das_alg2_dispatch_vec_size<Tx, Ty, Tx, M, N>(handle, params, xpos, xdir, wavenum, x, ypos, offsets, weights, beta, y);
+    return das_alg2_dispatch_vec_size<Tx, Ty, Tx, M, N>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, beta, out);
 }
 
 
@@ -231,15 +231,15 @@ ffdas_error_t das_alg2_dispatch_n(
     int n,
     ffdas_context &handle,
     const das_problem_params& params,
-    const float3 *xpos,
-    const float4 *xdir,
+    const float3 *srcpos,
+    const float4 *srcdir,
     float wavenum,
     const Tx* x, 
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float* offsets, 
     const float* weights,
     Ty beta, 
-    Ty* y,
+    Ty* out,
     ffdas_compute_type_t compute_type
 ) {
     switch (n)
@@ -251,15 +251,15 @@ ffdas_error_t das_alg2_dispatch_n(
             return das_alg2_dispatch_compute<Tx, Ty, M, 1>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
             );
         }
@@ -270,15 +270,15 @@ ffdas_error_t das_alg2_dispatch_n(
             return das_alg2_dispatch_compute<Tx, Ty, M, 2>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
             );
         }
@@ -289,15 +289,15 @@ ffdas_error_t das_alg2_dispatch_n(
             return das_alg2_dispatch_compute<Tx, Ty, M, 4>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
             );
         }
@@ -308,15 +308,15 @@ ffdas_error_t das_alg2_dispatch_n(
             return das_alg2_dispatch_compute<Tx, Ty, M, 8>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
             );
         }
@@ -327,15 +327,15 @@ ffdas_error_t das_alg2_dispatch_n(
             return das_alg2_dispatch_compute<Tx, Ty, M, 16>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
             );
         }
@@ -343,30 +343,30 @@ ffdas_error_t das_alg2_dispatch_n(
         return das_alg2_dispatch_compute<Tx, Ty, M, 32>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
         );
     case 64:
         return das_alg2_dispatch_compute<Tx, Ty, M, 64>(
                 handle,
                 params,
-                xpos,
-                xdir,
+                srcpos,
+                srcdir,
                 wavenum,
                 x,
-                ypos,
+                dstpos,
                 offsets,
                 weights,
                 beta,
-                y,
+                out,
                 compute_type
         );
     default:
@@ -380,21 +380,21 @@ ffdas_error_t das_alg2_dispatch_n(
 template<typename Tx, typename Ty>
 ffdas_error_t das_alg2_strided(
     ffdas_context &handle,
-    const float3 *xpos, 
-    const float4 *xdir, 
+    const float3 *srcpos, 
+    const float4 *srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
-    const float3 *ypos, 
+    const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
     Ty beta, 
-    const ffdas_tensor_desc &y_desc, 
-    Ty* y,
+    const ffdas_tensor_desc &out_desc, 
+    Ty* out,
     ffdas_compute_type_t compute_type
 ) {
     das_problem_params params;
-    FFDAS_CHECK(get_das_problem_params(x_desc, y_desc, params));
+    FFDAS_CHECK(get_das_problem_params(x_desc, out_desc, params));
 
     if (params.channels > DAS_ALG2_MAX_CHANNELS)
         return FFDAS_ERROR_INVALID_DIMS;
@@ -421,15 +421,15 @@ ffdas_error_t das_alg2_strided(
             batch_per_warp,
             handle,
             params,
-            xpos,
-            xdir,
+            srcpos,
+            srcdir,
             wavenum,
             x,
-            ypos,
+            dstpos,
             offsets,
             weights,
             beta,
-            y,
+            out,
             compute_type
         );
     case 2:
@@ -437,15 +437,15 @@ ffdas_error_t das_alg2_strided(
             batch_per_warp,
             handle,
             params,
-            xpos,
-            xdir,
+            srcpos,
+            srcdir,
             wavenum,
             x,
-            ypos,
+            dstpos,
             offsets,
             weights,
             beta,
-            y,
+            out,
             compute_type
         );
     case 4:
@@ -453,15 +453,15 @@ ffdas_error_t das_alg2_strided(
             batch_per_warp,
             handle,
             params,
-            xpos,
-            xdir,
+            srcpos,
+            srcdir,
             wavenum,
             x,
-            ypos,
+            dstpos,
             offsets,
             weights,
             beta,
-            y,
+            out,
             compute_type
         );
     default:

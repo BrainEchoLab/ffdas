@@ -75,9 +75,9 @@ cos_ay = reshape(cos(angle_y), 1, 1, 1, []);
 offsets = (xx .* sin_ax + yy .* sin_ay + zz .* cos_ax .* cos_ay) * ks;
 weights = ones(size(offsets), "single", "gpuArray");
 
-xdir = zeros(4, n_channels, "single", "gpuArray");
-xdir(3,:) = 1.0;
-xdir(4,:) = 0.5;
+srcdir = zeros(4, n_channels, "single", "gpuArray");
+srcdir(3,:) = 1.0;
+srcdir(4,:) = 0.5;
 
 wavenum = single(-2 * pi * center_freq / sampling_freq);
 
@@ -85,7 +85,7 @@ wavenum = single(-2 * pi * center_freq / sampling_freq);
 timer = ffdas.utils.Timer();
 timer.start();
 compounded = ffdas.das( ...
-    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, xdir, wavenum);
+    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, srcdir, wavenum);
 timer.stop();
 fprintf("compounded (%d angles): %.1f ms\n", n_angles, timer.elapsed_ms());
 
@@ -97,7 +97,7 @@ single_img = ffdas.das( ...
     rf(:, mid:mid, :, :), ...
     channel_pos * ks, voxel_pos * ks, ...
     offsets(:,:,:,mid:mid), weights(:,:,:,mid:mid), ...
-    xdir, wavenum);
+    srcdir, wavenum);
 timer2.stop();
 fprintf("single angle: %.1f ms\n", timer2.elapsed_ms());
 

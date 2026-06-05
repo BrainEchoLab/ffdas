@@ -7,103 +7,103 @@ ffdas_error_t ffdas_contiguous_copy(
     ffdas_handle_t handle,
     ffdas_tensor_desc_t x_desc,
     const void *x,
-    ffdas_tensor_desc_t y_desc,
-    void *y
+    ffdas_tensor_desc_t out_desc,
+    void *out
 ) {
     CHECK_HANDLE(handle);
     FFDAS_CHECK(handle->check_device());
     CHECK_NULL_PTR(x_desc);
-    CHECK_NULL_PTR(y_desc);
+    CHECK_NULL_PTR(out_desc);
 
     ffdas_tensor_desc x_tensor = *x_desc;
-    ffdas_tensor_desc y_tensor = *y_desc;
+    ffdas_tensor_desc out_tensor = *out_desc;
     
-    if (!x_tensor.same_dims(y_tensor) || !y_tensor.is_contiguous())
+    if (!x_tensor.same_dims(out_tensor) || !out_tensor.is_contiguous())
         return FFDAS_ERROR_INVALID_DIMS;
 
     ffdas::detail::nvtx_range nvtx(*handle, "contiguous_copy");
 
     switch (x_tensor.dtype) {
     case FFDAS_R_16I:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_R_16I:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16I, FFDAS_R_16I>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16I, FFDAS_R_16I>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_R_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16I, FFDAS_R_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16I, FFDAS_R_32F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_R_16F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_R_16F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16F, FFDAS_R_16F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16F, FFDAS_R_16F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_R_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16F, FFDAS_R_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_16F, FFDAS_R_32F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_R_32F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_R_16F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_32F, FFDAS_R_16F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_32F, FFDAS_R_16F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_R_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_32F, FFDAS_R_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_32F, FFDAS_R_32F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_R_64F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_32F, FFDAS_R_64F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_32F, FFDAS_R_64F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_C_16I:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_C_16I:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16I, FFDAS_C_16I>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16I, FFDAS_C_16I>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_C_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16I, FFDAS_C_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16I, FFDAS_C_32F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_C_16F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_C_16F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16F, FFDAS_C_16F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16F, FFDAS_C_16F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_C_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16F, FFDAS_C_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_16F, FFDAS_C_32F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_C_32F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_C_16F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_32F, FFDAS_C_16F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_32F, FFDAS_C_16F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_C_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_32F, FFDAS_C_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_32F, FFDAS_C_32F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_C_64F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_32F, FFDAS_C_64F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_32F, FFDAS_C_64F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_R_64F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_R_64F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_64F, FFDAS_R_64F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_64F, FFDAS_R_64F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_R_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_64F, FFDAS_R_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_R_64F, FFDAS_R_32F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }
         break;
     case FFDAS_C_64F:
-        switch (y_tensor.dtype) {
+        switch (out_tensor.dtype) {
         case FFDAS_C_64F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_64F, FFDAS_C_64F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_64F, FFDAS_C_64F>(*handle, x_tensor, x, out_tensor, out);
         case FFDAS_C_32F:
-            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_64F, FFDAS_C_32F>(*handle, x_tensor, x, y_tensor, y);
+            return ffdas::detail::contiguous_copy_dispatch<FFDAS_C_64F, FFDAS_C_32F>(*handle, x_tensor, x, out_tensor, out);
         default:
             break;
         }

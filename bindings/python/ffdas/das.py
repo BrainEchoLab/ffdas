@@ -33,12 +33,12 @@ def _compute_type(x, use_fp16):
 @overload
 def das(
     x: T,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
     *,
-    xdir: TensorLike | None = None,
+    srcdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
     use_fp16: bool = False,
@@ -48,12 +48,12 @@ def das(
 @overload
 def das(
     x: TensorLike,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
     *,
-    xdir: TensorLike | None = None,
+    srcdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
     use_fp16: bool = False,
@@ -63,12 +63,12 @@ def das(
 
 def das(
     x: TensorLike,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
     *,
-    xdir: TensorLike | None = None,
+    srcdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
     use_fp16: bool = False,
@@ -84,12 +84,12 @@ def das(
     Args:
         x: Input RF data, shape (channels, sequence, samples) or
             (batch, channels, sequence, samples).
-        xpos: Channel positions, shape (channels, 3).
-        ypos: Target positions, shape (..., 3). The spatial dimensions
-            are ypos.shape[:-1].
+        srcpos: Source (channel) positions, shape (channels, 3).
+        dstpos: Destination (target) positions, shape (..., 3). The spatial
+            dimensions are dstpos.shape[:-1].
         offsets: Per-target time offsets in samples, shape (sequence, ...).
         weights: Per-target apodization weights, shape (sequence, ...).
-        xdir: Channel directivity vectors, shape (channels, 4). The first
+        srcdir: Source directivity vectors, shape (channels, 4). The first
             three components are the unit surface normal; the fourth is
             the cosine of the sensitivity half-angle. Channels whose
             angle to a target exceeds this are excluded.
@@ -104,10 +104,10 @@ def das(
     Returns:
         Beamformed output with shape (...) or (batch, ...).
     """
-    if ypos.ndim < 2 or ypos.shape[-1] != 3:
-        raise ValueError("ypos must have dimensions (..., 3)")
+    if dstpos.ndim < 2 or dstpos.shape[-1] != 3:
+        raise ValueError("dstpos must have dimensions (..., 3)")
 
-    spatial_dims = ypos.shape[:-1]
+    spatial_dims = dstpos.shape[:-1]
 
     out_dims = spatial_dims
     if x.ndim == 4:
@@ -122,11 +122,11 @@ def das(
             f"weights shape {weights.shape} must match target layout {spatial_dims}"
         )
 
-    xpos = _ensure_contiguous(astype(xpos, "float32"))
-    ypos = _ensure_contiguous(astype(ypos, "float32"))
+    srcpos = _ensure_contiguous(astype(srcpos, "float32"))
+    dstpos = _ensure_contiguous(astype(dstpos, "float32"))
     offsets = _ensure_contiguous(astype(offsets, "float32"))
     weights = _ensure_contiguous(astype(weights, "float32"))
-    xdir = _ensure_contiguous(astype(xdir, "float32"))
+    srcdir = _ensure_contiguous(astype(srcdir, "float32"))
 
     if out is None:
         out = empty_like(x, shape=out_dims)
@@ -137,11 +137,11 @@ def das(
     _ffdas.das(
         get_library_handle(),
         x,
-        xpos,
-        ypos,
+        srcpos,
+        dstpos,
         offsets,
         weights,
-        xdir,
+        srcdir,
         wavenum,
         beta,
         out,
@@ -155,13 +155,13 @@ def das(
 @overload
 def das_sparse(
     x: T,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
     sparse_indices: TensorLike,
     *,
-    xdir: TensorLike | None = None,
+    srcdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
     use_fp16: bool = False,
@@ -171,13 +171,13 @@ def das_sparse(
 @overload
 def das_sparse(
     x: TensorLike,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
     sparse_indices: TensorLike,
     *,
-    xdir: TensorLike | None = None,
+    srcdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
     use_fp16: bool = False,
@@ -187,13 +187,13 @@ def das_sparse(
 
 def das_sparse(
     x: TensorLike,
-    xpos: TensorLike,
-    ypos: TensorLike,
+    srcpos: TensorLike,
+    dstpos: TensorLike,
     offsets: TensorLike,
     weights: TensorLike,
     sparse_indices: TensorLike,
     *,
-    xdir: TensorLike | None = None,
+    srcdir: TensorLike | None = None,
     wavenum: float = 0.0,
     algorithm: _ffdas.Algorithm = _ffdas.Algorithm.DEFAULT,
     use_fp16: bool = False,
@@ -208,14 +208,14 @@ def das_sparse(
     Args:
         x: Input RF data, shape (channels, sequence, samples) or
             (batch, channels, sequence, samples).
-        xpos: Channel positions, shape (channels, 3).
-        ypos: Target positions, shape (..., 3).
+        srcpos: Source (channel) positions, shape (channels, 3).
+        dstpos: Destination (target) positions, shape (..., 3).
         offsets: Per-target time offsets in samples, shape (n, ...).
         weights: Per-target apodization weights, shape (n, ...).
         sparse_indices: Indices into the sequence dimension of x,
             shape (n, ...). Each target compounds the n events given
             by these indices.
-        xdir: Channel directivity vectors, shape (channels, 4).
+        srcdir: Source directivity vectors, shape (channels, 4).
             See ``das`` for details.
         wavenum: Wavenumber for phase rotation (-2*pi*fc/fs).
         algorithm: Algorithm variant.
@@ -226,10 +226,10 @@ def das_sparse(
     Returns:
         Beamformed output with shape (...) or (batch, ...).
     """
-    if ypos.ndim < 2 or ypos.shape[-1] != 3:
-        raise ValueError("ypos must have dimensions (..., 3)")
+    if dstpos.ndim < 2 or dstpos.shape[-1] != 3:
+        raise ValueError("dstpos must have dimensions (..., 3)")
 
-    spatial_dims = ypos.shape[:-1]
+    spatial_dims = dstpos.shape[:-1]
 
     out_dims = spatial_dims
     if x.ndim == 4:
@@ -255,11 +255,11 @@ def das_sparse(
             f"offsets and weights leading dimension must match sparse count {sparse_count}"
         )
 
-    xpos = _ensure_contiguous(astype(xpos, "float32"))
-    ypos = _ensure_contiguous(astype(ypos, "float32"))
+    srcpos = _ensure_contiguous(astype(srcpos, "float32"))
+    dstpos = _ensure_contiguous(astype(dstpos, "float32"))
     offsets = _ensure_contiguous(astype(offsets, "float32"))
     weights = _ensure_contiguous(astype(weights, "float32"))
-    xdir = _ensure_contiguous(astype(xdir, "float32"))
+    srcdir = _ensure_contiguous(astype(srcdir, "float32"))
     sparse_indices = _ensure_contiguous(astype(sparse_indices, "int32"))
 
     if out is None:
@@ -271,11 +271,11 @@ def das_sparse(
     _ffdas.das_sparse(
         get_library_handle(),
         x,
-        xpos,
-        ypos,
+        srcpos,
+        dstpos,
         offsets,
         weights,
-        xdir,
+        srcdir,
         wavenum,
         beta,
         out,

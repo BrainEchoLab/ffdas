@@ -12,21 +12,21 @@
 enum { MODE_BROADCAST=0, MODE_BATCH=1, MODE_REDUCE=2 };
 
 
-// Precomputed plan for y = contraction(x, a) expressed as a batched GEMM.
+// Precomputed plan for out = contraction(a, b) expressed as b batched GEMM.
 //
-// The contraction is decomposed into: (1) optionally permute x and/or a into
-// a memory layout compatible with batched GEMM, (2) call cuBLAS, (3) optionally
-// permute the GEMM output into the user's requested y layout.
+// The contraction is decomposed into: (1) optionally permute a and/or b into
+// b memory layout compatible with batched GEMM, (2) call cuBLAS, (3) optionally
+// permute the GEMM output into the user's requested out layout.
 struct ffdas_contraction_plan {
-    ffdas_tensor_desc x_desc, a_desc, y_desc;
+    ffdas_tensor_desc a_desc, b_desc, out_desc;
 
-    // if swap_ax is true, x is passed as cuBLAS's A matrix and a as B
-    // (rather than the default a=A, x=B)
-    bool swap_ax;
+    // if swap_ab is true, a is passed as cuBLAS's A matrix and b as B
+    // (rather than the default b=A, a=B)
+    bool swap_ab;
 
-    // whether each operand/output requires a permutation copy
-    bool do_xperm, do_aperm, do_yperm;
-    std::vector<int64_t> px, pa, py;
+    // whether each operand/output requires b permutation copy
+    bool do_aperm, do_bperm, do_outperm;
+    std::vector<int64_t> pa, pb, pout;
 
     // cuBLAS parameters (m, n, k, leading dims, strides, batch count)
     bool transa, transb;
@@ -36,9 +36,9 @@ struct ffdas_contraction_plan {
     int64_t batchCount;
 
     // device workspace for permuted copies (allocated only when do_*perm is true)
-    ffdas::detail::device_ptr<void> x_work;
     ffdas::detail::device_ptr<void> a_work;
-    ffdas::detail::device_ptr<void> y_work;
+    ffdas::detail::device_ptr<void> b_work;
+    ffdas::detail::device_ptr<void> out_work;
 };
 
 
@@ -48,22 +48,22 @@ template<typename T>
 ffdas_error_t contraction_impl(
     ffdas_context &handle,
     ffdas_contraction_plan &plan,
-    const T *x,
     const T *a,
-    T *y
+    const T *b,
+    T *out
 );
 
 template<ffdas_datatype_t Tx_t>
 ffdas_error_t ffdas_contraction_dispatch(
     ffdas_context &handle,
     ffdas_contraction_plan &plan,
-    const void *x,
     const void *a,
-    void *y
+    const void *b,
+    void *out
 ) {
     using T = typename ffdas_traits<Tx_t>::type;
 
-    return contraction_impl<T>(handle, plan, static_cast<const T*>(x), static_cast<const T*>(a), static_cast<T*>(y));
+    return contraction_impl<T>(handle, plan, static_cast<const T*>(a), static_cast<const T*>(b), static_cast<T*>(out));
 }
 
 }  // namespace ffdas::detail

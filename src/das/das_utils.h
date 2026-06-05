@@ -29,14 +29,14 @@ struct das_problem_params {
 
 static ffdas_error_t get_das_problem_params(
     const ffdas_tensor_desc &x_desc,
-    const ffdas_tensor_desc &y_desc,
+    const ffdas_tensor_desc &out_desc,
     das_problem_params &params
 ) {
     int ndim = x_desc.dims.size();
 
     if (ndim != 3 && ndim != 4) 
         return FFDAS_ERROR_INVALID_DIMS;
-    if (y_desc.dims.size() < 1) 
+    if (out_desc.dims.size() < 1) 
         return FFDAS_ERROR_INVALID_DIMS;
 
     params.have_batch = (ndim == 4);
@@ -47,19 +47,19 @@ static ffdas_error_t get_das_problem_params(
     params.channels = (int)x_desc.dims[ofs+0];
     params.batch_size = params.have_batch ? (int)x_desc.dims[0] : 1;
 
-    if (params.have_batch && (y_desc.dims.size() < 2 || y_desc.dims[0] != params.batch_size))
+    if (params.have_batch && (out_desc.dims.size() < 2 || out_desc.dims[0] != params.batch_size))
         return FFDAS_ERROR_INVALID_DIMS;
 
     params.ny = 1;
-    for (int i = ofs; i < y_desc.dims.size(); i++) {
-        params.ny *= (int)y_desc.dims[i];
+    for (int i = ofs; i < out_desc.dims.size(); i++) {
+        params.ny *= (int)out_desc.dims[i];
     }
 
     params.channel_stride = (int)x_desc.strides[ofs+0];
     params.seq_stride = (int)x_desc.strides[ofs+1];
     params.sample_stride = (int)x_desc.strides[ofs+2];
     params.batch_stride = params.have_batch ? (int)x_desc.strides[0] : 0;
-    params.ystride = params.have_batch ? (int)y_desc.strides[0] : 0;
+    params.ystride = params.have_batch ? (int)out_desc.strides[0] : 0;
 
     if (params.sample_stride != 1) 
         return FFDAS_ERROR_INVALID_ARGUMENT;
