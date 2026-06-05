@@ -76,7 +76,7 @@ ffdas_error_t das_alg4_launch(
 
     dim3 block_dim(block);
     dim3 grid_dim(
-        (params.ny + (warps_per_block * M) - 1) / (warps_per_block * M),
+        (params.ndst + (warps_per_block * M) - 1) / (warps_per_block * M),
         (params.batch_size + N - 1) / N
     );
 
@@ -89,8 +89,8 @@ ffdas_error_t das_alg4_launch(
             srcdir,
             wavenum, 
             x_ld_batch_ptr.get(), 
-            params.ny, 
-            params.ystride,
+            params.ndst, 
+            params.outstride,
             dstpos, 
             offsets, 
             weights, 
@@ -107,8 +107,8 @@ ffdas_error_t das_alg4_launch(
             NULL,
             wavenum, 
             x_ld_batch_ptr.get(), 
-            params.ny, 
-            params.ystride,
+            params.ndst, 
+            params.outstride,
             dstpos, 
             offsets, 
             weights, 

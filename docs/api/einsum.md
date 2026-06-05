@@ -9,13 +9,13 @@ Binary tensor contraction using Einstein summation notation.
 === "Python"
 
     ```python
-    ffdas.einsum(subscripts, a, x, *, out=None)
+    ffdas.einsum(subscripts, a, b, *, out=None)
     ```
 
 === "MATLAB"
 
     ```matlab
-    y = ffdas.einsum(subscripts, a, x)
+    out = ffdas.einsum(subscripts, a, b)
     ```
 
 ## Parameters
@@ -24,7 +24,7 @@ Binary tensor contraction using Einstein summation notation.
 |---|---|
 | `subscripts` | Subscript string, e.g., `"ij,jk->ik"`. Exactly two comma-separated operands. The `->` and output modes are optional; if omitted, output modes are inferred (indices appearing exactly once, in order of first appearance). |
 | `a` | First operand. |
-| `x` | Second operand. Must have the same dtype as `a`. |
+| `b` | Second operand. Must have the same dtype as `a`. |
 
 ## Returns
 

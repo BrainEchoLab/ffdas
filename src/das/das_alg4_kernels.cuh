@@ -244,8 +244,8 @@ __global__ void das_alg4_kernel(
     const float4 *srcdir, 
     float wavenum,
     const Tx *x, 
-    int ny, 
-    int ystride, 
+    int ndst, 
+    int outstride, 
     const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
@@ -271,11 +271,11 @@ __global__ void das_alg4_kernel(
 
     __shared__ int index_table[warps_per_block][32];
 
-    float3 yp = dstpos[min(n, ny-1)];
+    float3 yp = dstpos[min(n, ndst-1)];
     float2 acc[2*vec_size]{};
 
     for (int o = 0; o < seqlen; o++) {
-        const int to = min(n, ny-1) + o * ystride;
+        const int to = min(n, ndst-1) + o * outstride;
         const float ofs = offsets[to];
         const float scl = weights[to];
 
@@ -413,17 +413,17 @@ __global__ void das_alg4_kernel(
         }
     }
 
-    if (n < ny) {
+    if (n < ndst) {
         #pragma unroll
         for (int i = 0; i < vec_size; i++) {
             const int b = (blockIdx.y * N) + (lane % 4) * vec_size * 2 + i;
 
             if (b < batch_size) {
-                accumulate_inplace(&out[n + b*ystride], acc[i*2], beta);
+                accumulate_inplace(&out[n + b*outstride], acc[i*2], beta);
             }
 
             if (b+vec_size < batch_size) {
-                accumulate_inplace(&out[n + (b+vec_size)*ystride], acc[i*2+1], beta);
+                accumulate_inplace(&out[n + (b+vec_size)*outstride], acc[i*2+1], beta);
             }
         }
     }

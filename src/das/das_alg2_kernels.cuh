@@ -21,8 +21,8 @@ __global__ void das_alg2_kernel(
     const float4 *srcdir, 
     float wavenum,
     const Tx *x, 
-    int ny, 
-    int ystride, 
+    int ndst, 
+    int outstride, 
     const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
@@ -63,20 +63,20 @@ __global__ void das_alg2_kernel(
     if (batch_size % vec_size)
         return;
 
-    if (target_base >= ny || batch_base >= batch_size)
+    if (target_base >= ndst || batch_base >= batch_size)
         return;  // must be same across warp
 
     // position of this thread within a subtile
     const int row = lane / cols_per_subtile;
     const int col = batch_base + (lane % cols_per_subtile) * vec_size;
 
-    const float3 yp = dstpos[min(target_base + (lane % M), ny-1)];
+    const float3 yp = dstpos[min(target_base + (lane % M), ndst-1)];
     __shared__ Ty shared_weight[warps_per_block][32];
 
     Ty accum[elem_per_thread]{};
 
     for (int o = 0; o < seqlen; o++) {
-        const int to = min(target_base + (lane % M), ny-1) + o * ystride;
+        const int to = min(target_base + (lane % M), ndst-1) + o * outstride;
         const float ofs = offsets[to];
         const float scl = weights[to];
 
@@ -163,13 +163,13 @@ __global__ void das_alg2_kernel(
 #pragma unroll (M / rows_per_subtile)
     for (int m = row; m < M; m+=rows_per_subtile) {
 
-        if (target_base + m < ny) {
+        if (target_base + m < ndst) {
             #pragma unroll // (N / (cols_per_subtile*vec_size))
             for (int n = col; n < batch_size; n+=(cols_per_subtile*vec_size)) {
-                int out_ofs = target_base + m + n * ystride;
+                int out_ofs = target_base + m + n * outstride;
                 
                 for (int i = 0; i < vec_size; i++) {
-                    accumulate_inplace(&out[out_ofs + i*ystride], *acc_ptr++, beta);
+                    accumulate_inplace(&out[out_ofs + i*outstride], *acc_ptr++, beta);
                 }
             }
         }

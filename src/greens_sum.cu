@@ -13,8 +13,8 @@
 namespace ffdas::detail {
 
 
-// The kernel writes out in (samples, ny, batch_size) layout. After the kernel,
-// a contiguous copy transposes this into the user's (batch_size, ny, samples)
+// The kernel writes out in (samples, ndst, batch_size) layout. After the kernel,
+// a contiguous copy transposes this into the user's (batch_size, ndst, samples)
 // layout.
 template<>
 ffdas_error_t greens_sum_impl<half2, float2>(
@@ -44,7 +44,7 @@ ffdas_error_t greens_sum_impl<half2, float2>(
     if (out_desc.ndim() != 3 || out_desc.dims[0] != batch_size64 || out_desc.dims[2] != samples64)
         return FFDAS_ERROR_INVALID_DIMS;
 
-    int ny = static_cast<int>(out_desc.dims[1]);
+    int ndst = static_cast<int>(out_desc.dims[1]);
 
     device_ptr<float2> work(handle);
     FFDAS_CHECK(work.alloc(out_desc.nbytes()));
@@ -58,7 +58,7 @@ ffdas_error_t greens_sum_impl<half2, float2>(
 
     dim3 block_dim(block_size);
     dim3 grid_dim(
-        (ny + (M * warps_per_block) - 1) / (M * warps_per_block),
+        (ndst + (M * warps_per_block) - 1) / (M * warps_per_block),
         (batch_size + N - 1) / N,
         samples
     );
@@ -66,16 +66,16 @@ ffdas_error_t greens_sum_impl<half2, float2>(
     greens_sum_kernel<warps_per_block, M, N, K><<<grid_dim, block_dim, 0, handle.stream>>>(
         samples, channels,
         srcpos, wavenums, x,
-        ny, dstpos, work.get(),
+        ndst, dstpos, work.get(),
         batch_size
     );
 
     CUDA_LAUNCH_CHECK();
 
-    // kernel output is (batch, ny, samples) with strides (1, batch_size, batch_size*ny)
+    // kernel output is (batch, ndst, samples) with strides (1, batch_size, batch_size*ndst)
     ffdas_tensor_desc work_desc(
-        {batch_size64, (int64_t)ny, samples64},
-        {1LL, batch_size64, batch_size64 * (int64_t)ny},
+        {batch_size64, (int64_t)ndst, samples64},
+        {1LL, batch_size64, batch_size64 * (int64_t)ndst},
         builtin_traits<float2>::ffdas_datatype
     );
 

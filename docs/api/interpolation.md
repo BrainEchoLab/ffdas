@@ -15,7 +15,7 @@ One-shot interpolation. Creates an internal plan, evaluates the query points, an
     ```python
     ffdas.interpolate(
         gridpos,       # grid vertex positions
-        values,            # values on the grid
+        x,                 # values on the grid
         querypos,      # evaluation points
         *,
         mode="linear",     # "nearest" or "linear"
@@ -27,8 +27,8 @@ One-shot interpolation. Creates an internal plan, evaluates the query points, an
 === "MATLAB"
 
     ```matlab
-    result = ffdas.interpolate(gridpos, values, querypos)
-    result = ffdas.interpolate(gridpos, values, querypos, mode, fill_value)
+    result = ffdas.interpolate(gridpos, x, querypos)
+    result = ffdas.interpolate(gridpos, x, querypos, mode, fill_value)
     ```
 
 ### Parameters
@@ -65,7 +65,7 @@ interp = ffdas.Interpolator(gridpos, mode="linear")
 ### Calling
 
 ```python
-result = interp(values, querypos, *, fill=None, out=None, preprocess=False)
+result = interp(x, querypos, *, fill=None, out=None, preprocess=False)
 ```
 
 | Parameter | Shape | Description |

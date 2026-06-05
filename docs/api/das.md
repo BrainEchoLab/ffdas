@@ -27,8 +27,8 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 === "MATLAB"
 
     ```matlab
-    y = ffdas.das(x, srcpos, dstpos, offsets, weights)
-    y = ffdas.das(x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
+    out = ffdas.das(x, srcpos, dstpos, offsets, weights)
+    out = ffdas.das(x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
     ```
 
 ## Parameters
@@ -115,6 +115,6 @@ The `offsets` and `weights` arrays have shape `(n, ...)` in Python and `(..., n)
 === "MATLAB"
 
     ```matlab
-    y = ffdas.das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices)
-    y = ffdas.das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
+    out = ffdas.das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices)
+    out = ffdas.das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices, srcdir, wavenum, algorithm, use_fp16, channels_trailing)
     ```

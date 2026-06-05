@@ -31,7 +31,7 @@ The output at each target is the sum over all sources of $x_s \cdot G$, computed
 === "MATLAB"
 
     ```matlab
-    y = ffdas.greens(srcpos, wavenums, x, dstpos)
+    out = ffdas.greens(srcpos, wavenums, x, dstpos)
     ```
 
 ## Parameters

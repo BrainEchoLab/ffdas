@@ -98,7 +98,7 @@ ffdas_error_t das_alg1_launch(
     bool dir_check = (srcdir != NULL);
 
     dim3 block_dim(128);
-    dim3 grid_dim((params.ny + block_dim.x - 1) / block_dim.x,
+    dim3 grid_dim((params.ndst + block_dim.x - 1) / block_dim.x,
                   (params.batch_size + tile_width - 1) / tile_width);
 
     if (dir_check) {
@@ -112,8 +112,8 @@ ffdas_error_t das_alg1_launch(
             srcdir,
             wavenum, 
             static_cast<const Tcompute*>(input_ptr), 
-            params.ny, 
-            params.ystride,
+            params.ndst, 
+            params.outstride,
             dstpos, 
             offsets, 
             weights, 
@@ -133,8 +133,8 @@ ffdas_error_t das_alg1_launch(
             NULL,
             wavenum, 
             static_cast<const Tcompute*>(input_ptr), 
-            params.ny, 
-            params.ystride,
+            params.ndst, 
+            params.outstride,
             dstpos, 
             offsets, 
             weights, 

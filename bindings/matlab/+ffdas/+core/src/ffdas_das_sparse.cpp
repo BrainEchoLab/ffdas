@@ -67,8 +67,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
     }
 
     // dstpos must have dimensions (..., 3)
-    int64_t ynd = dstpos.ndim_val();
-    if (ynd < 2 || dstpos.shape(ynd - 1) != 3)
+    int64_t dstnd = dstpos.ndim_val();
+    if (dstnd < 2 || dstpos.shape(dstnd - 1) != 3)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "dstpos must have shape (3, ...)");
 
@@ -76,27 +76,27 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if (offsets.dims != weights.dims || offsets.dims != sparse_indices.dims)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "offsets, weights and sparse_indices must have the same shape");
-    if (sequence == 1 && offsets.ndim_val() != (ynd-1))  // matlab squeezed the sequence dimension from offsets/weights
+    if (sequence == 1 && offsets.ndim_val() != (dstnd-1))  // matlab squeezed the sequence dimension from offsets/weights
         mexErrMsgIdAndTxt("ffdas_das:error",
             "offsets and weights must have the same number of dimensions as dstpos");
-    if (sequence > 1 && (offsets.ndim_val()-1) != (ynd-1))  // check number of spatial dimensions
+    if (sequence > 1 && (offsets.ndim_val()-1) != (dstnd-1))  // check number of spatial dimensions
         mexErrMsgIdAndTxt("ffdas_das:error",
             "offsets and weights must have the same number of dimensions as dstpos");
-    for (int i = 0; i < ynd-1; i++) {
+    for (int i = 0; i < dstnd-1; i++) {
         if (offsets.shape((sequence > 1) ? i+1 : i) != dstpos.shape(i))
             mexErrMsgIdAndTxt("ffdas_das_sparse:error",
                 "spatial dimensions of offsets, weights and sparse_indices must match dstpos");
     }
 
     // out will have dimensions ([batch,] ...)
-    int64_t ynd_spatial = ynd - 1;
-    int64_t out_ndim = ynd_spatial + (have_batch ? 1 : 0);
+    int64_t spatial_ndim = dstnd - 1;
+    int64_t out_ndim = spatial_ndim + (have_batch ? 1 : 0);
 
     std::vector<int64_t> out_dims(out_ndim);
     int o = 0;
     if (have_batch)
         out_dims[o++] = x.shape(0);
-    for (int i = 0; i < ynd_spatial; i++)
+    for (int i = 0; i < spatial_ndim; i++)
         out_dims[o++] = dstpos.shape(i);
 
     // out follows the input data type

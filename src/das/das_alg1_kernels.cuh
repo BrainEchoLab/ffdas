@@ -19,8 +19,8 @@ __global__ void das_alg1_kernel(
     const float4 *srcdir, 
     float wavenum,
     const Tx *x, 
-    int ny, 
-    int ystride, 
+    int ndst, 
+    int outstride, 
     const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
@@ -32,7 +32,7 @@ __global__ void das_alg1_kernel(
     const int n = blockIdx.x * blockDim.x + threadIdx.x;
     const int batch_base = blockIdx.y * tile_width;
 
-    if (n >= ny || batch_base >= batch_size) 
+    if (n >= ndst || batch_base >= batch_size) 
         return;
 
     const float3 yp = dstpos[n];
@@ -46,11 +46,11 @@ __global__ void das_alg1_kernel(
         int seqidx = i;
 
         if constexpr(is_sparse) {
-            seqidx = sparse_indices[i * ystride];
+            seqidx = sparse_indices[i * outstride];
         }
 
-        const float ofs = offsets[n + seqidx * ystride];
-        const float scl = weights[n + seqidx * ystride];
+        const float ofs = offsets[n + seqidx * outstride];
+        const float scl = weights[n + seqidx * outstride];
 
         for (int m = 0; m < channels; m++) {
             const float3 xp = srcpos[m];
@@ -98,7 +98,7 @@ __global__ void das_alg1_kernel(
     }
 
     for (int b = 0; b < actual_batch_size; b++) {
-        int idx = n + (batch_base + b) * ystride;
+        int idx = n + (batch_base + b) * outstride;
         accumulate_inplace(&out[idx], accum[b], beta);
     }
 }

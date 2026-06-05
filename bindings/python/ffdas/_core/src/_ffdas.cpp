@@ -352,42 +352,42 @@ NB_MODULE(_ffdas, m) {
     nb::class_<ContractionPlan>(m, "ContractionPlan");
 
     m.def("create_contraction", [](Handle &handle,
-                                    nb::ndarray<nb::ro, nb::device::cuda> x, 
-                                    std::vector<int> x_modes,
                                     nb::ndarray<nb::ro, nb::device::cuda> a, 
                                     std::vector<int> a_modes,
-                                    nb::ndarray<nb::device::cuda> y, 
-                                    std::vector<int> y_modes) {
-        ScopedTensorDesc x_desc(x), a_desc(a), out_desc(y);
+                                    nb::ndarray<nb::ro, nb::device::cuda> b, 
+                                    std::vector<int> b_modes,
+                                    nb::ndarray<nb::device::cuda> out, 
+                                    std::vector<int> out_modes) {
+        ScopedTensorDesc a_desc(a), b_desc(b), out_desc(out);
         auto *cp = new ContractionPlan();
         cp->owner = &handle;
         check(ffdas_create_contraction(
             handle.h, 
             &cp->plan,
-            x_desc.desc, 
-            x_modes.data(),
             a_desc.desc, 
             a_modes.data(),
+            b_desc.desc, 
+            b_modes.data(),
             out_desc.desc, 
-            y_modes.data()
+            out_modes.data()
         ));
         return cp;
-    }, "handle"_a, "x"_a, "x_modes"_a, "a"_a, "a_modes"_a, "y"_a, "out_modes"_a,
+    }, "handle"_a, "a"_a, "a_modes"_a, "b"_a, "b_modes"_a, "out"_a, "out_modes"_a,
        nb::rv_policy::take_ownership, nb::keep_alive<0, 1>());
 
     m.def("contraction", [](Handle &handle, 
                             ContractionPlan &plan,
-                             nb::ndarray<nb::ro, nb::device::cuda> x, 
                              nb::ndarray<nb::ro, nb::device::cuda> a, 
-                             nb::ndarray<nb::device::cuda> y) {
+                             nb::ndarray<nb::ro, nb::device::cuda> b, 
+                             nb::ndarray<nb::device::cuda> out) {
         check(ffdas_contraction(
             handle.h, 
             plan.plan, 
-            x.data(), 
             a.data(), 
-            y.data()
+            b.data(), 
+            out.data()
         ));
-    }, "handle"_a, "plan"_a, "x"_a, "a"_a, "y"_a);
+    }, "handle"_a, "plan"_a, "a"_a, "b"_a, "out"_a);
 
     nb::class_<InterpolationPlan>(m, "InterpolationPlan");
 

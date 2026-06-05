@@ -7,8 +7,8 @@ import ffdas
 
 def _greens_reference(srcpos, wavenums, x, dstpos):
     """Reference: y[b,t,f] = sum_s x[b,s,f] * exp(i*k[f]*r[s,t]) / r[s,t]."""
-    flat_ypos = dstpos.reshape(-1, 3)
-    diff = srcpos[None, :, :] - flat_ypos[:, None, :]
+    flat_dstpos = dstpos.reshape(-1, 3)
+    diff = srcpos[None, :, :] - flat_dstpos[:, None, :]
     r = np.maximum(np.sqrt(np.sum(diff ** 2, axis=-1)), 1e-10)
     phase = wavenums[None, None, :] * r[:, :, None]
     kernel = np.exp(1j * phase) / r[:, :, None]

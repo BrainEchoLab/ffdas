@@ -35,23 +35,23 @@ void mexFunction(int nlhs, mxArray *plhs[],
     int64_t channels = x.shape(1);
     int64_t samples = x.shape(2);
 
-    int64_t ny = 1;
+    int64_t ndst = 1;
     std::vector<int64_t> out_shape(2 + dstpos.ndim_val()-1);
     out_shape[0] = batch_size;
     out_shape[1 + dstpos.ndim_val()-1] = samples;
 
     for (int i = 0; i < dstpos.ndim_val()-1; i++) {
-        ny *= dstpos.shape(i);
+        ndst *= dstpos.shape(i);
         out_shape[i+1] = dstpos.shape(i);
     }
 
-    ndarray::ndarray out = ndarray::make_ndarray({batch_size, ny, samples}, x.class_id, x.complexity);
+    ndarray::ndarray out = ndarray::make_ndarray({batch_size, ndst, samples}, x.class_id, x.complexity);
 
     // The output array gets constructed through mex, which removes any unit trailing dimensions. Since
     // ffdas_greens_sum expects a 3d output tensor, we update the (ffdas) descriptor's dimensions by
     // calling reshape to get back the unit dimension
     if (batch_size == 1)
-        out.reshape({batch_size, ny, samples});
+        out.reshape({batch_size, ndst, samples});
 
     ScopedTensorDesc x_desc(x);
     ScopedTensorDesc out_desc(out);

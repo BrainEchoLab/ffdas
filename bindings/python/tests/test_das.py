@@ -36,12 +36,12 @@ def _das_sparse_args(**overrides):
 # raises
 
 
-def test_das_ypos_wrong_trailing_dim():
+def test_das_dstpos_wrong_trailing_dim():
     with pytest.raises(ValueError):
         ffdas.das(**_das_args(dstpos=cp.zeros((8, 2), dtype="float32")))
 
 
-def test_das_ypos_1d():
+def test_das_dstpos_1d():
     with pytest.raises(ValueError):
         ffdas.das(**_das_args(dstpos=cp.zeros((3,), dtype="float32")))
 
