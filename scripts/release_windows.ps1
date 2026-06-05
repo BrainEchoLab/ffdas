@@ -95,7 +95,7 @@ if ($Target -eq "python" -or $Target -eq "all") {
         if (Test-Path $WheelDir) { Remove-Item -Recurse -Force $WheelDir }
         python -m build --wheel --outdir $WheelDir
         $wheel = (Get-Item "$WheelDir\*.whl").FullName
-        & delvewheel repair $wheel --wheel-dir "$DistDir" @DelvewheelExcludes
+        & delvewheel repair $wheel --wheel-dir "$DistDir" --add-path "$RepoRoot\_build_python_cu$CudaMajor" @DelvewheelExcludes
     } finally {
         Pop-Location
     }
