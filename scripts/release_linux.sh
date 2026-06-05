@@ -7,6 +7,7 @@ DIST_DIR="$REPO_ROOT/dist"
 CUDA_ROOT="${CUDA_ROOT:-/usr/local/cuda-13}"
 CUDA_MAJOR="${CUDA_MAJOR:-13}"
 TARGET="${1:-all}"
+ffdasVersion="0.1.0"
 
 fail() { echo "error: $1" >&2; exit 1; }
 
@@ -69,8 +70,8 @@ if [ "$TARGET" = "matlab" ] || [ "$TARGET" = "all" ]; then
         -DBUILD_MEX=ON \
         -DCMAKE_CUDA_ARCHITECTURES="$CUDA_ARCHITECTURES"
     cmake --build "$REPO_ROOT/_build_matlab_cu$CUDA_MAJOR" -j
-    cmake --install "$REPO_ROOT/_build_matlab_cu$CUDA_MAJOR" --prefix "$DIST_DIR/ffdas_cu$CUDA_MAJOR-matlab-linux-x86_64"
-    (cd "$DIST_DIR" && zip -qr ffdas_cu$CUDA_MAJOR-matlab-linux-x86_64.zip ffdas_cu$CUDA_MAJOR-matlab-linux-x86_64/)
+    cmake --install "$REPO_ROOT/_build_matlab_cu$CUDA_MAJOR" --prefix "$DIST_DIR/ffdas_cu$CUDA_MAJOR-$ffdasVersion-matlab-linux_x86_64"
+    (cd "$DIST_DIR" && zip -qr ffdas_cu$CUDA_MAJOR-$ffdasVersion-matlab-linux_x86_64.zip ffdas_cu$CUDA_MAJOR-$ffdasVersion-matlab-linux_x86_64/)
     echo ""
 fi
 
