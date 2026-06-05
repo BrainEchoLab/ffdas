@@ -33,7 +33,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
     int algorithm = static_cast<int>(mxGetScalar(prhs[8]));
     bool use_fp16 = static_cast<bool>(mxGetScalar(prhs[9]));
 
-    // refers to trailing from matlab's perspective (col-major ordering), so 'true' would require no permutation
+    // refers to trailing from matlab's perspective (col-major ordering), so 'true' means 
+    // leadig in row-major order and would require no permutation
     bool channels_trailing = static_cast<bool>(mxGetScalar(prhs[10]));
 
     // x must have dimensions ([batch,] channels, sequence, samples)
@@ -42,12 +43,20 @@ void mexFunction(int nlhs, mxArray *plhs[],
             "x must have 3 or 4 dimensions (got %d)", x.ndim_val());
 
     if (!channels_trailing) {
+        // in this case, it is possible that the batch and sequence dims are both 1, 
+        // and since matlab removes any trailing dimension, we have to add it back here
+        if (x.ndim_val() == 2)
+            x.reshape({1, x.shape(0), x.shape(1)});
+
         if (x.ndim_val() == 3) {
             x.permute({1, 0, 2});
         } else {
             x.permute({0, 2, 1, 3});
         }
     }
+
+    bool have_batch = (x.ndim_val() == 4);
+    int64_t sequence = channels_trailing ? x.shape(x.ndim_val()-2) : x.shape(x.ndim_val()-3);
 
     if (xpos.ndim_val() != 2 || xpos.shape(1) != 3)
         mexErrMsgIdAndTxt("ffdas_das:error",
@@ -69,20 +78,22 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if (offsets.dims != weights.dims)
         mexErrMsgIdAndTxt("ffdas_das:error",
             "offsets and weights must have the same shape");
-    if (offsets.ndim_val() != ynd)
+    if (sequence == 1 && offsets.ndim_val() != (ynd-1))  // matlab squeezed the sequence dimension from offsets/weights
         mexErrMsgIdAndTxt("ffdas_das:error",
             "offsets and weights must have the same number of dimensions as ypos");
-    if (offsets.shape(0) != x.shape(x.ndim_val() - 2))
+    if (sequence > 1 && (offsets.ndim_val()-1) != (ynd-1))  // check number of spatial dimensions
+        mexErrMsgIdAndTxt("ffdas_das:error",
+            "offsets and weights must have the same number of dimensions as ypos");
+    if (sequence > 1 && offsets.shape(0) != sequence)
         mexErrMsgIdAndTxt("ffdas_das:error",
             "leading dimension of offsets/weights must match the channel dimension of x");
-    for (int i = 1; i < offsets.ndim_val(); i++) {
-        if (offsets.shape(i) != ypos.shape(i - 1))
+    for (int i = 0; i < ynd-1; i++) {
+        if (offsets.shape((sequence > 1) ? i+1 : i) != ypos.shape(i))
             mexErrMsgIdAndTxt("ffdas_das:error",
                 "spatial dimensions of offsets/weights must match ypos");
     }
 
     // y will have dimensions ([batch,] ...)
-    bool have_batch = (x.ndim_val() == 4);
     int64_t ynd_spatial = ynd - 1;
     int64_t out_ndim = ynd_spatial + (have_batch ? 1 : 0);
 

@@ -41,12 +41,20 @@ void mexFunction(int nlhs, mxArray *plhs[],
             "x must have 3 or 4 dimensions (got %d)", x.ndim_val());
 
     if (!channels_trailing) {
+        // in this case, it is possible that the batch and sequence dims are both 1, 
+        // and since matlab removes any trailing dimension, we have to add it back here
+        if (x.ndim_val() == 2)
+            x.reshape({1, x.shape(0), x.shape(1)});
+
         if (x.ndim_val() == 3) {
             x.permute({1, 0, 2});
         } else {
             x.permute({0, 2, 1, 3});
         }
     }
+
+    bool have_batch = (x.ndim_val() == 4);
+    int64_t sequence = channels_trailing ? x.shape(x.ndim_val()-2) : x.shape(x.ndim_val()-3);
 
     if (xpos.ndim_val() != 2 || xpos.shape(1) != 3)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
@@ -68,17 +76,19 @@ void mexFunction(int nlhs, mxArray *plhs[],
     if (offsets.dims != weights.dims || offsets.dims != sparse_indices.dims)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "offsets, weights and sparse_indices must have the same shape");
-    if (offsets.ndim_val() != ynd)
-        mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-            "offsets, weights and sparse_indices must have the same number of dimensions as ypos");
-    for (int i = 1; i < offsets.ndim_val(); i++) {
-        if (offsets.shape(i) != ypos.shape(i - 1))
+    if (sequence == 1 && offsets.ndim_val() != (ynd-1))  // matlab squeezed the sequence dimension from offsets/weights
+        mexErrMsgIdAndTxt("ffdas_das:error",
+            "offsets and weights must have the same number of dimensions as ypos");
+    if (sequence > 1 && (offsets.ndim_val()-1) != (ynd-1))  // check number of spatial dimensions
+        mexErrMsgIdAndTxt("ffdas_das:error",
+            "offsets and weights must have the same number of dimensions as ypos");
+    for (int i = 0; i < ynd-1; i++) {
+        if (offsets.shape((sequence > 1) ? i+1 : i) != ypos.shape(i))
             mexErrMsgIdAndTxt("ffdas_das_sparse:error",
                 "spatial dimensions of offsets, weights and sparse_indices must match ypos");
     }
 
     // y will have dimensions ([batch,] ...)
-    bool have_batch = (x.ndim_val() == 4);
     int64_t ynd_spatial = ynd - 1;
     int64_t out_ndim = ynd_spatial + (have_batch ? 1 : 0);
 
