@@ -5,10 +5,32 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DIST_DIR="$REPO_ROOT/dist"
 
 CUDA_ROOT="${CUDA_ROOT:-/usr/local/cuda-13}"
-CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"
+CUDA_MAJOR="${CUDA_MAJOR:-13}"
+CUDA_ARCHITECTURES="${CMAKE_CUDA_ARCHITECTURES:-75-real;80-real;86-real;89-real;90-real;100-real;120}"
 TARGET="${1:-all}"
 
 fail() { echo "error: $1" >&2; exit 1; }
+
+# auditwheel excludes per CUDA major version — these are the CUDA shared
+# libraries that should NOT be bundled into the wheel (provided by the
+# system toolkit or pip cuda packages at runtime).
+if [ "$CUDA_MAJOR" = "13" ]; then
+    AUDITWHEEL_EXCLUDES=(
+        --exclude libcudart.so.13
+        --exclude libcublas.so.13
+        --exclude libcusolver.so.13
+        --exclude libnvToolsExt.so.1
+    )
+elif [ "$CUDA_MAJOR" = "12" ]; then
+    AUDITWHEEL_EXCLUDES=(
+        --exclude libcudart.so.12
+        --exclude libcublas.so.12
+        --exclude libcusolver.so.11
+        --exclude libnvToolsExt.so.1
+    )
+else
+    fail "unsupported CUDA_MAJOR=$CUDA_MAJOR (expected 12 or 13)"
+fi
 
 # Validate prerequisites
 [ -x "$CUDA_ROOT/bin/nvcc" ] || fail "nvcc not found at $CUDA_ROOT/bin/nvcc (set CUDA_ROOT)"
@@ -26,6 +48,7 @@ if [ "$TARGET" = "python" ] || [ "$TARGET" = "all" ]; then
 fi
 
 echo "info: CUDA_ROOT=$CUDA_ROOT"
+echo "info: CUDA_MAJOR=$CUDA_MAJOR"
 echo "info: CUDA_ARCHITECTURES=$CUDA_ARCHITECTURES"
 echo "info: TARGET=$TARGET"
 echo "info: DIST_DIR=$DIST_DIR"
@@ -48,16 +71,15 @@ if [ "$TARGET" = "matlab" ] || [ "$TARGET" = "all" ]; then
 fi
 
 if [ "$TARGET" = "python" ] || [ "$TARGET" = "all" ]; then
-    echo "info: building Python wheel"
+    echo "info: building Python wheel (ffdas-cu$CUDA_MAJOR)"
+    export FFDAS_CUDA_MAJOR="$CUDA_MAJOR"
+    export CUDA_ROOT
+    export CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCHITECTURES"
     cd "$REPO_ROOT"
-    python -m build --wheel --outdir "$REPO_ROOT/_build_wheel" \
-        -Ccmake.define.CMAKE_CUDA_COMPILER="$CUDA_ROOT/bin/nvcc" \
-        -Ccmake.define.CUDAToolkit_ROOT="$CUDA_ROOT"
-    auditwheel repair "$REPO_ROOT/_build_wheel"/*.whl --wheel-dir "$DIST_DIR/" \
-        --exclude libcudart.so.13 \
-        --exclude libcublas.so.13 \
-        --exclude libcusolver.so.13 \
-        --exclude libnvToolsExt.so.1
+    python -m build --wheel --outdir "$REPO_ROOT/_build_wheel"
+    auditwheel repair "$REPO_ROOT/_build_wheel"/*.whl \
+        --wheel-dir "$DIST_DIR/" \
+        "${AUDITWHEEL_EXCLUDES[@]}"
     echo ""
 fi
 

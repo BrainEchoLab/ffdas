@@ -32,7 +32,7 @@ By default, the pip package does not install CUDA runtime libraries. If you do n
 
 ## MATLAB
 
-Download the prebuilt MEX binaries for your platform from the [GitHub Releases](https://github.com/BrainEchoLab/ffdas/releases) page and add the bindings directory to your MATLAB path:
+Download the prebuilt MEX binaries for your platform from the [GitHub Releases](https://github.com/luukverhoef/ffdas/releases) page and add the bindings directory to your MATLAB path:
 
 ```matlab
 addpath("/path/to/ffdas/bindings/matlab")
@@ -47,7 +47,7 @@ Requires MATLAB R2018b+ with the Parallel Computing Toolbox.
 - CMake 3.26 or later
 - CUDA Toolkit (13.x or 12.x)
 - C++ compiler with C++17 support (GCC 9+, Clang 10+, or MSVC 2019+)
-- For Python bindings: Python 3.12+, scikit-build-core, nanobind, array-api-compat
+- For Python bindings: Python 3.12+, nanobind, array-api-compat
 - For MATLAB bindings: MATLAB R2018b+, Parallel Computing Toolbox
 
 ### Core Library
@@ -77,9 +77,8 @@ The minimum supported architecture is SM 70 (required for half-precision and ten
 | 75 | RTX 20-series, Quadro RTX |
 | 80 | A100 |
 | 86 | RTX 30-series, A-series |
-| 89 | RTX 40-series, RTX Ada, L-series |
+| 89 | RTX 40-series, L-series |
 | 90 | H100, GH200 |
-| 120 | RTX 50-series, RTX PRO Blackwell |
 
 Specifying the exact architecture for your GPU avoids compiling unused PTX/SASS and speeds up the build.
 
@@ -91,36 +90,54 @@ Specifying the exact architecture for your GPU avoids compiling unused PTX/SASS 
 | `BUILD_PYTHON` | `OFF` | Build Python bindings |
 | `BUILD_MEX` | `OFF` | Build MATLAB MEX bindings |
 | `FFDAS_USE_NVTX` | `ON` | Enable NVTX profiling annotations |
-| `FETCH_NANOBIND` | `OFF` | Fetch nanobind via FetchContent if not found (only needed for standalone CMake builds without pip) |
+| `FETCH_NANOBIND` | `OFF` | Fetch nanobind via FetchContent if not found |
 
 ### Python Development Install
 
-The Python package uses [scikit-build-core](https://scikit-build-core.readthedocs.io) as its build backend, which drives CMake internally. The recommended way to set up a development environment is an editable install from the repository root:
+The recommended way to build and install the Python bindings for development is directly through CMake:
 
 ```bash
-git clone https://github.com/BrainEchoLab/ffdas.git
+git clone https://github.com/luukverhoef/ffdas.git
 cd ffdas
+pip install nanobind array-api-compat
+cmake -S . -B build -DBUILD_PYTHON=ON
+cmake --build build --config Release
+cmake --install build --prefix bindings/python
+```
+
+This places the compiled extension (`_ffdas`) and shared library (`libffdas`) into `bindings/python/ffdas/_core/`, making the package importable from `bindings/python/`. Either add that directory to your Python path or install in editable mode:
+
+```bash
+pip install -e ".[dev]" --no-build-isolation
+```
+
+After modifying C++ or CUDA source files, re-run the cmake build and install steps.
+
+If nanobind is not installed, CMake can fetch it automatically:
+
+```bash
+cmake -S . -B build -DBUILD_PYTHON=ON -DFETCH_NANOBIND=ON
+```
+
+#### Using pip to build
+
+An alternative to invoking cmake directly is building entirely through pip, which handles nanobind discovery and cmake invocation automatically:
+
+```bash
 pip install -e ".[dev]"
 ```
 
-This builds the CUDA extension, installs ffdas in editable mode, and pulls the development dependencies (pytest, pytest-cov). Changes to Python source files are picked up immediately. After modifying C++ or CUDA source files, re-run `pip install -e .` to rebuild the extension.
-
-Each editable install creates an isolated build environment and installs the build dependencies (scikit-build-core, nanobind) into it. To skip this overhead on repeated rebuilds, pre-install the build dependencies and pass `--no-build-isolation`:
+To point the build at a specific CUDA toolkit, set environment variables:
 
 ```bash
-pip install scikit-build-core nanobind
-pip install --no-build-isolation -e ".[dev]"
+CUDA_ROOT=/usr/local/cuda-13 pip install -e ".[dev]"
 ```
 
-To pass CMake options through pip, use `-C` (configuration settings):
+Additional cmake flags can be passed through `FFDAS_CMAKE_ARGS`:
 
 ```bash
-pip install --no-build-isolation -e ".[dev]" \
-    -Ccmake.define.CMAKE_CUDA_ARCHITECTURES=86
+FFDAS_CMAKE_ARGS="-DCMAKE_CUDA_ARCHITECTURES=86" pip install -e ".[dev]"
 ```
-
-!!! note
-    The editable install runs from the repository root where `pyproject.toml` lives, not from `bindings/python/`.
 
 ### MATLAB Bindings
 
@@ -168,12 +185,10 @@ cmake -S . -B build -DCMAKE_CUDA_COMPILER=/usr/local/cuda-13/bin/nvcc \
     -DCUDAToolkit_ROOT=/usr/local/cuda-13
 ```
 
-For Python development installs, pass the same through pip:
+Or via environment variable when building through pip:
 
 ```bash
-pip install --no-build-isolation -e . \
-    -Ccmake.define.CMAKE_CUDA_COMPILER=/usr/local/cuda-13/bin/nvcc \
-    -Ccmake.define.CUDAToolkit_ROOT=/usr/local/cuda-13
+CUDA_ROOT=/usr/local/cuda-13 pip install -e .
 ```
 
 ### Windows
@@ -220,4 +235,4 @@ python3.12 -m pip install -e .
 
 **Linux: MEX files fail to load.** If MATLAB reports missing symbols, check that you built with a compiler version compatible with your MATLAB release. Recent MATLAB versions require GCC 12 or 13; older GCC versions may produce incompatible binaries.
 
-**Import error in Python.** If `import ffdas` fails with a missing `_ffdas` module, the nanobind extension was not built or is not in the expected location. Verify the build completed without errors by checking the pip install output, and confirm that `bindings/python/ffdas/_core/_ffdas*.so` (or `.pyd` on Windows) exists.
+**Import error in Python.** If `import ffdas` fails with a missing `_ffdas` module, the nanobind extension was not built or is not in the expected location. Verify the build completed without errors and confirm that `bindings/python/ffdas/_core/_ffdas*.so` (or `.pyd` on Windows) exists.

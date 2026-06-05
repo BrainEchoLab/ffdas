@@ -3,10 +3,32 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $DistDir = "$RepoRoot\dist"
 
-$CudaArchitectures = "75-real;80-real;86-real;89-real;90-real;100-real;120"
+$CudaMajor = if ($env:CUDA_MAJOR) { $env:CUDA_MAJOR } else { "13" }
+$CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90-real;100-real;120" }
 $Target = if ($args.Count -gt 0) { $args[0] } else { "all" }
 
 function Fail($msg) { Write-Error $msg; exit 1 }
+
+# delvewheel excludes per CUDA major version — these are the CUDA DLLs that
+# should NOT be bundled into the wheel (provided by the system toolkit or
+# pip cuda packages at runtime).
+if ($CudaMajor -eq "13") {
+    $DelvewheelExcludes = @(
+        "--exclude", "cublas64_13.dll",
+        "--exclude", "cublasLt64_13.dll",
+        "--exclude", "cusolver64_12.dll",
+        "--exclude", "cusparse64_12.dll"
+    )
+} elseif ($CudaMajor -eq "12") {
+    $DelvewheelExcludes = @(
+        "--exclude", "cublas64_12.dll",
+        "--exclude", "cublasLt64_12.dll",
+        "--exclude", "cusolver64_11.dll",
+        "--exclude", "cusparse64_12.dll"
+    )
+} else {
+    Fail "unsupported CUDA_MAJOR=$CudaMajor (expected 12 or 13)"
+}
 
 # Set up VS developer environment if not already active
 if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
@@ -30,6 +52,7 @@ if ($Target -eq "python" -or $Target -eq "all") {
     if (-not (Get-Command delvewheel -ErrorAction SilentlyContinue)) { Fail "delvewheel not found (pip install delvewheel)" }
 }
 
+Write-Host "cuda major:    $CudaMajor"
 Write-Host "architectures: $CudaArchitectures"
 Write-Host "target:        $Target"
 Write-Host "output:        $DistDir"
@@ -51,17 +74,15 @@ if ($Target -eq "matlab" -or $Target -eq "all") {
 }
 
 if ($Target -eq "python" -or $Target -eq "all") {
-    Write-Host "info: building Python wheel"
+    Write-Host "info: building Python wheel (ffdas-cu$CudaMajor)"
+    $env:FFDAS_CUDA_MAJOR = $CudaMajor
+    $env:CMAKE_CUDA_ARCHITECTURES = $CudaArchitectures
+    $env:CMAKE_GENERATOR = "Ninja"
     Push-Location $RepoRoot
     try {
-        python -m build --wheel --outdir "$RepoRoot\_build_wheel" -C cmake.define.CMAKE_GENERATOR="Ninja"
+        python -m build --wheel --outdir "$RepoRoot\_build_wheel"
         $wheel = (Get-Item "$RepoRoot\_build_wheel\*.whl").FullName
-        delvewheel repair $wheel --wheel-dir "$DistDir" `
-            --add-path "$RepoRoot\_build_python" `
-            --exclude cublas64_13.dll `
-            --exclude cublasLt64_13.dll `
-            --exclude cusolver64_12.dll `
-            --exclude cusparse64_12.dll
+        & delvewheel repair $wheel --wheel-dir "$DistDir" @DelvewheelExcludes
     } finally {
         Pop-Location
     }

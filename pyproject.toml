@@ -1,50 +1,6 @@
 [build-system]
-requires = ["scikit-build-core>=0.10", "nanobind>=2.6"]
-build-backend = "scikit_build_core.build"
-
-[project]
-name = "ffdas-cu13"
-version = "0.1.0"
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "array-api-compat",
-]
-
-# CUDA runtime libraries are optional. Users with a system CUDA toolkit
-# do not need them; `pip install ffdas-cu13[cuda]` pulls them from PyPI.
-# For ffdas-cu12, the release script patches these to the -cu12 variants.
-
-[tool.scikit-build]
-cmake.build-type = "Release"
-cmake.define = {BUILD_PYTHON = "ON", BUILD_MEX = "OFF", CMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"}
-ninja.make-fallback = true
-wheel.packages = ["bindings/python/ffdas"]
-wheel.py-api = "cp312"
-build-dir = "_build_python"
-
-[project.optional-dependencies]
-cuda = [
-    "cuda-pathfinder",
-    "nvidia-cuda-runtime",
-    "nvidia-cublas",
-    "nvidia-cusolver",
-    "nvidia-nvtx",
-]
-dev = [
-    "pytest>=6.0",
-    "pytest-cov",
-]
-examples = [
-    "cupy-cuda13x",
-    "numpy>=2.0",
-    "matplotlib",
-    "pillow",
-]
-docs = [
-    "mkdocs>=1.6,<2",
-    "mkdocs-material>=9.7",
-]
+requires = ["setuptools>=70", "nanobind>=2.6"]
+build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 testpaths = ["bindings/python/tests"]
