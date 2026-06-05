@@ -8,22 +8,39 @@
 rng(0);
 
 sound_speed = 1540.0;
-center_freq = 3e6;
+center_freq = 3.08e6;
 sampling_freq = center_freq;
 n_samples = 512;
 
-pitch = 300e-6;
+pitch = 500e-6;
 el = gpuArray(single((0:31) - 15.5) * pitch);
 [ex, ey] = ndgrid(el, el);
-channel_pos = gpuArray(single([ex(:)'; ey(:)'; zeros(1, 1024)]));
+n_channels = 1024;
+channel_pos = gpuArray(single([ex(:)'; ey(:)'; zeros(1, n_channels)]));
+
+xmin = -0.008; xmax = 0.008;
+ymin = -0.008; ymax = 0.008;
+zmin = 0.010;  zmax = 0.026;
 
 
-% simulate rf data for a normal-incidence plane wave
+% simulate rf data for a normal-incidence plane wave.
+% see simulation.py for a walkthrough of greens propagation
 
 batch_size = 128;
-n_scatterers = 4096;
-t = 2 * pi * rand(1, n_scatterers, "single", "gpuArray");
-scatter_pos = trefoil(t) + randn(3, n_scatterers, "single", "gpuArray") * 0.00015;
+n_scatterers = 16384;
+n_knot = 8192;
+
+t = 2 * pi * rand(1, n_knot, "single", "gpuArray");
+knot_pos = trefoil(t) + randn(3, n_knot, "single", "gpuArray") * 0.00015;
+background_pos = [ ...
+    xmin + (xmax - xmin) * rand(1, n_scatterers - n_knot, "single", "gpuArray"); ...
+    ymin + (ymax - ymin) * rand(1, n_scatterers - n_knot, "single", "gpuArray"); ...
+    zmin + (zmax - zmin) * rand(1, n_scatterers - n_knot, "single", "gpuArray")];
+
+scatter_pos = cat(2, knot_pos, background_pos);
+scatter_values = cat(2, ...
+    rand(1, n_knot, batch_size, "single", "gpuArray"), ...
+    rand(1, n_scatterers - n_knot, batch_size, "single", "gpuArray"));
 
 k_fft = gpuArray(single([0:n_samples/2-1, -n_samples/2:-1]'));
 freqs = k_fft * sampling_freq / n_samples + center_freq;
@@ -32,9 +49,8 @@ sigma_f = 0.6 * center_freq / (2 * sqrt(2 * log(2)));
 pulse = complex(exp(-0.5 * ((freqs - center_freq) / sigma_f).^2));
 
 % plane wave: all channels transmit simultaneously (zero delay)
-channel_delay = zeros(1, 1024, "single", "gpuArray");
+channel_delay = zeros(1, n_channels, "single", "gpuArray");
 transmission = pulse .* exp(-2j * pi * freqs .* channel_delay);
-scatter_values = rand(1, n_scatterers, batch_size, "single", "gpuArray");
 
 tx = ffdas.greens(channel_pos, wavenums, transmission, scatter_pos);
 rx = ffdas.greens(scatter_pos, wavenums, tx .* scatter_values, channel_pos);
@@ -46,9 +62,9 @@ rf = reshape(rf, n_samples, 1, [], batch_size);
 
 % reconstruction grid: 64^3 voxels centered on the phantom
 nz = 64; ny = 64; nx = 64;
-x = gpuArray(single(linspace(-0.007, 0.007, nx)));
-y = gpuArray(single(linspace(-0.007, 0.007, ny)));
-z = gpuArray(single(linspace(0.003, 0.017, nz)));
+x = gpuArray(single(linspace(xmin, xmax, nx)));
+y = gpuArray(single(linspace(ymin, ymax, ny)));
+z = gpuArray(single(linspace(zmin, zmax, nz)));
 [xx, yy, zz] = ndgrid(x, y, z);
 voxel_pos = zeros(3, nx, ny, nz, "single", "gpuArray");
 voxel_pos(1,:,:,:) = xx;
@@ -63,21 +79,29 @@ offsets = squeeze(voxel_pos(3,:,:,:)) * ks;
 offsets = reshape(offsets, nx, ny, nz, 1);
 weights = ones(size(offsets), "single", "gpuArray");
 
-% element directivity: (4, channels), rows 1-3 are the normal, row 4
-% is the cosine of the sensitivity half-angle
-srcdir = zeros(4, 1024, "single", "gpuArray");
-srcdir(3,:) = 1.0;
-srcdir(4,:) = 0.5;
-
 wavenum = single(-2 * pi * center_freq / sampling_freq);
 
 timer = ffdas.utils.Timer();
 timer.start();
 image = ffdas.das( ...
-    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, srcdir, wavenum);
+    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, [], wavenum);
 timer.stop();
-fprintf("das: %dx%dx%d, %d ch, batch %d: %.1f ms\n", ...
-    nz, ny, nx, 1024, batch_size, timer.elapsed_ms());
+fprintf("das (srcdir=[]): %dx%dx%d, %d ch, batch %d: %.1f ms\n", ...
+    nz, ny, nx, n_channels, batch_size, timer.elapsed_ms());
+
+% element directivity: (4, channels), rows 1-3 are the normal, row 4
+% is the cosine of the sensitivity half-angle
+srcdir = zeros(4, n_channels, "single", "gpuArray");
+srcdir(3,:) = 1.0;
+srcdir(4,:) = 0.707;  % ~45 degree half-angle
+
+timer2 = ffdas.utils.Timer();
+timer2.start();
+image = ffdas.das( ...
+    rf, channel_pos * ks, voxel_pos * ks, offsets, weights, srcdir, wavenum);
+timer2.stop();
+fprintf("das (with srcdir): %dx%dx%d, %d ch, batch %d: %.1f ms\n", ...
+    nz, ny, nx, n_channels, batch_size, timer2.elapsed_ms());
 
 
 magnitude = abs(image(:,:,:,1));
@@ -110,7 +134,7 @@ exportgraphics(gcf, "reconstruct.png", Resolution=150);
 
 function pos = trefoil(t)
     pos = cat(1, ...
-        (sin(t) + 2 * sin(2*t)) * 0.0015, ...
-        -sin(3*t) * 0.002, ...
-        (cos(t) - 2 * cos(2*t)) * 0.0015 + 0.01);
+        (sin(t) + 2 * sin(2*t)) * 0.0016, ...
+        -sin(3*t) * 0.0024, ...
+        (cos(t) - 2 * cos(2*t)) * 0.0016 + 0.018);
 end

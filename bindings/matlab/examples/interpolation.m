@@ -12,40 +12,21 @@
 
 rng(0);
 
+sound_speed = 1540.0;
+center_freq = 3.08e6;
+sampling_freq = center_freq;
+n_samples = 512;
 
-% spherical reconstruction grid
-nr = 96; ntheta = 64; nphi = 64;
-r     = gpuArray(single(linspace(0.005, 0.035, nr)));
-theta = gpuArray(single(linspace(-0.4, 0.4, ntheta)));
-phi   = gpuArray(single(linspace(-0.4, 0.4, nphi)));
-
-% MATLAB convention: gridpos is (3, nx, ny, nz) = (3, nphi, ntheta, nr)
-[pp, tt, rr] = ndgrid(phi, theta, r);
-gridpos = zeros(3, nphi, ntheta, nr, "single", "gpuArray");
-gridpos(1,:,:,:) = rr .* sin(tt);
-gridpos(2,:,:,:) = rr .* sin(pp);
-gridpos(3,:,:,:) = rr .* cos(tt) .* cos(pp);
-
-
-% simulate and reconstruct (see reconstruct.m for details)
-pitch = 150e-6;
+% probe: 32x32 matrix array in the xy-plane at z=0
+pitch = 250e-6;
 el = gpuArray(single((0:31) - 15.5) * pitch);
 [ex, ey] = ndgrid(el, el);
 n_channels = 1024;
 channel_pos = gpuArray(single([ex(:)'; ey(:)'; zeros(1, n_channels)]));
 
-sound_speed = 1540.0;
-center_freq = 5e6;
-sampling_freq = center_freq;
-n_samples = 512;
-batch_size = 32;
-
-xs = gpuArray(single(linspace(-0.004, 0.004, 9)));
-ys = gpuArray(single(linspace(-0.003, 0.003, 3)));
-zs = gpuArray(single(linspace(0.010, 0.026, 9)));
-[gxs, gys, gzs] = ndgrid(xs, ys, zs);
-scatterers = gpuArray(single([gxs(:)'; gys(:)'; gzs(:)']));
-n_scatterers = size(scatterers, 2);
+xmin = -0.016; xmax = 0.016;
+ymin = -0.016; ymax = 0.016;
+zmin = 0.006;  zmax = 0.038;
 
 source = gpuArray(single([0; 0; -0.005]));
 
@@ -55,30 +36,72 @@ wavenums = single(-2 * pi) * freqs / sound_speed;
 sigma_f = 0.6 * center_freq / (2 * sqrt(2 * log(2)));
 pulse = complex(exp(-0.5 * ((freqs - center_freq) / sigma_f).^2));
 
-phases = exp(2i * pi * rand(1, n_scatterers, batch_size, "single", "gpuArray"));
+delay = ffdas.utils.cdist(source, channel_pos) / sound_speed;
+tx_signal = pulse .* exp(-2j * pi * freqs .* delay);
 
-tx = ffdas.greens(source, wavenums, pulse, scatterers);
-rx = ffdas.greens(scatterers, wavenums, tx .* phases, channel_pos);
+% render "ff" text to a binary image for the scatterer phantom
+fig = figure('Visible', 'off', 'Color', 'k');
+set(fig, 'Units', 'pixels', 'Position', [100 100 64 96]);
+ax = axes(fig, 'Units', 'normalized', 'Position', [0 0 1 1]);
+set(ax, 'Color', 'k', 'XLim', [0 1], 'YLim', [0 1], 'Visible', 'off');
+text(ax, 0.47, 0.5, 'ff', 'Color', 'w', 'FontSize', 48, ...
+    'HorizontalAlignment', 'center', 'VerticalAlignment', 'middle', ...
+    'Units', 'normalized');
+drawnow;
+frame = getframe(ax);
+close(fig);
+grid_values = gpuArray(single(mean(double(frame.cdata), 3) > 128));
+img_h = size(grid_values, 1);
+img_w = size(grid_values, 2);
+
+n_scatterers = 16384;
+scatter_pos_unit = rand(3, n_scatterers, "single", "gpuArray");
+
+row = min(floor(scatter_pos_unit(3,:) * single(img_h - 1)) + 1, single(img_h));
+col = min(floor(scatter_pos_unit(1,:) * single(img_w - 1)) + 1, single(img_w));
+scatter_amp = grid_values(row + (col - 1) * img_h);
+scatter_values = single(0.001) * (scatter_amp ...
+    + randn(1, n_scatterers, "single", "gpuArray") * 0.1);
+
+scatter_pos = gpuArray(single([xmin; ymin; zmin])) ...
+    + scatter_pos_unit .* gpuArray(single([xmax - xmin; ymax - ymin; zmax - zmin]));
+
+tx = ffdas.greens(channel_pos, wavenums, tx_signal, scatter_pos);
+rx = ffdas.greens(scatter_pos, wavenums, tx .* scatter_values, channel_pos);
 rf = conj(ifft(rx, [], 1));
-rf = reshape(rf, n_samples, 1, [], batch_size);
+rf = reshape(rf, n_samples, 1, []);
 
-k = sampling_freq / sound_speed;
+
+% spherical reconstruction grid
+nr = 96; ntheta = 96; nphi = 96;
+r     = gpuArray(single(linspace(zmin + 0.005, zmax, nr)));
+theta = gpuArray(single(linspace(-0.5, 0.5, ntheta)));
+phi   = gpuArray(single(linspace(-0.5, 0.5, nphi)));
+
+% MATLAB convention: gridpos is (3, nphi, ntheta, nr)
+[pp, tt, rr] = ndgrid(phi, theta, r);
+gridpos = zeros(3, nphi, ntheta, nr, "single", "gpuArray");
+gridpos(1,:,:,:) = rr .* sin(tt);
+gridpos(2,:,:,:) = rr .* sin(pp);
+gridpos(3,:,:,:) = rr .* cos(tt) .* cos(pp);
+
+ks = sampling_freq / sound_speed;
 d = ffdas.utils.cdist(source, gridpos);
-offsets = reshape(d * k, nphi, ntheta, nr, 1);
+offsets = reshape(d * ks, nphi, ntheta, nr, 1);
 weights = ones(size(offsets), "single", "gpuArray");
 
-volume = ffdas.das( ...
-    rf, channel_pos * k, gridpos * k, offsets, weights, ...
+spherical = ffdas.das( ...
+    rf, channel_pos * ks, gridpos * ks, offsets, weights, ...
     [], single(-2 * pi * center_freq / sampling_freq));
 
-envelope = abs(volume);  % (nphi, ntheta, nr, batch)
+envelope = abs(spherical);  % (nphi, ntheta, nr)
 
 
 % interpolate to Cartesian coordinates
-cart_nz = 128; cart_ny = 64; cart_nx = 64;
-cx = gpuArray(single(linspace(-0.010, 0.010, cart_nx)));
-cy = gpuArray(single(linspace(-0.010, 0.010, cart_ny)));
-cz = gpuArray(single(linspace(0.005, 0.035, cart_nz)));
+cart_nz = 128; cart_ny = 128; cart_nx = 128;
+cx = gpuArray(single(linspace(xmin, xmax, cart_nx)));
+cy = gpuArray(single(linspace(ymin, ymax, cart_ny)));
+cz = gpuArray(single(linspace(zmin, zmax, cart_nz)));
 [cxx, cyy, czz] = ndgrid(cx, cy, cz);
 cart_points = zeros(3, cart_nx, cart_ny, cart_nz, "single", "gpuArray");
 cart_points(1,:,:,:) = cxx;
@@ -95,10 +118,10 @@ fprintf("interpolate to %dx%dx%d: %.1f ms\n", ...
 
 % spherical volume: max projection over phi shows the Cartesian grid
 % warped by the curvilinear coordinates. after interpolation, recovered
-sph_mip = gather(squeeze(max(envelope(:,:,:,1), [], 1)))';
+sph_mip = gather(squeeze(max(envelope, [], 1)))';
 db_sph = 20 * log10(sph_mip / max(sph_mip(:)) + 1e-10);
 
-cart_mip = gather(squeeze(max(cart_volume(:,:,:,1), [], 2)))';
+cart_mip = gather(squeeze(max(cart_volume, [], 2)))';
 db_cart = 20 * log10(cart_mip / max(cart_mip(:)) + 1e-10);
 
 figure;
