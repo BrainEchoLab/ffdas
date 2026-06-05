@@ -4,6 +4,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $DistDir = "$RepoRoot\dist"
 
 $CudaMajor = if ($env:CUDA_MAJOR) { $env:CUDA_MAJOR } else { "13" }
+$CudaRoot = if ($env:CUDA_ROOT) { $env:CUDA_ROOT } else { $null }
 $CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90-real;100-real;120" }
 $Target = if ($args.Count -gt 0) { $args[0] } else { "all" }
 
@@ -53,6 +54,7 @@ if ($Target -eq "python" -or $Target -eq "all") {
 }
 
 Write-Host "cuda major:    $CudaMajor"
+if ($CudaRoot) { Write-Host "cuda root:     $CudaRoot" }
 Write-Host "architectures: $CudaArchitectures"
 Write-Host "target:        $Target"
 Write-Host "output:        $DistDir"
@@ -62,10 +64,18 @@ if (-not (Test-Path $DistDir)) { New-Item -ItemType Directory -Path $DistDir | O
 
 if ($Target -eq "matlab" -or $Target -eq "all") {
     Write-Host "info: building MATLAB toolbox"
-    cmake -G Ninja -S $RepoRoot -B "$RepoRoot\_build_matlab_cu$CudaMajor" `
-        -DCMAKE_BUILD_TYPE=Release `
-        -DBUILD_MEX=ON `
-        -DCMAKE_CUDA_ARCHITECTURES="$CudaArchitectures"
+    $MatlabCmakeArgs = @(
+        "-G", "Ninja",
+        "-S", $RepoRoot,
+        "-B", "$RepoRoot\_build_matlab_cu$CudaMajor",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DBUILD_MEX=ON",
+        "-DCMAKE_CUDA_ARCHITECTURES=$CudaArchitectures"
+    )
+    if ($CudaRoot) {
+        $MatlabCmakeArgs += "-DCUDAToolkit_ROOT=$CudaRoot"
+    }
+    cmake @MatlabCmakeArgs
     cmake --build "$RepoRoot\_build_matlab_cu$CudaMajor"
     cmake --install "$RepoRoot\_build_matlab_cu$CudaMajor" --prefix "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64"
     Compress-Archive -Path "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64" -DestinationPath "$DistDir\ffdas_cu$CudaMajor-matlab-win-amd64.zip"
@@ -78,6 +88,7 @@ if ($Target -eq "python" -or $Target -eq "all") {
     $env:FFDAS_CUDA_MAJOR = $CudaMajor
     $env:CMAKE_CUDA_ARCHITECTURES = $CudaArchitectures
     $env:CMAKE_GENERATOR = "Ninja"
+    if ($CudaRoot) { $env:CUDA_ROOT = $CudaRoot }
     Push-Location $RepoRoot
     try {
         if (Test-Path $WheelDir) { Remove-Item -Recurse -Force $WheelDir }
