@@ -53,7 +53,6 @@ echo "info: CUDA_ARCHITECTURES=$CUDA_ARCHITECTURES"
 echo "info: TARGET=$TARGET"
 echo "info: DIST_DIR=$DIST_DIR"
 
-rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
 if [ "$TARGET" = "matlab" ] || [ "$TARGET" = "all" ]; then
@@ -71,13 +70,15 @@ if [ "$TARGET" = "matlab" ] || [ "$TARGET" = "all" ]; then
 fi
 
 if [ "$TARGET" = "python" ] || [ "$TARGET" = "all" ]; then
+    WHEEL_DIR="$REPO_ROOT/_build_wheel_cu$CUDA_MAJOR"
     echo "info: building Python wheel (ffdas-cu$CUDA_MAJOR)"
     export FFDAS_CUDA_MAJOR="$CUDA_MAJOR"
     export CUDA_ROOT
     export CMAKE_CUDA_ARCHITECTURES="$CUDA_ARCHITECTURES"
     cd "$REPO_ROOT"
-    python -m build --wheel --outdir "$REPO_ROOT/_build_wheel"
-    auditwheel repair "$REPO_ROOT/_build_wheel"/*.whl \
+    rm -rf "$WHEEL_DIR"
+    python -m build --wheel --outdir "$WHEEL_DIR"
+    auditwheel repair "$WHEEL_DIR"/*.whl \
         --wheel-dir "$DIST_DIR/" \
         "${AUDITWHEEL_EXCLUDES[@]}"
     echo ""

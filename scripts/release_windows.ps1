@@ -58,8 +58,7 @@ Write-Host "target:        $Target"
 Write-Host "output:        $DistDir"
 Write-Host ""
 
-if (Test-Path $DistDir) { Remove-Item -Recurse -Force $DistDir }
-New-Item -ItemType Directory -Path $DistDir | Out-Null
+if (-not (Test-Path $DistDir)) { New-Item -ItemType Directory -Path $DistDir | Out-Null }
 
 if ($Target -eq "matlab" -or $Target -eq "all") {
     Write-Host "info: building MATLAB toolbox"
@@ -74,14 +73,16 @@ if ($Target -eq "matlab" -or $Target -eq "all") {
 }
 
 if ($Target -eq "python" -or $Target -eq "all") {
+    $WheelDir = "$RepoRoot\_build_wheel_cu$CudaMajor"
     Write-Host "info: building Python wheel (ffdas-cu$CudaMajor)"
     $env:FFDAS_CUDA_MAJOR = $CudaMajor
     $env:CMAKE_CUDA_ARCHITECTURES = $CudaArchitectures
     $env:CMAKE_GENERATOR = "Ninja"
     Push-Location $RepoRoot
     try {
-        python -m build --wheel --outdir "$RepoRoot\_build_wheel"
-        $wheel = (Get-Item "$RepoRoot\_build_wheel\*.whl").FullName
+        if (Test-Path $WheelDir) { Remove-Item -Recurse -Force $WheelDir }
+        python -m build --wheel --outdir $WheelDir
+        $wheel = (Get-Item "$WheelDir\*.whl").FullName
         & delvewheel repair $wheel --wheel-dir "$DistDir" @DelvewheelExcludes
     } finally {
         Pop-Location

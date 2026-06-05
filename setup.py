@@ -12,7 +12,7 @@ REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 class CMakeBuildExt(build_ext):
     def build_extension(self, ext):
-        build_dir = os.path.join(self.build_temp, "cmake")
+        build_dir = os.path.join(self.build_temp, f"cmake_cu{CUDA_MAJOR}")
         install_dir = os.path.abspath(self.build_lib)
 
         cmake_args = [
