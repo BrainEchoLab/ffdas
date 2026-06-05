@@ -11,10 +11,11 @@ def find_win32_dlls():
     if os.path.isdir(core_dir):
         os.add_dll_directory(core_dir)
 
-    # find the directory containing the cuda runtime dlls through 
-    # a similar approach as cupy (https://github.com/cupy)
-    from cuda.pathfinder import (
-        load_nvidia_dynamic_lib, DynamicLibNotFoundError)
+    try:
+        from cuda.pathfinder import (
+            load_nvidia_dynamic_lib, DynamicLibNotFoundError)
+    except ImportError:
+        return
     try:
         lib = load_nvidia_dynamic_lib("cudart")
     except DynamicLibNotFoundError:

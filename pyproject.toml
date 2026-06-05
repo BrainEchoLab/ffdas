@@ -9,12 +9,11 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "array-api-compat",
-    "cuda-pathfinder",
-    "nvidia-cuda-runtime",
-    "nvidia-cublas",
-    "nvidia-cusolver",
-    "nvidia-nvtx",
 ]
+
+# CUDA runtime libraries are optional. Users with a system CUDA toolkit
+# do not need them; `pip install ffdas-cu13[cuda]` pulls them from PyPI.
+# For ffdas-cu12, the release script patches these to the -cu12 variants.
 
 [tool.scikit-build]
 cmake.build-type = "Release"
@@ -25,6 +24,13 @@ wheel.py-api = "cp312"
 build-dir = "_build_python"
 
 [project.optional-dependencies]
+cuda = [
+    "cuda-pathfinder",
+    "nvidia-cuda-runtime",
+    "nvidia-cublas",
+    "nvidia-cusolver",
+    "nvidia-nvtx",
+]
 dev = [
     "pytest>=6.0",
     "pytest-cov",
