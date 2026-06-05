@@ -13,7 +13,7 @@ function Fail($msg) { Write-Error $msg; exit 1 }
 # should NOT be bundled into the wheel (provided by the system toolkit or
 # pip cuda packages at runtime).
 if ($CudaMajor -eq "13") {
-    $CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90-real;100-real;120" }
+    $CudaArchitectures = "75-real;80-real;86-real;89-real;90-real;100-real;120"
     $DelvewheelExcludes = @(
         "--exclude", "cublas64_13.dll",
         "--exclude", "cublasLt64_13.dll",
@@ -21,7 +21,7 @@ if ($CudaMajor -eq "13") {
         "--exclude", "cusparse64_12.dll"
     )
 } elseif ($CudaMajor -eq "12") {
-    $CudaArchitectures = if ($env:CMAKE_CUDA_ARCHITECTURES) { $env:CMAKE_CUDA_ARCHITECTURES } else { "75-real;80-real;86-real;89-real;90" }
+    $CudaArchitectures = "75-real;80-real;86-real;89-real;90"
     $DelvewheelExcludes = @(
         "--exclude", "cublas64_12.dll",
         "--exclude", "cublasLt64_12.dll",

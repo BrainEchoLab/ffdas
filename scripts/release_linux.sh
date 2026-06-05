@@ -6,7 +6,6 @@ DIST_DIR="$REPO_ROOT/dist"
 
 CUDA_ROOT="${CUDA_ROOT:-/usr/local/cuda-13}"
 CUDA_MAJOR="${CUDA_MAJOR:-13}"
-CUDA_ARCHITECTURES="${CMAKE_CUDA_ARCHITECTURES:-75-real;80-real;86-real;89-real;90-real;100-real;120}"
 TARGET="${1:-all}"
 
 fail() { echo "error: $1" >&2; exit 1; }
@@ -15,6 +14,7 @@ fail() { echo "error: $1" >&2; exit 1; }
 # libraries that should NOT be bundled into the wheel (provided by the
 # system toolkit or pip cuda packages at runtime).
 if [ "$CUDA_MAJOR" = "13" ]; then
+    CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"
     AUDITWHEEL_EXCLUDES=(
         --exclude libcudart.so.13
         --exclude libcublas.so.13
@@ -22,6 +22,7 @@ if [ "$CUDA_MAJOR" = "13" ]; then
         --exclude libnvToolsExt.so.1
     )
 elif [ "$CUDA_MAJOR" = "12" ]; then
+    CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90"
     AUDITWHEEL_EXCLUDES=(
         --exclude libcudart.so.12
         --exclude libcublas.so.12
