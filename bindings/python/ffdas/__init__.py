@@ -57,6 +57,10 @@ from ._core.tensor import (  # noqa: E402
     astype,
     DowncastWarning,
 )
+from ._core.library import (  # noqa: E402
+    get_cuda_device,
+    set_cuda_device,
+)
 from .das import (  # noqa: E402
     das, 
     das_sparse,
@@ -98,6 +102,8 @@ __all__ = [
     "full_like",
     "astype",
     "DowncastWarning",
+    "get_cuda_device",
+    "set_cuda_device",
     "InterpMode",
     "Algorithm",
     "gather", 

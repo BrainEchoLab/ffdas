@@ -47,6 +47,10 @@ add_mex_function(ffdas_create
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_create.cpp")
 add_mex_function(ffdas_destroy
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_destroy.cpp")
+add_mex_function(ffdas_device_get
+    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_device_get.cpp")
+add_mex_function(ffdas_device_set
+    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_device_set.cpp")
 add_mex_function(ffdas_event_create
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_create.cpp")
 add_mex_function(ffdas_event_destroy

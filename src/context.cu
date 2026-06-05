@@ -178,6 +178,18 @@ ffdas_error_t ffdas_context::check_device() const {
 }
 
 
+ffdas_error_t ffdas_device_get(int *device) {
+    CUDA_CHECK(cudaGetDevice(device));
+    return FFDAS_SUCCESS;
+}
+
+
+ffdas_error_t ffdas_device_set(int device) {
+    CUDA_CHECK(cudaSetDevice(device));
+    return FFDAS_SUCCESS;
+}
+
+
 ffdas_error_t ffdas_event_create(uintptr_t *event) {
     CHECK_NULL_PTR(event);
     cudaEvent_t e;

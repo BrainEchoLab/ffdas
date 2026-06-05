@@ -287,6 +287,14 @@ FFDAS_API ffdas_error_t ffdas_greens_sum(
     void* out
 );
 
+FFDAS_API ffdas_error_t ffdas_device_get(
+    int *device
+);
+
+FFDAS_API ffdas_error_t ffdas_device_set(
+    int device
+);
+
 FFDAS_API ffdas_error_t ffdas_event_create(
     uintptr_t *event
 );

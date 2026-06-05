@@ -325,6 +325,16 @@ NB_MODULE(_ffdas, m) {
             self.destroy();
         });
 
+    m.def("device_get", []() {
+        int device;
+        check(ffdas_device_get(&device));
+        return device;
+    });
+
+    m.def("device_set", [](int device) {
+        check(ffdas_device_set(device));
+    });
+
     m.def("event_create", []() {
         uintptr_t event;
         check(ffdas_event_create(&event));
