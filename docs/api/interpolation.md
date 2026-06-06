@@ -4,6 +4,8 @@ Interpolation from a structured 3D grid to arbitrary query positions. The grid h
 
 The grid vertex positions must define a non-self-intersecting mapping from index space to physical space. Self-intersecting grids (where different index-space cells map to overlapping physical regions) will produce unpredictable results.
 
+The dimensions of the grid can be in arbitrary order (e.g., `(nz, ny, nx)` or `(ny, nx, nz)`) as long as the input and query points are consistent.
+
 ## interpolate
 
 One-shot interpolation. Creates an internal plan, evaluates the query points, and discards the plan. Use `Interpolator` instead when interpolating multiple value arrays or query point sets on the same grid.
@@ -14,13 +16,13 @@ One-shot interpolation. Creates an internal plan, evaluates the query points, an
 
     ```python
     ffdas.interpolate(
-        gridpos,       # grid vertex positions
-        x,                 # values on the grid
-        querypos,      # evaluation points
-        *,
-        mode="linear",     # "nearest" or "linear"
-        fill=None,         # fill value for out-of-grid points (default 0)
-        out=None,
+        gridpos, 
+        x, 
+        querypos, 
+        *, 
+        mode="linear", 
+        fill=None, 
+        out=None, 
     )
     ```
 
@@ -86,11 +88,4 @@ result = interp(x, querypos, *, fill=None, out=None, preprocess=False)
     # reuse for multiple frames
     for frame in frames:
         cart = interp(frame, cart_points, fill=0.0)
-    ```
-
-=== "MATLAB"
-
-    ```matlab
-    % one-shot interpolation
-    cart = ffdas.interpolate(spherical_grid, frame, cart_points, 'linear', 0.0);
     ```

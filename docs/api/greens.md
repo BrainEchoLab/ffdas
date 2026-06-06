@@ -19,12 +19,12 @@ The output at each target is the sum over all sources of $x_s \cdot G$, computed
 
     ```python
     ffdas.greens(
-        srcpos,         # source positions
-        wavenums,     # wavenumber per frequency bin
-        x,            # source field (frequency domain)
-        dstpos,         # target positions
+        srcpos, 
+        wavenums, 
+        x, 
+        dstpos, 
         *,
-        out=None,
+        out=None, 
     )
     ```
 
@@ -59,10 +59,10 @@ Propagated field at the target positions: `([batch,] ..., frequencies)` in Pytho
 
     # propagate from sources to receivers
     received = ffdas.greens(
-        source_pos,                          # (sources, 3)
-        wavenums,                            # (frequencies,)
+        source_pos,                         # (sources, 3)
+        wavenums,                           # (frequencies,)
         pulse[None, None, :] * amplitudes,  # (batch, sources, frequencies)
-        receiver_pos,                        # (receivers, 3)
+        receiver_pos,                       # (receivers, 3)
     )
     # received: (batch, receivers, frequencies)
 
@@ -79,10 +79,10 @@ Propagated field at the target positions: `([batch,] ..., frequencies)` in Pytho
     pulse = exp(-0.5 * ((freqs - center_freq) / sigma_f).^2);
 
     received = ffdas.greens( ...
-        source_pos, ...        % (3, sources)
-        wavenums, ...          % (frequencies, 1)
+        source_pos, ...           % (3, sources)
+        wavenums, ...             % (frequencies, 1)
         pulse .* amplitudes, ...  % (frequencies, sources, batch)
-        receiver_pos ...       % (3, receivers)
+        receiver_pos ...          % (3, receivers)
     );
     % received: (frequencies, receivers, batch)
     ```

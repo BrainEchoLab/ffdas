@@ -10,17 +10,18 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 
     ```python
     ffdas.das(
-        x,                    # channel data
-        srcpos,                 # channel positions
-        dstpos,                 # target positions
-        offsets,              # transmit delays
-        weights,              # apodization weights
+        x, 
+        srcpos, 
+        dstpos, 
+        offsets, 
+        weights, 
         *,
-        srcdir=None,            # channel directivity
-        wavenum=0.0,          # phase rotation wavenumber
-        algorithm=Algorithm.DEFAULT,
-        out=None,
-        use_fp16=False,
+        srcdir=None, 
+        wavenum=0.0, 
+        algorithm=Algorithm.DEFAULT, 
+        use_fp16=False, 
+        channels_trailing=False, 
+        out=None, 
     )
     ```
 
@@ -44,7 +45,7 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 | `wavenum` | `float` | `single` | Wavenumber for phase rotation, typically `-2*pi*fc/fs` for IQ data. Set to `0` to disable. |
 | `algorithm` | `Algorithm` | `int32` | Algorithm variant. `DEFAULT` (0) selects automatically. |
 | `use_fp16` | `bool` | `logical` | Use half-precision arithmetic. |
-| `channels_trailing` | — | `logical` (default `true`) | If `true`, channel data layout is `(samples, seq, channels[, batch])`. If `false`, `(samples, channels, seq[, batch])`. |
+| `channels_trailing` | `bool` | `logical` (default `true`) | If `true`, channel data layout is `(samples, seq, channels[, batch])`. If `false`, `(samples, channels, seq[, batch])`. |
 
 ## Returns
 
@@ -58,12 +59,12 @@ Reconstructed output with the spatial dimensions of `dstpos`: `([batch,] ...)` i
     k = sampling_freq / sound_speed
 
     output = ffdas.das(
-        rf,                        # (batch, 1024, 1, 512) — 1024 channels, 1 transmit, 512 samples
-        channel_pos * k,           # (1024, 3)
-        voxel_pos * k,             # (64, 64, 64, 3)
-        offsets,                   # (1, 64, 64, 64) — one transmit event
-        weights,                   # (1, 64, 64, 64)
-        wavenum=-2 * math.pi * center_freq / sampling_freq,
+        rf,               # (batch, 1024, 1, 512) — 1024 channels, 1 transmit, 512 samples
+        channel_pos * k,  # (1024, 3)
+        voxel_pos * k,    # (64, 64, 64, 3)
+        offsets,          # (1, 64, 64, 64) — one transmit event
+        weights,          # (1, 64, 64, 64)
+        wavenum=-2 * math.pi * center_freq / sampling_freq,  # wavenumber in sampling wavelengths
     )
     # output: (batch, 64, 64, 64)
     ```
@@ -74,11 +75,12 @@ Reconstructed output with the spatial dimensions of `dstpos`: `([batch,] ...)` i
     k = sampling_freq / sound_speed;
 
     output = ffdas.das( ...
-        rf, ...                    % (512, 1, 1024, batch) — 512 samples, 1 transmit, 1024 channels
-        channel_pos * k, ...       % (3, 1024)
-        voxel_pos * k, ...         % (3, 64, 64, 64)
-        offsets, ...               % (64, 64, 64, 1) — one transmit event
-        weights ...                % (64, 64, 64, 1)
+        rf, ...               % (512, 1, 1024, batch) — 512 samples, 1 transmit, 1024 channels
+        channel_pos * k, ...  % (3, 1024)
+        voxel_pos * k, ...    % (3, 64, 64, 64)
+        offsets, ...          % (64, 64, 64, 1) — one transmit event
+        weights, ...          % (64, 64, 64, 1)
+        -2 * pi * center_freq / sampling_freq ...  % wavenumber in sampling wavelengths
     );
     % output: (64, 64, 64, batch)
     ```
@@ -103,12 +105,19 @@ The `offsets` and `weights` arrays have shape `(n, ...)` in Python and `(..., n)
 
     ```python
     ffdas.das_sparse(
-        x, srcpos, dstpos,
-        offsets, weights, sparse_indices,
+        x, 
+        srcpos, 
+        dstpos,
+        offsets, 
+        weights, 
+        sparse_indices,
         *,
-        srcdir=None, wavenum=0.0,
+        srcdir=None, 
+        wavenum=0.0,
         algorithm=Algorithm.DEFAULT,
-        out=None, use_fp16=False,
+        use_fp16=False,
+        channels_trailing=False,
+        out=None, 
     )
     ```
 

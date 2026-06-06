@@ -10,9 +10,9 @@ The input is internally reshaped to a 2D matrix $(m, n)$ where $m$ is the size o
 
     ```python
     ffdas.truncate_rank(
-        x,            # input array (frames, ...)
-        start,        # first singular vector to keep (0-based)
-        stop=None,    # past the last singular vector (exclusive)
+        x,
+        start,
+        stop=None,
         *,
         out=None,
     )
@@ -44,22 +44,25 @@ In high frame rate ultrasound imaging, the first few singular components typical
 === "Python"
 
     ```python
-    # volume: (n_frames, nz, ny, nx) — reconstructed frame sequence
+    # volumes: (n_frames, nz, ny, nx)
     # tissue is approximately rank 1; skip the first singular vector
-    flow = ffdas.truncate_rank(volume, start=1)
+    flow = ffdas.truncate_rank(volumes, start=1)
 
     # keep only components 5 through 20
-    band = ffdas.truncate_rank(volume, start=5, stop=20)
+    band = ffdas.truncate_rank(volumes, start=5, stop=20)
     ```
 
 === "MATLAB"
 
     ```matlab
-    % volume: (nz, ny, nx, n_frames)
-    flow = ffdas.truncate_rank(volume, 2);         % skip the first singular vector (1-based)
-    band = ffdas.truncate_rank(volume, 6, 20);     % keep components 6 through 20
+    % volumes: (nz, ny, nx, n_frames)
+    % skip the first singular vector (1-based)
+    flow = ffdas.truncate_rank(volumes, 2);
+
+    % keep components 6 through 20
+    band = ffdas.truncate_rank(volumes, 6, 20);
     ```
 
 ## Notes
 
-The implementation uses cuSOLVER for the SVD computation. For large spatial dimensions, this is substantially faster than host-side SVD followed by reconstruction, since it avoids the device-to-host transfer of the full data matrix.
+The implementation uses cuSOLVER for the SVD computation.

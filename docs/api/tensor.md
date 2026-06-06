@@ -32,8 +32,8 @@ MATLAB additionally supports:
 
 | Parameter | Description |
 |---|---|
-| `permutation` | Optional permutation vector (1-based, `int32`). Applies a dimension permutation during the gather, avoiding the extra copy that MATLAB's `permute` would create. |
-| `dtype` | Optional output datatype (`'single'`, `'int16'`, `'int32'`). |
+| `permutation` | Optional permutation vector (1-based, `int32`). Effectively, this corresponds to permuting the dimensions of `x` to order `permutation` *before* gathering, but the library performs both operations at the same time, avoiding the extra copy that MATLAB's `permute` would create. |
+| `dtype` | Optional output datatype (`'single'`, `'double'`, `'int16'`, `'int32'`). |
 
 ### Returns
 
@@ -43,7 +43,7 @@ Array with the same shape as `x` except along the gather dimension, where the si
 
 ## scatter
 
-Scatter elements of `x` into an output array along a dimension at the given indices. The inverse of gather. Python only.
+Python only. Scatter elements of `x` into an output array along a dimension at the given indices. The inverse of gather.
 
 ```python
 ffdas.scatter(x, indices, axis, *, out=None)
@@ -61,7 +61,7 @@ ffdas.scatter(x, indices, axis, *, out=None)
 
 ## contiguous_copy
 
-Copy a strided (non-contiguous) GPU array into a contiguous buffer. Useful after slicing or transposing when a subsequent operation requires contiguous memory. Python only.
+Python only. Copy a strided (non-contiguous) GPU array into a contiguous buffer. Useful after slicing or transposing when a subsequent operation requires contiguous memory.
 
 ```python
 ffdas.contiguous_copy(x, *, out=None)

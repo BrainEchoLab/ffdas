@@ -43,17 +43,19 @@ Result of the contraction. Scalar outputs (all indices contracted) are returned 
 
     # outer product
     C = ffdas.einsum("i,j->ij", a, b)
-
-    # trace (implicit output — all indices repeated, so scalar output)
-    t = ffdas.einsum("ii", A, eye)  # returns shape (1,)
     ```
 
 === "MATLAB"
 
     ```matlab
-    C = ffdas.einsum('ij,jk->ik', A, B);     % matrix multiplication
-    C = ffdas.einsum('bij,bjk->bik', A, B);   % batched matmul
-    C = ffdas.einsum('i,j->ij', a, b);        % outer product
+    % matrix multiplication
+    C = ffdas.einsum('ij,jk->ik', A, B);
+
+    % batched matmul
+    C = ffdas.einsum('bij,bjk->bik', A, B);
+
+    % outer product
+    C = ffdas.einsum('i,j->ij', a, b);
     ```
 
 ## Notes

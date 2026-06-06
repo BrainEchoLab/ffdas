@@ -27,17 +27,17 @@ The coordinate dimension is last in Python and first in MATLAB, matching the lib
 === "Python"
 
     ```python
-    sources = cp.array([[0.0, 0.0, -0.01]], dtype=cp.float32)        # (1, 3)
-    targets = cp.stack([xx, yy, zz], axis=-1)                         # (nz, ny, nx, 3)
-    dist = ffdas.cdist(sources, targets)                               # (1, nz, ny, nx)
+    sources = cp.array([[0.0, 0.0, -0.01]], dtype=cp.float32)  # (1, 3)
+    targets = cp.stack([xx, yy, zz], axis=-1)                  # (nz, ny, nx, 3)
+    dist = ffdas.cdist(sources, targets)                       # (1, nz, ny, nx)
     ```
 
 === "MATLAB"
 
     ```matlab
-    sources = gpuArray(single([0; 0; -0.01]));                        % (3, 1)
-    targets = permute(cat(4, xx, yy, zz), [4 3 1 2]);                % (3, nz, ny, nx)
-    dist = ffdas.utils.cdist(sources, targets);                       % (1, nz, ny, nx)
+    sources = gpuArray(single([0; 0; -0.01]));         % (3, 1)
+    targets = permute(cat(4, xx, yy, zz), [4 3 1 2]);  % (3, nz, ny, nx)
+    dist = ffdas.utils.cdist(sources, targets);        % (1, nz, ny, nx)
     ```
 
 ---
@@ -60,7 +60,7 @@ Minimum Euclidean distance from 3D points to an axis-aligned rectangle centered 
     % points: (3, ...), size: [width; height] -> (...)
     ```
 
-`size` is the full width and height of the rectangle (not half-extents).
+`size` is the full width and height of the rectangle.
 
 ---
 
@@ -93,14 +93,14 @@ Computing the off-axis angle for apodization:
 
     ```python
     direction = cp.array([0.0, 0.0, 1.0], dtype=cp.float32)
-    theta = ffdas.angle(targets - source, direction)  # angle from forward axis
+    theta = ffdas.angle(targets - source, direction)  # angle from +z
     ```
 
 === "MATLAB"
 
     ```matlab
     direction = gpuArray(single([0; 0; 1]));
-    theta = ffdas.utils.angle(targets - source, direction);
+    theta = ffdas.utils.angle(targets - source, direction);  % angle from +z
     ```
 
 ---
