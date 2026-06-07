@@ -420,7 +420,7 @@ ffdas_error_t truncate_rank_impl(
 
     void *bufferOnHost = malloc(workspaceInBytesOnHost);
     if (!bufferOnHost)
-        return FFDAS_ERROR_FAILED_MALLOC;
+        return FFDAS_ERROR_ALLOCATION_FAILED;
 
     ffdas_error_t err = truncate_rank_execute<T, w_type>(
         handle,

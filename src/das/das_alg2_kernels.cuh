@@ -5,7 +5,6 @@
 #include <math.h>
 
 #include "type_utils.h"
-#include "das_common.cuh"
 #include "das_device_utils.cuh"
 #include "math/core.cuh"
 #include "math/vector.cuh"

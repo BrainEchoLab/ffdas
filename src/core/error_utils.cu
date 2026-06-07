@@ -24,8 +24,6 @@ const char* ffdas_error_string(ffdas_error_t error) {
             return "Insufficient device memory";
         case FFDAS_ERROR_HOST_MEMORY_INSUFFICIENT:
             return "Insufficient host memory";
-        case FFDAS_ERROR_FAILED_MALLOC:
-            return "Memory allocation failed";
             
         // Device/hardware errors
         case FFDAS_ERROR_DEVICE_NOT_SUPPORTED:
@@ -48,8 +46,6 @@ const char* ffdas_error_string(ffdas_error_t error) {
             return "CUDA synchronization failed";
         case FFDAS_ERROR_CUDA_MEMCPY_FAILED:
             return "CUDA memory copy failed";
-        case FFDAS_ERROR_CUDA:
-            return "CUDA error";
             
         // Library errors
         case FFDAS_ERROR_CUBLAS:

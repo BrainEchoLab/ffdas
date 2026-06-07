@@ -121,7 +121,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     ffdas_error_t err = ffdas_das_sparse(
         handle,
         srcpos.data(),
-        srcdir.numel() > 0 ? srcdir.data() : nullptr,
+        srcdir.numel() > 0 ? static_cast<const float*>(srcdir.data()) : nullptr,
         wavenum,
         x_desc.desc, 
         x.data(),

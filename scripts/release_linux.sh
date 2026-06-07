@@ -16,27 +16,21 @@ fail() { echo "error: $1" >&2; exit 1; }
 # system toolkit or pip cuda packages at runtime).
 if [ "$CUDA_MAJOR" = "13" ]; then
     CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"
-    AUDITWHEEL_EXCLUDES=(
-        --exclude libcudart.so.13
-        --exclude libcublas.so.13
-        --exclude libcusolver.so.12
-        --exclude libcublasLt.so.13
-        --exclude libcusparse.so.12
-        --exclude libnvToolsExt.so.1
-    )
 elif [ "$CUDA_MAJOR" = "12" ]; then
     CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90"
-    AUDITWHEEL_EXCLUDES=(
-        --exclude libcudart.so.12
-        --exclude libcublas.so.12
-        --exclude libcusolver.so.11
-        --exclude libcublasLt.so.12
-        --exclude libcusparse.so.12
-        --exclude libnvToolsExt.so.1
-    )
 else
     fail "unsupported CUDA_MAJOR=$CUDA_MAJOR (expected 12 or 13)"
 fi
+
+AUDITWHEEL_EXCLUDES=(
+    --exclude libcudart.so.*
+    --exclude libcublas.so.*
+    --exclude libcusolver.so.*
+    --exclude libcublasLt.so.*
+    --exclude libcusparse.so.*
+    --exclude libnvToolsExt.so.*
+)
+
 
 # Validate prerequisites
 [ -x "$CUDA_ROOT/bin/nvcc" ] || fail "nvcc not found at $CUDA_ROOT/bin/nvcc (set CUDA_ROOT)"

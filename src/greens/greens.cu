@@ -1,4 +1,4 @@
-#include "greens_sum_impl.cuh"
+#include "greens_impl.cuh"
 
 #include <cuda_runtime.h>
 #include <climits>
@@ -17,13 +17,13 @@ namespace ffdas::detail {
 // a contiguous copy transposes this into the user's (batch_size, ndst, samples)
 // layout.
 template<>
-ffdas_error_t greens_sum_impl<half2, float2>(
+ffdas_error_t greens_impl<half2, float2>(
     ffdas_context &handle,
-    const ffdas_float3 *srcpos_,
+    const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const half2* x,
-    const ffdas_float3 *dstpos,
+    const float3 *dstpos,
     const ffdas_tensor_desc &out_desc,
     float2* out
 ) {
@@ -31,15 +31,15 @@ ffdas_error_t greens_sum_impl<half2, float2>(
         return FFDAS_ERROR_INVALID_DIMS;
 
     int64_t batch_size64 = x_desc.dims[0];
-    int64_t channels64   = x_desc.dims[1];
-    int64_t samples64    = x_desc.dims[2];
+    int64_t channels64 = x_desc.dims[1];
+    int64_t samples64 = x_desc.dims[2];
 
     if (batch_size64 > INT_MAX || channels64 > INT_MAX || samples64 > INT_MAX)
         return FFDAS_ERROR_INVALID_DIMS;
 
     int batch_size = static_cast<int>(batch_size64);
-    int channels   = static_cast<int>(channels64);
-    int samples    = static_cast<int>(samples64);
+    int channels = static_cast<int>(channels64);
+    int samples = static_cast<int>(samples64);
 
     if (out_desc.ndim() != 3 || out_desc.dims[0] != batch_size64 || out_desc.dims[2] != samples64)
         return FFDAS_ERROR_INVALID_DIMS;
@@ -63,9 +63,9 @@ ffdas_error_t greens_sum_impl<half2, float2>(
         samples
     );
 
-    greens_sum_kernel<warps_per_block, M, N, K><<<grid_dim, block_dim, 0, handle.stream>>>(
+    greens_kernel<warps_per_block, M, N, K><<<grid_dim, block_dim, 0, handle.stream>>>(
         samples, channels,
-        srcpos_, wavenums, x,
+        srcpos, wavenums, x,
         ndst, dstpos, work.get(),
         batch_size
     );
@@ -85,13 +85,13 @@ ffdas_error_t greens_sum_impl<half2, float2>(
 
 // float2 input: downcast to half2, then call the half2 specialization.
 template<>
-ffdas_error_t greens_sum_impl<float2, float2>(
+ffdas_error_t greens_impl<float2, float2>(
     ffdas_context &handle,
-    const ffdas_float3 *srcpos_,
+    const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const float2* x,
-    const ffdas_float3 *dstpos,
+    const float3 *dstpos,
     const ffdas_tensor_desc &out_desc,
     float2* out
 ) {
@@ -102,8 +102,8 @@ ffdas_error_t greens_sum_impl<float2, float2>(
         handle, x_desc, x, static_cast<half2*>(x_half.get()));
 
     if (err == FFDAS_SUCCESS) {
-        err = greens_sum_impl<half2, float2>(
-            handle, srcpos_, wavenums, x_desc,
+        err = greens_impl<half2, float2>(
+            handle, srcpos, wavenums, x_desc,
             static_cast<half2*>(x_half.get()),
             dstpos, out_desc, out);
     }
@@ -115,9 +115,9 @@ ffdas_error_t greens_sum_impl<float2, float2>(
 }  // namespace ffdas::detail
 
 
-ffdas_error_t ffdas_greens_sum(
+ffdas_error_t ffdas_greens(
     ffdas_handle_t handle,
-    const float *srcpos_,
+    const float *srcpos,
     const float *wavenums,
     ffdas_tensor_desc_t x_desc,
     const void* x,
@@ -142,16 +142,16 @@ ffdas_error_t ffdas_greens_sum(
     case FFDAS_C_16F:
         switch (out_tensor.dtype) {
         case FFDAS_C_32F:
-            return ffdas::detail::greens_sum_dispatch<FFDAS_C_16F, FFDAS_C_32F>(
-                *handle, srcpos_, wavenums, x_tensor, x, dstpos, out_tensor, out);
+            return ffdas::detail::greens_dispatch<FFDAS_C_16F, FFDAS_C_32F>(
+                *handle, srcpos_, wavenums, x_tensor, x, dstpos_, out_tensor, out);
         default: break;
         }
         break;
     case FFDAS_C_32F:
         switch (out_tensor.dtype) {
         case FFDAS_C_32F:
-            return ffdas::detail::greens_sum_dispatch<FFDAS_C_32F, FFDAS_C_32F>(
-                *handle, srcpos_, wavenums, x_tensor, x, dstpos, out_tensor, out);
+            return ffdas::detail::greens_dispatch<FFDAS_C_32F, FFDAS_C_32F>(
+                *handle, srcpos_, wavenums, x_tensor, x, dstpos_, out_tensor, out);
         default: break;
         }
         break;

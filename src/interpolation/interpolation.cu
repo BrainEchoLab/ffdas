@@ -99,7 +99,7 @@ ffdas_error_t interpolation_impl(
         }
     } else {
         // Create device vector directly from input data (avoid copy)
-        const float3* query_points_f3 = reinterpret_cast<const ffdas_float3*>(querypos);
+        const float3* query_points_f3 = reinterpret_cast<const float3*>(querypos);
         device_query_points.assign(query_points_f3, query_points_f3 + num_querypos);
         
         ffdas_error_t err;
@@ -314,7 +314,7 @@ ffdas_error_t ffdas_interpolation_preprocess(
 
     try {
         // Create device vector directly from input data (avoid copy)
-        const float3* query_points_f3 = reinterpret_cast<const ffdas_float3*>(querypos);
+        const float3* query_points_f3 = reinterpret_cast<const float3*>(querypos);
         plan->cached_querypos.assign(query_points_f3, query_points_f3 + num_querypos);
         plan->cached_num_querypos = num_querypos;
     } catch (const std::exception& e) {

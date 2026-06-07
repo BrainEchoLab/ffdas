@@ -12,7 +12,7 @@ using namespace nvcuda::wmma;
 // Complex matrix multiply via four real WMMAs: (A_r + jA_i)(B_r + jB_i)
 // = (A_r·B_r - A_i·B_i) + j(A_r·B_i + A_i·B_r)
 template<int warps_per_block, int M = 16, int N = 16, int K = 16>
-__global__ void greens_sum_kernel(
+__global__ void greens_kernel(
     int samples,  // S samples (frequency bins)
     int channels,  // M channels (sources)
     const float3 *srcpos,  // [M]: positions of each source

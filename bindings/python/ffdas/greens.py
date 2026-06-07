@@ -75,7 +75,7 @@ def greens(
     
     out_3d = reshape(out, flat_shape, order="C")
 
-    _ffdas.greens_sum(
+    _ffdas.greens(
         get_library_handle(),
         srcpos,
         wavenums,

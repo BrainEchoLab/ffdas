@@ -564,7 +564,7 @@ NB_MODULE(_ffdas, m) {
         check(ffdas_das_sparse(
             handle.h,
             srcpos.data(),
-            srcdir.has_value() ? (*srcdir).data()): nullptr,
+            srcdir.has_value() ? (*srcdir).data() : nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),
@@ -624,7 +624,7 @@ NB_MODULE(_ffdas, m) {
         ));
     }, "handle"_a, "x"_a, "y"_a, "mode"_a, "indices"_a);
 
-    m.def("greens_sum", [](Handle &handle,
+    m.def("greens", [](Handle &handle,
         nb::ndarray<const float, nb::device::cuda, nb::c_contig> srcpos,
         nb::ndarray<const float, nb::device::cuda, nb::c_contig> wavenums,
         nb::ndarray<nb::ro, nb::device::cuda> x,
@@ -632,7 +632,7 @@ NB_MODULE(_ffdas, m) {
         nb::ndarray<nb::device::cuda> y
     ) {
         ScopedTensorDesc x_desc(x), out_desc(y);
-        check(ffdas_greens_sum(
+        check(ffdas_greens(
             handle.h,
             srcpos.data(),
             wavenums.data(),

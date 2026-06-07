@@ -9,7 +9,7 @@
 namespace ffdas::detail {
 
 template<typename Tx, typename Ty>
-ffdas_error_t greens_sum_impl(
+ffdas_error_t greens_impl(
     ffdas_context &handle,
     const float3 *srcpos,
     const float *wavenums,
@@ -24,7 +24,7 @@ ffdas_error_t greens_sum_impl(
 
 
 template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>
-ffdas_error_t greens_sum_dispatch(
+ffdas_error_t greens_dispatch(
     ffdas_context &handle,
     const float3 *srcpos,
     const float *wavenums,
@@ -37,7 +37,7 @@ ffdas_error_t greens_sum_dispatch(
     using Tx = typename ffdas_traits<Tx_t>::type;
     using Ty = typename ffdas_traits<Ty_t>::type;
 
-    return greens_sum_impl<Tx, Ty>(
+    return greens_impl<Tx, Ty>(
         handle, srcpos, wavenums,
         x_desc, static_cast<const Tx*>(x),
         dstpos, out_desc, static_cast<Ty*>(out)

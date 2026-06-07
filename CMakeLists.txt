@@ -57,7 +57,7 @@ set(FFDAS_SOURCES
     ${SRC_DIR}/das/das_alg1.cu
     ${SRC_DIR}/das/das_alg2.cu
     ${SRC_DIR}/das/das_alg4.cu
-    ${SRC_DIR}/greens/greens_sum.cu
+    ${SRC_DIR}/greens/greens.cu
     ${SRC_DIR}/truncate_rank/truncate_rank.cu
     ${SRC_DIR}/contraction/contraction.cu
     ${SRC_DIR}/interpolation/interpolation.cu
@@ -82,14 +82,14 @@ target_compile_options(ffdas_objects PRIVATE
     $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-v;-keep;-Xptxas=-v;-Xptxas=-preserve-relocs;--nvlink-options=-preserve-relocs;-g;-lineinfo>
 )
 
-target_include_directories(ffdas_objects PRIVATE
-    ${SRC_DIR}
-    ${PROJECT_ROOT_DIR}/include
-    ${PROJECT_ROOT_DIR}/include/utils
-    ${PROJECT_ROOT_DIR}/src/include
-    ${PROJECT_ROOT_DIR}/src/include/math
-    ${CUDA_INCLUDE_DIRS}
-)
+# target_include_directories(ffdas_objects PRIVATE
+#     ${SRC_DIR}
+#     ${PROJECT_ROOT_DIR}/include
+#     ${PROJECT_ROOT_DIR}/include/utils
+#     ${PROJECT_ROOT_DIR}/src/include
+#     ${PROJECT_ROOT_DIR}/src/include/math
+#     ${CUDA_INCLUDE_DIRS}
+# )
 
 if(FFDAS_USE_NVTX)
   target_compile_definitions(ffdas_objects PRIVATE FFDAS_USE_NVTX)

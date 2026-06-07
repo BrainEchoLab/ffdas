@@ -269,7 +269,7 @@ FFDAS_API ffdas_error_t ffdas_destroy_interpolation_plan(
     ffdas_interpolation_plan_t plan
 );
 
-FFDAS_API ffdas_error_t ffdas_greens_sum(
+FFDAS_API ffdas_error_t ffdas_greens(
     ffdas_handle_t handle,
     const float *srcpos,
     const float *wavenums,

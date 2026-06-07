@@ -1,6 +1,5 @@
 #include "das_alg4.h"
 #include "das_alg4_kernels.cuh"
-// #include "das_common.cuh"
 #include "das_utils.h"
 
 #include "type_utils.h"

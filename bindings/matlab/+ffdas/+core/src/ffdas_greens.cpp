@@ -48,7 +48,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     ndarray::ndarray out = ndarray::make_ndarray({batch_size, ndst, samples}, x.class_id, x.complexity);
 
     // The output array gets constructed through mex, which removes any unit trailing dimensions. Since
-    // ffdas_greens_sum expects a 3d output tensor, we update the (ffdas) descriptor's dimensions by
+    // ffdas_greens expects a 3d output tensor, we update the (ffdas) descriptor's dimensions by
     // calling reshape to get back the unit dimension
     if (batch_size == 1)
         out.reshape({batch_size, ndst, samples});
@@ -56,7 +56,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     ScopedTensorDesc x_desc(x);
     ScopedTensorDesc out_desc(out);
 
-    check(ffdas_greens_sum(
+    check(ffdas_greens(
         handle, 
         srcpos.data(), 
         wavenums.data(), 

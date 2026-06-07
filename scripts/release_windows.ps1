@@ -15,23 +15,19 @@ function Fail($msg) { Write-Error $msg; exit 1 }
 # pip cuda packages at runtime).
 if ($CudaMajor -eq "13") {
     $CudaArchitectures = "75-real;80-real;86-real;89-real;90-real;100-real;120"
-    $DelvewheelExcludes = @(
-        "--exclude", "cublas64_13.dll",
-        "--exclude", "cublasLt64_13.dll",
-        "--exclude", "cusolver64_12.dll",
-        "--exclude", "cusparse64_12.dll"
-    )
 } elseif ($CudaMajor -eq "12") {
     $CudaArchitectures = "75-real;80-real;86-real;89-real;90"
-    $DelvewheelExcludes = @(
-        "--exclude", "cublas64_12.dll",
-        "--exclude", "cublasLt64_12.dll",
-        "--exclude", "cusolver64_11.dll",
-        "--exclude", "cusparse64_12.dll"
-    )
 } else {
     Fail "unsupported CUDA_MAJOR=$CudaMajor (expected 12 or 13)"
 }
+
+$DelvewheelExcludes = @(
+    "--exclude", "cublas64_*.dll",
+    "--exclude", "cublasLt64_*.dll",
+    "--exclude", "cusolver64_*.dll",
+    "--exclude", "cusparse64_*.dll"
+)
+
 
 # Set up VS developer environment if not already active
 if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {

@@ -142,7 +142,7 @@ def gather(
 def scatter(
     handle: Handle, x: TensorLike, out: TensorLike, mode: int, indices: TensorLike
 ) -> None: ...
-def greens_sum(
+def greens(
     handle: Handle,
     srcpos: TensorLike,
     wavenums: TensorLike,
