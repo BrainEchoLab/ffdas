@@ -26,6 +26,8 @@ nav:
     - Installation: getting-started/installation.md
     - Quickstart: getting-started/quickstart.md
   - Conventions: conventions.md
+  - How It Works: how-it-works.md
+  - Performance Guide: performance.md
   - API Reference:
     - Overview: api/index.md
     - das: api/das.md
