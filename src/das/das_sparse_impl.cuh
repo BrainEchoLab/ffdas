@@ -2,14 +2,13 @@
 
 #include <cuda_runtime.h>
 
-#include "ffdas_api.h"
-#include "ffdas_types.h"
+#include "ffdas.h"
 #include "type_utils.h"
 #include "tensor.cuh"
 #include "error_checking.h"
 
-#include "das/das_alg1.h"
-#include "das/das_alg2.h"
+#include "das_alg1.h"
+#include "das_alg2.h"
 
 
 namespace ffdas::detail {

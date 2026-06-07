@@ -19,11 +19,11 @@ namespace ffdas::detail {
 template<>
 ffdas_error_t greens_sum_impl<half2, float2>(
     ffdas_context &handle,
-    const float3 *srcpos,
+    const ffdas_float3 *srcpos_,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const half2* x,
-    const float3 *dstpos,
+    const ffdas_float3 *dstpos,
     const ffdas_tensor_desc &out_desc,
     float2* out
 ) {
@@ -65,7 +65,7 @@ ffdas_error_t greens_sum_impl<half2, float2>(
 
     greens_sum_kernel<warps_per_block, M, N, K><<<grid_dim, block_dim, 0, handle.stream>>>(
         samples, channels,
-        srcpos, wavenums, x,
+        srcpos_, wavenums, x,
         ndst, dstpos, work.get(),
         batch_size
     );
@@ -87,11 +87,11 @@ ffdas_error_t greens_sum_impl<half2, float2>(
 template<>
 ffdas_error_t greens_sum_impl<float2, float2>(
     ffdas_context &handle,
-    const float3 *srcpos,
+    const ffdas_float3 *srcpos_,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
     const float2* x,
-    const float3 *dstpos,
+    const ffdas_float3 *dstpos,
     const ffdas_tensor_desc &out_desc,
     float2* out
 ) {
@@ -103,7 +103,7 @@ ffdas_error_t greens_sum_impl<float2, float2>(
 
     if (err == FFDAS_SUCCESS) {
         err = greens_sum_impl<half2, float2>(
-            handle, srcpos, wavenums, x_desc,
+            handle, srcpos_, wavenums, x_desc,
             static_cast<half2*>(x_half.get()),
             dstpos, out_desc, out);
     }
@@ -117,11 +117,11 @@ ffdas_error_t greens_sum_impl<float2, float2>(
 
 ffdas_error_t ffdas_greens_sum(
     ffdas_handle_t handle,
-    const float3 *srcpos,
+    const float *srcpos_,
     const float *wavenums,
     ffdas_tensor_desc_t x_desc,
     const void* x,
-    const float3 *dstpos,
+    const float *dstpos,
     ffdas_tensor_desc_t out_desc,
     void* out
 ) {
@@ -129,6 +129,9 @@ ffdas_error_t ffdas_greens_sum(
     CHECK_NULL_PTR(x_desc);
     CHECK_NULL_PTR(out_desc);
     FFDAS_CHECK(handle->check_device());
+
+    const float3 *srcpos_ = reinterpret_cast<const float3*>(srcpos);
+    const float3 *dstpos_ = reinterpret_cast<const float3*>(dstpos);
 
     ffdas::detail::nvtx_range nvtx(*handle, "greens");
 
@@ -140,7 +143,7 @@ ffdas_error_t ffdas_greens_sum(
         switch (out_tensor.dtype) {
         case FFDAS_C_32F:
             return ffdas::detail::greens_sum_dispatch<FFDAS_C_16F, FFDAS_C_32F>(
-                *handle, srcpos, wavenums, x_tensor, x, dstpos, out_tensor, out);
+                *handle, srcpos_, wavenums, x_tensor, x, dstpos, out_tensor, out);
         default: break;
         }
         break;
@@ -148,7 +151,7 @@ ffdas_error_t ffdas_greens_sum(
         switch (out_tensor.dtype) {
         case FFDAS_C_32F:
             return ffdas::detail::greens_sum_dispatch<FFDAS_C_32F, FFDAS_C_32F>(
-                *handle, srcpos, wavenums, x_tensor, x, dstpos, out_tensor, out);
+                *handle, srcpos_, wavenums, x_tensor, x, dstpos, out_tensor, out);
         default: break;
         }
         break;

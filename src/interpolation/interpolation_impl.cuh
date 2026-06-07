@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-#include "ffdas_api.h"
+#include "ffdas.h"
 #include "tensor.cuh"
 #include "spatial_hash.cuh"
 #include "error_checking.h"

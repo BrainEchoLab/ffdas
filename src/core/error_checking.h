@@ -11,7 +11,7 @@
 #include <cusolverDn.h>
 #include <cufftXt.h>
 
-#include "ffdas_api.h"
+#include "ffdas.h"
 
 // Legacy exception class for backward compatibility during transition
 class ffdas_runtime_error : public std::runtime_error {

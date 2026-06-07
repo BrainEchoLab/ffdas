@@ -2,7 +2,7 @@
 #include <string.h>
 #include <vector>
 
-#include "ffdas_api.h"
+#include "ffdas.h"
 #include "tensor.cuh"
 
 

@@ -4,9 +4,8 @@
 #include <vector>
 #include <cstdint>
 
-#include "ffdas_api.h"
+#include "ffdas.h"
 #include "context.cuh"
-#include "ffdas_types.h"
 #include "type_utils.h"
 #include "tensor.cuh"
 #include "error_checking.h"

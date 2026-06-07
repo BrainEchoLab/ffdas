@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ffdas.h"
-#include "ffdas_types.h"
 
 
 constexpr int DAS_ALG2_MAX_CHANNELS = 4096;

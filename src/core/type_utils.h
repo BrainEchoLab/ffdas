@@ -9,7 +9,6 @@
 #include <cuda_runtime.h>
 #include <cuda_fp16.h>
 
-#include "ffdas_types.h"
 #include "error_checking.h"
 
 

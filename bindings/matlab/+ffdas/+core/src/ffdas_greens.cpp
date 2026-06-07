@@ -58,11 +58,11 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     check(ffdas_greens_sum(
         handle, 
-        reinterpret_cast<const float3*>(srcpos.data()), 
+        srcpos.data(), 
         wavenums.data(), 
         x_desc.desc, 
         x.data(), 
-        reinterpret_cast<const float3*>(dstpos.data()), 
+        dstpos.data(), 
         out_desc.desc, 
         out.data()
     ));

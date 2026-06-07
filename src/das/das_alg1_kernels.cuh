@@ -1,13 +1,15 @@
 #pragma once
-#include "das/das_alg1.h"
+#include "das_alg1.h"
 
 #include <cuda_runtime.h>
 #include <math.h>
 
 #include "type_utils.h"
-#include "das/das_common.cuh"
-#include "das/das_device_utils.cuh"
-#include "ffdas_math.cuh"
+// #include "das_common.cuh"
+#include "das_device_utils.cuh"
+#include "math/core.cuh"
+#include "math/vector.cuh"
+#include "math/bitops.cuh"
 
 
 template<typename Tx, typename Ty, int tile_width, bool is_sparse, bool dir_check>

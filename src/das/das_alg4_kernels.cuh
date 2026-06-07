@@ -1,13 +1,15 @@
 #pragma once
-#include "das/das_alg4.h"
+#include "das_alg4.h"
 
 #include <cuda_runtime.h>
 #include <math.h>
 
 #include "type_utils.h"
-#include "das/das_common.cuh"
-#include "das/das_device_utils.cuh"
-#include "ffdas_math.cuh"
+// #include "das_common.cuh"
+#include "das_device_utils.cuh"
+#include "math/core.cuh"
+#include "math/vector.cuh"
+#include "math/bitops.cuh"
 
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800)
   #define FFDAS_HAVE_SP_MMA 1

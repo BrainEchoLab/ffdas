@@ -1,7 +1,7 @@
-#include "das/das_alg2.h"
-#include "das/das_alg2_kernels.cuh"
-#include "das/das_common.cuh"
-#include "das/das_utils.h"
+#include "das_alg2.h"
+#include "das_alg2_kernels.cuh"
+// #include "das_common.cuh"
+#include "das_utils.h"
 
 #include "type_utils.h"
 #include "math/core.cuh"

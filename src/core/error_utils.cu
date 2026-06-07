@@ -1,4 +1,4 @@
-#include "ffdas_api.h"
+#include "ffdas.h"
 
 const char* ffdas_error_string(ffdas_error_t error) {
     switch (error) {

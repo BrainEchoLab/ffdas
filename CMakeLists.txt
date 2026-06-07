@@ -36,31 +36,35 @@ set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SRC_DIR "${PROJECT_ROOT_DIR}/src")
 
 include_directories(
-    ${SRC_DIR}
     ${PROJECT_ROOT_DIR}/include
-    ${PROJECT_ROOT_DIR}/include/utils
-    ${PROJECT_ROOT_DIR}/src/include
-    ${PROJECT_ROOT_DIR}/src/include/math
+    ${SRC_DIR}/core
+    ${SRC_DIR}/core/math
+    ${SRC_DIR}/das
+    ${SRC_DIR}/greens
+    ${SRC_DIR}/truncate_rank
+    ${SRC_DIR}/contraction
+    ${SRC_DIR}/interpolation
+    ${SRC_DIR}/tensor_ops
 )
 
 set(FFDAS_SOURCES
-    ${SRC_DIR}/context.cu
-    ${SRC_DIR}/type_utils.cu
-    ${SRC_DIR}/error_utils.cu
-    ${SRC_DIR}/truncate_rank.cu
-    ${SRC_DIR}/contiguous_copy.cu
-    ${SRC_DIR}/gather.cu
-    ${SRC_DIR}/scatter.cu
-    ${SRC_DIR}/das.cu
-    ${SRC_DIR}/das_sparse.cu
-    ${SRC_DIR}/tensor.cu
+    ${SRC_DIR}/core/context.cu
+    ${SRC_DIR}/core/type_utils.cu
+    ${SRC_DIR}/core/error_utils.cu
+    ${SRC_DIR}/core/tensor.cu
+    ${SRC_DIR}/das/das.cu
+    ${SRC_DIR}/das/das_sparse.cu
     ${SRC_DIR}/das/das_alg1.cu
     ${SRC_DIR}/das/das_alg2.cu
     ${SRC_DIR}/das/das_alg4.cu
-    ${SRC_DIR}/contraction.cu
-    ${SRC_DIR}/spatial_hash.cu
-    ${SRC_DIR}/interpolation.cu
-    ${SRC_DIR}/greens_sum.cu
+    ${SRC_DIR}/greens/greens_sum.cu
+    ${SRC_DIR}/truncate_rank/truncate_rank.cu
+    ${SRC_DIR}/contraction/contraction.cu
+    ${SRC_DIR}/interpolation/interpolation.cu
+    ${SRC_DIR}/interpolation/spatial_hash.cu
+    ${SRC_DIR}/tensor_ops/contiguous_copy.cu
+    ${SRC_DIR}/tensor_ops/gather.cu
+    ${SRC_DIR}/tensor_ops/scatter.cu
 )
 
 # Objects library used in both shared and static targets

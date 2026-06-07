@@ -1,13 +1,15 @@
 #pragma once
-#include "das/das_alg2.h"
+#include "das_alg2.h"
 
 #include <cuda_runtime.h>
 #include <math.h>
 
 #include "type_utils.h"
-#include "das/das_common.cuh"
-#include "das/das_device_utils.cuh"
-#include "ffdas_math.cuh"
+#include "das_common.cuh"
+#include "das_device_utils.cuh"
+#include "math/core.cuh"
+#include "math/vector.cuh"
+#include "math/bitops.cuh"
 
 
 __constant__ float3 alg2_channel_pos[DAS_ALG2_MAX_CHANNELS];

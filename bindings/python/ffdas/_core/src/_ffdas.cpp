@@ -514,12 +514,12 @@ NB_MODULE(_ffdas, m) {
 
         check(ffdas_das(
             handle.h,
-            reinterpret_cast<const float3*>(srcpos.data()),
-            srcdir.has_value() ? reinterpret_cast<const float4 *>((*srcdir).data()) : nullptr,
+            srcpos.data(),
+            srcdir.has_value() ? (*srcdir).data() : nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),
-            reinterpret_cast<const float3*>(dstpos.data()),
+            dstpos.data(),
             offsets.data(),
             weights.data(),
             beta.data(),
@@ -563,12 +563,12 @@ NB_MODULE(_ffdas, m) {
 
         check(ffdas_das_sparse(
             handle.h,
-            reinterpret_cast<const float3 *>(srcpos.data()),
-            srcdir.has_value() ? reinterpret_cast<const float4 *>((*srcdir).data()) : nullptr,
+            srcpos.data(),
+            srcdir.has_value() ? (*srcdir).data()): nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),
-            reinterpret_cast<const float3 *>(dstpos.data()),
+            dstpos.data(),
             offsets.data(),
             weights.data(),
             sparse_indices.shape(0),
@@ -634,11 +634,11 @@ NB_MODULE(_ffdas, m) {
         ScopedTensorDesc x_desc(x), out_desc(y);
         check(ffdas_greens_sum(
             handle.h,
-            reinterpret_cast<const float3 *>(srcpos.data()),
+            srcpos.data(),
             wavenums.data(),
             x_desc.desc, 
             x.data(),
-            reinterpret_cast<const float3 *>(dstpos.data()),
+            dstpos.data(),
             out_desc.desc, 
             y.data()
         ));

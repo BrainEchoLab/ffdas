@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cassert>
 
-#include "ffdas_api.h"
+#include "ffdas.h"
 #include "error_checking.h"
 
 

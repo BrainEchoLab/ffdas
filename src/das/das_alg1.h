@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ffdas.h"
-#include "ffdas_types.h"
 
 
 namespace ffdas::detail {

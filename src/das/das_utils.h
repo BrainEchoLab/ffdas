@@ -1,10 +1,11 @@
 #pragma once
 
-#include "ffdas_math.cuh"
+#include "math/core.cuh"
+#include "math/vector.cuh"
+#include "math/bitops.cuh"
 #include "tensor.cuh"
-#include "ffdas_api.h"
+#include "ffdas.h"
 #include "context.cuh"
-#include "ffdas_types.h"
 #include "type_utils.h"
 #include "error_checking.h"
 #include "contiguous_copy_impl.cuh"

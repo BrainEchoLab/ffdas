@@ -1,9 +1,9 @@
 #include <cstdio>
 
-#include "das/das_alg1.h"
-#include "das/das_alg1_kernels.cuh"
-#include "das/das_common.cuh"
-#include "das/das_utils.h"
+#include "das_alg1.h"
+#include "das_alg1_kernels.cuh"
+// #include "das_common.cuh"
+#include "das_utils.h"
 
 #include "context.cuh"
 #include "type_utils.h"

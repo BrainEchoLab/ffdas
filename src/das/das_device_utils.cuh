@@ -1,7 +1,9 @@
 #pragma once
 
 #include "type_utils.h"
-#include "ffdas_math.cuh"
+#include "math/core.cuh"
+#include "math/vector.cuh"
+#include "math/bitops.cuh"
 
 
 __device__ __forceinline__

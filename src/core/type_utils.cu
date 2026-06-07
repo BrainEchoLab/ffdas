@@ -28,31 +28,3 @@ size_t ffdas_type_size(ffdas_datatype_t datatype) {
             return 0;
     }
 }
-
-bool iscomplextype(ffdas_datatype_t datatype) {
-    switch (datatype) {
-        case FFDAS_R_16F: 
-            return ffdas_traits<FFDAS_R_16F>::complex;
-        case FFDAS_C_16F: 
-            return ffdas_traits<FFDAS_C_16F>::complex;
-        case FFDAS_R_32F: 
-            return ffdas_traits<FFDAS_R_32F>::complex;
-        case FFDAS_C_32F: 
-            return ffdas_traits<FFDAS_C_32F>::complex;
-        case FFDAS_R_64F: 
-            return ffdas_traits<FFDAS_R_64F>::complex;
-        case FFDAS_C_64F: 
-            return ffdas_traits<FFDAS_C_64F>::complex;
-        case FFDAS_R_32I: 
-            return ffdas_traits<FFDAS_R_32I>::complex;
-        case FFDAS_C_32I: 
-            return ffdas_traits<FFDAS_C_32I>::complex;
-        case FFDAS_R_16I: 
-            return ffdas_traits<FFDAS_R_16I>::complex;
-        case FFDAS_C_16I: 
-            return ffdas_traits<FFDAS_C_16I>::complex;
-        default: 
-            return false; // Safe default for unknown types
-    }
-}
-
