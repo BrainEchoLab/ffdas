@@ -25,6 +25,7 @@ struct das_problem_params {
     int batch_stride;
     int outstride;
     bool have_batch;
+    int sparse_count = 0;
 };
 
 

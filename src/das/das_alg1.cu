@@ -117,6 +117,7 @@ ffdas_error_t das_alg1_launch(
             dstpos, 
             offsets, 
             weights, 
+            is_sparse ? params.sparse_count : 0,
             sparse_indices, 
             beta, 
             out, 
@@ -138,6 +139,7 @@ ffdas_error_t das_alg1_launch(
             dstpos, 
             offsets, 
             weights, 
+            is_sparse ? params.sparse_count : 0,
             sparse_indices, 
             beta, 
             out, 
@@ -266,7 +268,7 @@ ffdas_error_t das_alg1_sparse(
         return FFDAS_ERROR_INVALID_ARGUMENT;
 
     // the actual number of observations to be compounded is passed by the user
-    params.seqlen = sparse_count;
+    params.sparse_count = sparse_count;
 
     int tile_width;
     const char* env = std::getenv("FFDAS_ALG1_TILE_SIZE");

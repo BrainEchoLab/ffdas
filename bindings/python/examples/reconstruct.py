@@ -47,26 +47,36 @@ def trefoil(t):
 
 
 batch_size = 128
-n_scatterers = 16384
-n_knot = 8192
+n_scatterers = 4096
 
-t = 2 * cp.pi * cp.random.rand(n_knot, dtype=cp.float32)
-knot_pos = trefoil(t) + 0.00015 * cp.random.randn(n_knot, 3, dtype=cp.float32)
-background_pos = cp.random.uniform(
-    [xmin, ymin, zmin],  # type: ignore
-    [xmax, ymax, zmax],  # type: ignore
-    size=(n_scatterers - n_knot, 3),
+# tube_radius = 0.00025
+# bg_radius = 0.008
+# contrast = 1000.0
+
+# p = contrast * tube_radius**2 / (contrast * tube_radius**2 + bg_radius**2 - tube_radius**2)
+
+# t = 2 * cp.pi * cp.random.rand(batch_size, n_scatterers, dtype=cp.float32)
+# u = cp.random.rand(1, n_scatterers, 1, dtype=cp.float32)
+# is_tube = cp.random.rand(1, n_scatterers, 1) < p
+# r = cp.where(
+#     is_tube,
+#     tube_radius * cp.sqrt(u),
+#     tube_radius + cp.sqrt(tube_radius**2 + u * (bg_radius**2 - tube_radius**2)),
+# )
+# scatter_pos = trefoil(t) + r * cp.random.randn(batch_size, n_scatterers, 3, dtype=cp.float32)
+
+
+tube_sigma = 0.0001
+bg_sigma = 0.008
+
+p = 0.3
+t = 2 * cp.pi * cp.random.rand(batch_size, n_scatterers, dtype=cp.float32)
+displacement = cp.random.normal(
+    scale=cp.random.choice([tube_sigma, bg_sigma], size=(1, n_scatterers, 1), p=[p, 1-p]), 
+    size=(batch_size, n_scatterers, 3),
     dtype=cp.float32,  # type: ignore
 )
-
-scatter_pos = cp.concat([knot_pos, background_pos], axis=0)
-scatter_values = cp.concat(
-    [
-        cp.random.rand(batch_size, n_knot, dtype=cp.float32),
-        cp.random.rand(batch_size, n_scatterers - n_knot, dtype=cp.float32),
-    ],
-    axis=1,
-)
+scatter_pos = trefoil(t) + displacement
 
 freqs = cp.fft.fftfreq(n_samples, d=1.0 / sampling_freq).astype(cp.float32) + center_freq
 wavenums = (-2 * cp.pi * freqs / sound_speed).astype(cp.float32)
@@ -76,10 +86,9 @@ pulse = cp.exp(-0.5 * ((freqs - center_freq) / sigma_f) ** 2).astype(cp.complex6
 # plane wave: all channels transmit simultaneously (zero delay)
 channel_delay = cp.zeros(channel_pos.shape[0], dtype=cp.float32)
 transmission = pulse * cp.exp(-2j * cp.pi * freqs * channel_delay[:, None])
-# scatter_values = cp.random.rand(batch_size, n_scatterers, 1, dtype=cp.float32)
 
 tx = ffdas.greens(channel_pos, wavenums, transmission, scatter_pos)
-rx = ffdas.greens(scatter_pos, wavenums, tx * scatter_values[:, :, None], channel_pos)
+rx = ffdas.greens(scatter_pos, wavenums, tx, channel_pos)
 rf = cp.fft.ifft(rx, axis=-1).astype(cp.complex64).conj()
 
 # rf: (batch, channels, samples). add the sequence dimension (one
@@ -88,7 +97,7 @@ rf = rf[:, :, None, :]  # (batch, channels, 1, samples)
 
 
 # reconstruction grid: 64^3 voxels centered on the phantom
-nz, ny, nx = 64, 64, 64
+nz, ny, nx = 128, 128, 128
 x = cp.linspace(xmin, xmax, nx, dtype=cp.float32)
 y = cp.linspace(ymin, ymax, ny, dtype=cp.float32)
 z = cp.linspace(zmin, zmax, nz, dtype=cp.float32)

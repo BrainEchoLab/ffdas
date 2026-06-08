@@ -26,6 +26,7 @@ __global__ void das_alg1_kernel(
     const float3 *dstpos, 
     const float *offsets, 
     const float *weights, 
+    int sparse_count,
     const int *sparse_indices, 
     Ty beta, 
     Ty *out, 
@@ -44,15 +45,15 @@ __global__ void das_alg1_kernel(
 
     Ty accum[tile_width]{};
 
-    for (int i = 0; i < seqlen; i++) {
+    for (int i = 0; i < (is_sparse ? sparse_count : seqlen); i++) {
         int seqidx = i;
 
         if constexpr(is_sparse) {
-            seqidx = sparse_indices[i * outstride];
+            seqidx = sparse_indices[n + i * outstride];
         }
 
-        const float ofs = offsets[n + seqidx * outstride];
-        const float scl = weights[n + seqidx * outstride];
+        const float ofs = offsets[n + i * outstride];
+        const float scl = weights[n + i * outstride];
 
         for (int m = 0; m < channels; m++) {
             const float3 xp = srcpos[m];
