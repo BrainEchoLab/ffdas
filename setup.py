@@ -1,7 +1,6 @@
 import glob
 import os
 import re
-import shlex
 import subprocess
 
 from setuptools import Extension, setup
