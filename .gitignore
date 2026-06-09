@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 *.dll
+*.pyd
+*.dylib
 
 # MATLAB compiled MEX extensions
 *.mex[aw]64

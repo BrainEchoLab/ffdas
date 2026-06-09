@@ -1,37 +1,6 @@
-cmake_minimum_required(VERSION 3.26)
-project(ffdas_matlab LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Pre-built libffdas location
-if(NOT FFDAS_LIB_DIR)
-    message(FATAL_ERROR "FFDAS_LIB_DIR must be set to the directory containing the pre-built libffdas")
-endif()
-if(NOT FFDAS_INCLUDE_DIR)
-    set(FFDAS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../include")
-endif()
-
-# Find the versioned library (libffdas_cu13.so, ffdas_cu13.lib, etc.)
-file(GLOB _ffdas_libs
-    "${FFDAS_LIB_DIR}/libffdas_cu*${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    "${FFDAS_LIB_DIR}/ffdas_cu*.lib"
-)
-
-list(LENGTH _ffdas_libs _count)
-
-if(_count EQUAL 0)
-    message(FATAL_ERROR "No libffdas_cu* found in ${FFDAS_LIB_DIR}")
-elseif(_count GREATER 1)
-    message(FATAL_ERROR "Multiple libffdas_cu* found in ${FFDAS_LIB_DIR}: ${_ffdas_libs}")
-endif()
-list(GET _ffdas_libs 0 FFDAS_LIBRARY)
-message(STATUS "Found libffdas: ${FFDAS_LIBRARY}")
-
 find_package(Matlab REQUIRED COMPONENTS MEX_COMPILER)
 
 include_directories(
-    ${FFDAS_INCLUDE_DIR}
     ${Matlab_INCLUDE_DIRS}
     ${Matlab_ROOT_DIR}/toolbox/parallel/gpu/extern/include
 )
@@ -45,12 +14,14 @@ else()
     set(GPUMEX_BINDER_LIB mwgpumexbinder)
 endif()
 
+set(FFDAS_MEX_TARGETS "")
+
 function(add_mex_function target_name source_file)
     matlab_add_mex(
         NAME ${target_name}
         SRC ${source_file}
         OUTPUT_NAME ${target_name}
-        LINK_TO ${FFDAS_LIBRARY} ${GPUMEX_BINDER_LIB}
+        LINK_TO ffdas ${GPUMEX_BINDER_LIB}
         R2018a
     )
     if(WIN32 AND MSVC)
@@ -68,60 +39,55 @@ function(add_mex_function target_name source_file)
         INSTALL_RPATH "$ORIGIN"
     )
 
-    install(TARGETS ${target_name}
-        RUNTIME DESTINATION "+ffdas/+core"
-        LIBRARY DESTINATION "+ffdas/+core"
-    )
+    if(FFDAS_DEVELOPMENT_BUILD)
+        set_target_properties(${target_name} PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY "${FFDAS_MATLAB_DEV_DIR}"
+            RUNTIME_OUTPUT_DIRECTORY "${FFDAS_MATLAB_DEV_DIR}")
+    endif()
+
+    set(FFDAS_MEX_TARGETS ${FFDAS_MEX_TARGETS} ${target_name} PARENT_SCOPE)
 endfunction()
 
-add_mex_function(ffdas_create
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_create.cpp")
-add_mex_function(ffdas_destroy
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_destroy.cpp")
-add_mex_function(ffdas_device_get
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_device_get.cpp")
-add_mex_function(ffdas_device_set
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_device_set.cpp")
-add_mex_function(ffdas_event_create
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_create.cpp")
-add_mex_function(ffdas_event_destroy
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_destroy.cpp")
-add_mex_function(ffdas_event_elapsed_time
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_elapsed_time.cpp")
-add_mex_function(ffdas_event_record
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_record.cpp")
-add_mex_function(ffdas_event_synchronize
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_event_synchronize.cpp")
-add_mex_function(ffdas_gather
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_gather.cpp")
-add_mex_function(ffdas_truncate_rank
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_truncate_rank.cpp")
-add_mex_function(ffdas_interpolate
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_interpolate.cpp")
-add_mex_function(ffdas_das
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_das.cpp")
-add_mex_function(ffdas_das_sparse
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_das_sparse.cpp")
-add_mex_function(ffdas_contraction
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_contraction.cpp")
-add_mex_function(ffdas_greens
-    "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_greens.cpp")
+set(MEX_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src")
 
-# Bundle libffdas alongside MEX files (MEX RPATH is $ORIGIN)
-get_filename_component(_ffdas_lib_name "${FFDAS_LIBRARY}" NAME)
-if(WIN32)
-    string(REGEX REPLACE "\\.lib$" ".dll" _ffdas_dll_name "${_ffdas_lib_name}")
-    install(FILES "${FFDAS_LIB_DIR}/${_ffdas_dll_name}" DESTINATION "+ffdas/+core")
-else()
-    install(FILES "${FFDAS_LIBRARY}" DESTINATION "+ffdas/+core")
-endif()
+add_mex_function(ffdas_create "${MEX_SRC_DIR}/ffdas_create.cpp")
+add_mex_function(ffdas_destroy "${MEX_SRC_DIR}/ffdas_destroy.cpp")
+add_mex_function(ffdas_device_get "${MEX_SRC_DIR}/ffdas_device_get.cpp")
+add_mex_function(ffdas_device_set "${MEX_SRC_DIR}/ffdas_device_set.cpp")
+add_mex_function(ffdas_event_create "${MEX_SRC_DIR}/ffdas_event_create.cpp")
+add_mex_function(ffdas_event_destroy "${MEX_SRC_DIR}/ffdas_event_destroy.cpp")
+add_mex_function(ffdas_event_elapsed_time "${MEX_SRC_DIR}/ffdas_event_elapsed_time.cpp")
+add_mex_function(ffdas_event_record "${MEX_SRC_DIR}/ffdas_event_record.cpp")
+add_mex_function(ffdas_event_synchronize "${MEX_SRC_DIR}/ffdas_event_synchronize.cpp")
+add_mex_function(ffdas_gather "${MEX_SRC_DIR}/ffdas_gather.cpp")
+add_mex_function(ffdas_truncate_rank "${MEX_SRC_DIR}/ffdas_truncate_rank.cpp")
+add_mex_function(ffdas_interpolate "${MEX_SRC_DIR}/ffdas_interpolate.cpp")
+add_mex_function(ffdas_das "${MEX_SRC_DIR}/ffdas_das.cpp")
+add_mex_function(ffdas_das_sparse "${MEX_SRC_DIR}/ffdas_das_sparse.cpp")
+add_mex_function(ffdas_contraction "${MEX_SRC_DIR}/ffdas_contraction.cpp")
+add_mex_function(ffdas_greens "${MEX_SRC_DIR}/ffdas_greens.cpp")
 
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/"
-    DESTINATION "+ffdas"
+# Install helpers
+function(ffdas_install_matlab_binaries component)
+    foreach(_target IN LISTS FFDAS_MEX_TARGETS)
+        install(TARGETS ${_target}
+            LIBRARY DESTINATION +ffdas/+core COMPONENT ${component}
+            RUNTIME DESTINATION +ffdas/+core COMPONENT ${component})
+    endforeach()
+    install(TARGETS ffdas
+        LIBRARY DESTINATION +ffdas/+core COMPONENT ${component}
+        RUNTIME DESTINATION +ffdas/+core COMPONENT ${component})
+endfunction()
+
+# Dev: binaries only
+ffdas_install_matlab_binaries(matlab-dev)
+
+# Release: binaries + source
+ffdas_install_matlab_binaries(matlab)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/bindings/matlab/+ffdas/
+    DESTINATION +ffdas COMPONENT matlab
     FILES_MATCHING PATTERN "*.m"
-)
-
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/examples/"
-    DESTINATION "examples"
-    FILES_MATCHING PATTERN "*.m"
-)
+    PATTERN "src" EXCLUDE)
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/bindings/matlab/examples/
+    DESTINATION examples COMPONENT matlab
+    FILES_MATCHING PATTERN "*.m")

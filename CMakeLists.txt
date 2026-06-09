@@ -4,12 +4,11 @@ cmake_minimum_required(VERSION 3.26)
 # SM 70+ enables tensor-core-accelerated greens; older SMs use a scalar fallback.
 set(MINIMUM_CUDA_ARCH 53)
 
-# Set the CMAKE_CUDA_ARCHITECTURES environment variable to specify the 
+# Set the CMAKE_CUDA_ARCHITECTURES environment variable to specify the
 # target architectures, e.g., CMAKE_CUDA_ARCHITECTURES=75 for SM 75
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
   set(CMAKE_CUDA_ARCHITECTURES all)
 else()
-    # If defined, check if it meets the minimum required architecture
     foreach(arch ${CMAKE_CUDA_ARCHITECTURES})
         if(arch LESS MINIMUM_CUDA_ARCH)
             message(FATAL_ERROR
@@ -21,6 +20,9 @@ endif()
 project(ffdas VERSION 0.1.0 LANGUAGES CXX CUDA)
 
 option(FFDAS_USE_NVTX "Enable NVTX profiling annotations" ON)
+option(FFDAS_BUILD_PYTHON "Build Python bindings" OFF)
+option(FFDAS_BUILD_MATLAB "Build MATLAB bindings" OFF)
+option(FFDAS_DEVELOPMENT_BUILD "Output binding binaries directly to source tree" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,18 +34,6 @@ find_package(CUDAToolkit REQUIRED)
 
 set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SRC_DIR "${PROJECT_ROOT_DIR}/src")
-
-include_directories(
-    ${PROJECT_ROOT_DIR}/include
-    ${SRC_DIR}/core
-    ${SRC_DIR}/core/math
-    ${SRC_DIR}/das
-    ${SRC_DIR}/greens
-    ${SRC_DIR}/truncate_rank
-    ${SRC_DIR}/contraction
-    ${SRC_DIR}/interpolation
-    ${SRC_DIR}/tensor_ops
-)
 
 set(FFDAS_SOURCES
     ${SRC_DIR}/core/context.cu
@@ -69,6 +59,21 @@ set(FFDAS_OUTPUT_NAME "ffdas_cu${CUDAToolkit_VERSION_MAJOR}")
 
 add_library(ffdas SHARED ${FFDAS_SOURCES})
 
+target_include_directories(ffdas
+    PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_ROOT_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${SRC_DIR}/core
+        ${SRC_DIR}/core/math
+        ${SRC_DIR}/das
+        ${SRC_DIR}/greens
+        ${SRC_DIR}/truncate_rank
+        ${SRC_DIR}/contraction
+        ${SRC_DIR}/interpolation
+        ${SRC_DIR}/tensor_ops
+)
+
 set_target_properties(ffdas PROPERTIES
     OUTPUT_NAME "${FFDAS_OUTPUT_NAME}"
     POSITION_INDEPENDENT_CODE ON
@@ -88,7 +93,7 @@ if(FFDAS_USE_NVTX)
     target_compile_definitions(ffdas PRIVATE FFDAS_USE_NVTX)
     list(APPEND FFDAS_LINK_LIBS CUDA::nvtx3)
 endif()
-target_link_libraries(ffdas PUBLIC ${FFDAS_LINK_LIBS})
+target_link_libraries(ffdas PRIVATE ${FFDAS_LINK_LIBS})
 
 # Statically link the C++ runtime. The public API is pure C so no C++
 # objects cross the boundary. This makes the binary self-contained and
@@ -105,8 +110,57 @@ message(STATUS "CUDA toolkit: ${CUDAToolkit_VERSION} (major ${CUDAToolkit_VERSIO
 message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 message(STATUS "Library name: ${FFDAS_OUTPUT_NAME}")
 
-install(TARGETS ffdas
-    LIBRARY DESTINATION lib
-    RUNTIME DESTINATION bin
-    ARCHIVE DESTINATION lib)
-install(FILES include/ffdas.h DESTINATION include)
+# Build-tree config export for standalone binding builds or external consumers
+export(TARGETS ffdas
+    NAMESPACE ffdas::
+    FILE "${CMAKE_BINARY_DIR}/ffdasConfig.cmake")
+file(WRITE "${CMAKE_BINARY_DIR}/ffdas_cuda_major.txt"
+    "${CUDAToolkit_VERSION_MAJOR}")
+
+# Core library install
+install(TARGETS ffdas EXPORT ffdasTargets
+    LIBRARY DESTINATION lib COMPONENT core
+    RUNTIME DESTINATION bin COMPONENT core
+    ARCHIVE DESTINATION lib COMPONENT core)
+install(FILES include/ffdas.h DESTINATION include COMPONENT core)
+install(EXPORT ffdasTargets
+    NAMESPACE ffdas::
+    DESTINATION lib/cmake/ffdas COMPONENT core)
+
+# Development build: set output directories for binding targets
+if(FFDAS_DEVELOPMENT_BUILD)
+    if(FFDAS_BUILD_PYTHON)
+        set(FFDAS_PYTHON_DEV_DIR
+            "${CMAKE_SOURCE_DIR}/bindings/python/ffdas/_core"
+            CACHE INTERNAL "")
+    endif()
+    if(FFDAS_BUILD_MATLAB)
+        set(FFDAS_MATLAB_DEV_DIR
+            "${CMAKE_SOURCE_DIR}/bindings/matlab/+ffdas/+core"
+            CACHE INTERNAL "")
+    endif()
+endif()
+
+# Bindings
+if(FFDAS_BUILD_PYTHON)
+    add_subdirectory(bindings/python)
+endif()
+if(FFDAS_BUILD_MATLAB)
+    add_subdirectory(bindings/matlab)
+endif()
+
+# Development build: copy shared library to binding source directories
+if(FFDAS_DEVELOPMENT_BUILD)
+    set(_ffdas_dev_dirs "")
+    if(FFDAS_BUILD_PYTHON)
+        list(APPEND _ffdas_dev_dirs "${FFDAS_PYTHON_DEV_DIR}")
+    endif()
+    if(FFDAS_BUILD_MATLAB)
+        list(APPEND _ffdas_dev_dirs "${FFDAS_MATLAB_DEV_DIR}")
+    endif()
+    foreach(_dir IN LISTS _ffdas_dev_dirs)
+        add_custom_command(TARGET ffdas POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+                $<TARGET_FILE:ffdas> "${_dir}/")
+    endforeach()
+endif()
