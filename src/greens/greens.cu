@@ -164,7 +164,7 @@ ffdas_error_t greens_launch_sm70<half2, float2>(
     int64_t batch_size
 ) {
     device_ptr<float2> work(handle);
-    FFDAS_CHECK(work.alloc(batch_size * channels * samples * sizeof(float2)));
+    FFDAS_CHECK(work.alloc(batch_size * ndst * samples * sizeof(float2)));
 
     constexpr int M = 16;
     constexpr int N = 16;

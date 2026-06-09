@@ -15,8 +15,11 @@ endif()
 # Find the versioned library (libffdas_cu13.so, ffdas_cu13.lib, etc.)
 file(GLOB _ffdas_libs
     "${FFDAS_LIB_DIR}/libffdas_cu*${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    "${FFDAS_LIB_DIR}/ffdas_cu*.lib")
+    "${FFDAS_LIB_DIR}/ffdas_cu*.lib"
+)
+
 list(LENGTH _ffdas_libs _count)
+
 if(_count EQUAL 0)
     message(FATAL_ERROR "No libffdas_cu* found in ${FFDAS_LIB_DIR}")
 elseif(_count GREATER 1)

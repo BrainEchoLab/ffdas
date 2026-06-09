@@ -90,6 +90,17 @@ if(FFDAS_USE_NVTX)
 endif()
 target_link_libraries(ffdas PUBLIC ${FFDAS_LINK_LIBS})
 
+# Statically link the C++ runtime. The public API is pure C so no C++
+# objects cross the boundary. This makes the binary self-contained and
+# avoids conflicts with MATLAB's bundled libstdc++.
+if(WIN32)
+    set_property(TARGET ffdas PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+else()
+    target_link_options(ffdas PRIVATE
+        $<HOST_LINK:-static-libstdc++;-static-libgcc>)
+endif()
+
 message(STATUS "CUDA toolkit: ${CUDAToolkit_VERSION} (major ${CUDAToolkit_VERSION_MAJOR})")
 message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
 message(STATUS "Library name: ${FFDAS_OUTPUT_NAME}")
