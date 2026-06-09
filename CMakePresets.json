@@ -2,17 +2,21 @@
     "version": 6,
     "configurePresets": [
         {
-            "name": "default",
+            "name": "base",
+            "hidden": true,
             "binaryDir": "${sourceDir}/_build",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
         },
         {
+            "name": "default",
+            "inherits": "base"
+        },
+        {
             "name": "dev",
-            "binaryDir": "${sourceDir}/_build",
+            "inherits": "base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
                 "FFDAS_BUILD_PYTHON": "ON",
                 "FFDAS_BUILD_MATLAB": "ON",
                 "FFDAS_DEVELOPMENT_BUILD": "ON"
@@ -20,18 +24,16 @@
         },
         {
             "name": "dev-python",
-            "binaryDir": "${sourceDir}/_build",
+            "inherits": "base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
                 "FFDAS_BUILD_PYTHON": "ON",
                 "FFDAS_DEVELOPMENT_BUILD": "ON"
             }
         },
         {
             "name": "dev-matlab",
-            "binaryDir": "${sourceDir}/_build",
+            "inherits": "base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
                 "FFDAS_BUILD_MATLAB": "ON",
                 "FFDAS_DEVELOPMENT_BUILD": "ON"
             }
@@ -40,19 +42,23 @@
     "buildPresets": [
         {
             "name": "default",
-            "configurePreset": "default"
+            "configurePreset": "default",
+            "configuration": "Release"
         },
         {
             "name": "dev",
-            "configurePreset": "dev"
+            "configurePreset": "dev",
+            "configuration": "Release"
         },
         {
             "name": "dev-python",
-            "configurePreset": "dev-python"
+            "configurePreset": "dev-python",
+            "configuration": "Release"
         },
         {
             "name": "dev-matlab",
-            "configurePreset": "dev-matlab"
+            "configurePreset": "dev-matlab",
+            "configuration": "Release"
         }
     ]
 }

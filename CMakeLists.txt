@@ -77,18 +77,24 @@ target_include_directories(ffdas
 set_target_properties(ffdas PROPERTIES
     OUTPUT_NAME "${FFDAS_OUTPUT_NAME}"
     POSITION_INDEPENDENT_CODE ON
-    CUDA_RUNTIME_LIBRARY Shared
 )
+
+set(FFDAS_CUDA_FLAGS --extended-lambda --ftz=true --fmad=true --threads 0)
+set(FFDAS_CUDA_DEBUG_FLAGS
+    -v -keep
+    -Xptxas=-v -Xptxas=-preserve-relocs
+    --nvlink-options=-preserve-relocs
+    -lineinfo)
 
 target_compile_options(ffdas PRIVATE
-    -DFFDAS_BUILDING_LIBRARY
-    $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda;--ftz=true;--fmad=true;-O3;--threads;0>
+    $<$<COMPILE_LANGUAGE:CUDA>:${FFDAS_CUDA_FLAGS}>
+    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<NOT:$<CONFIG:Debug>>>:-O3>
     $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<BOOL:${MSVC}>>:-Xcompiler=/Zc:preprocessor>
-    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:RelWithDebInfo>>:-v;-keep;-Xptxas=-v;-Xptxas=-preserve-relocs;--nvlink-options=-preserve-relocs;-lineinfo>
-    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-v;-keep;-Xptxas=-v;-Xptxas=-preserve-relocs;--nvlink-options=-preserve-relocs;-g;-lineinfo>
+    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>>:${FFDAS_CUDA_DEBUG_FLAGS}>
+    $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-g>
 )
 
-set(FFDAS_LINK_LIBS CUDA::cuda_driver CUDA::cublas CUDA::cusolver)
+set(FFDAS_LINK_LIBS CUDA::cudart CUDA::cuda_driver CUDA::cublas CUDA::cusolver)
 if(FFDAS_USE_NVTX)
     target_compile_definitions(ffdas PRIVATE FFDAS_USE_NVTX)
     list(APPEND FFDAS_LINK_LIBS CUDA::nvtx3)
@@ -104,6 +110,15 @@ if(WIN32)
 else()
     target_link_options(ffdas PRIVATE
         $<HOST_LINK:-static-libstdc++;-static-libgcc>)
+endif()
+
+# NVIDIA's MSBuild CUDA targets use --keep-dir set to a per-target
+# intermediate directory but don't create it. Without this, nvcc fails
+# with "Failed to create the host compiler response file".
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+    add_custom_command(TARGET ffdas PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            "${CMAKE_BINARY_DIR}/ffdas/${CMAKE_VS_PLATFORM_NAME}/$<CONFIG>")
 endif()
 
 message(STATUS "CUDA toolkit: ${CUDAToolkit_VERSION} (major ${CUDAToolkit_VERSION_MAJOR})")

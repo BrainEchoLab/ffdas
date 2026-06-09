@@ -1,8 +1,12 @@
 #ifndef FFDAS_H_
 #define FFDAS_H_
 
-#if (defined(_WIN32) || defined(_WIN64)) && defined(FFDAS_BUILDING_LIBRARY)
-    #define FFDAS_API __declspec(dllexport)
+#if defined(_WIN32) || defined(_WIN64)
+    #if defined(ffdas_EXPORTS)
+        #define FFDAS_API __declspec(dllexport)
+    #else
+        #define FFDAS_API __declspec(dllimport)
+    #endif
 #else
     #define FFDAS_API
 #endif

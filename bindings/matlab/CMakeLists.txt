@@ -40,9 +40,11 @@ function(add_mex_function target_name source_file)
     )
 
     if(FFDAS_DEVELOPMENT_BUILD)
-        set_target_properties(${target_name} PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY "${FFDAS_MATLAB_DEV_DIR}"
-            RUNTIME_OUTPUT_DIRECTORY "${FFDAS_MATLAB_DEV_DIR}")
+        foreach(_config DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+            set_target_properties(${target_name} PROPERTIES
+                LIBRARY_OUTPUT_DIRECTORY_${_config} "${FFDAS_MATLAB_DEV_DIR}"
+                RUNTIME_OUTPUT_DIRECTORY_${_config} "${FFDAS_MATLAB_DEV_DIR}")
+        endforeach()
     endif()
 
     set(FFDAS_MEX_TARGETS ${FFDAS_MEX_TARGETS} ${target_name} PARENT_SCOPE)

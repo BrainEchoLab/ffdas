@@ -30,9 +30,11 @@ if(UNIX)
 endif()
 
 if(FFDAS_DEVELOPMENT_BUILD)
-    set_target_properties(_ffdas PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${FFDAS_PYTHON_DEV_DIR}"
-        RUNTIME_OUTPUT_DIRECTORY "${FFDAS_PYTHON_DEV_DIR}")
+    foreach(_config DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+        set_target_properties(_ffdas PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY_${_config} "${FFDAS_PYTHON_DEV_DIR}"
+            RUNTIME_OUTPUT_DIRECTORY_${_config} "${FFDAS_PYTHON_DEV_DIR}")
+    endforeach()
 endif()
 
 # Install component for packaging
