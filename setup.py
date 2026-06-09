@@ -9,15 +9,14 @@ from setuptools.command.build_ext import build_ext
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-_LIB_PATTERN = re.compile(r"ffdas_cu(\d+)")
-
 
 def _find_library_in(directory):
     """Find libffdas_cu*.so/dll/dylib in directory. Return (lib_dir, cuda_major) or None."""
     if not os.path.isdir(directory):
         return None
+    pattern = re.compile(r"ffdas_cu(\d+)")
     for entry in os.listdir(directory):
-        m = _LIB_PATTERN.search(entry)
+        m = pattern.search(entry)
         if m and os.path.isfile(os.path.join(directory, entry)):
             return directory, int(m.group(1))
     return None
@@ -65,14 +64,24 @@ FFDAS_LIB_DIR, CUDA_MAJOR = find_ffdas()
 
 
 class CMakeBuildExt(build_ext):
+    _LIB_PATTERNS = ["libffdas_cu*", "ffdas_cu*.dll", "libffdas_cu*.dylib"]
+
+    def _bundled_libs(self):
+        d = os.path.join(self.build_lib, "ffdas", "_core")
+        libs = []
+        for pattern in self._LIB_PATTERNS:
+            libs.extend(glob.glob(os.path.join(d, pattern)))
+        return libs
+
     def build_extension(self, ext):
+        # run() sets self.inplace = 0 before calling this, so
+        # get_ext_fullpath() always returns a path inside build_lib
         ext_fullpath = self.get_ext_fullpath(ext.name)
         ext_dir = os.path.abspath(os.path.dirname(ext_fullpath))
-        build_dir = os.path.join(REPO_ROOT, f"_build_python_cu{CUDA_MAJOR}")
 
         cmake_args = [
             f"-S{os.path.join(REPO_ROOT, 'bindings', 'python')}",
-            f"-B{build_dir}",
+            f"-B{self.build_temp}",
             f"-DFFDAS_LIB_DIR={FFDAS_LIB_DIR}",
             f"-DFFDAS_INCLUDE_DIR={os.path.join(REPO_ROOT, 'include')}",
             "-DCMAKE_BUILD_TYPE=Release",
@@ -98,14 +107,26 @@ class CMakeBuildExt(build_ext):
 
         subprocess.check_call(["cmake"] + cmake_args)
         subprocess.check_call([
-            "cmake", "--build", build_dir,
+            "cmake", "--build", self.build_temp,
             "--config", "Release", "-j",
         ])
         subprocess.check_call([
-            "cmake", "--install", build_dir,
+            "cmake", "--install", self.build_temp,
             "--prefix", ext_dir, "--config", "Release",
         ])
 
+    def copy_extensions_to_source(self):
+        super().copy_extensions_to_source()
+        build_py = self.get_finalized_command("build_py")
+        package_dir = build_py.get_package_dir("ffdas._core")  # type: ignore
+        for src in self._bundled_libs():
+            dst = os.path.join(package_dir, os.path.basename(src))
+            self.copy_file(src, dst)
+
+    def get_outputs(self):
+        outputs = super().get_outputs()
+        outputs.extend(self._bundled_libs())
+        return outputs
 
 setup(
     name=f"ffdas-cu{CUDA_MAJOR}",
