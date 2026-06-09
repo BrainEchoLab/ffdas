@@ -19,7 +19,7 @@ function(add_mex_function target_name source_file)
         NAME ${target_name}
         SRC ${source_file}
         OUTPUT_NAME ${target_name}
-        LINK_TO ffdas_static_runtime ${GPUMEX_BINDER_LIB}
+        LINK_TO ffdas ${GPUMEX_BINDER_LIB}
         R2018a
     )
     if(WIN32 AND MSVC)
@@ -77,11 +77,6 @@ add_mex_function(ffdas_greens
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_greens.cpp")
 
 # Install rules for packaging
-install(TARGETS ffdas_static_runtime
-    RUNTIME DESTINATION "+ffdas/+core"
-    LIBRARY DESTINATION "+ffdas/+core"
-)
-
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/"
     DESTINATION "+ffdas"
     FILES_MATCHING PATTERN "*.m"

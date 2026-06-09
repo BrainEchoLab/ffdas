@@ -83,15 +83,6 @@ target_compile_options(ffdas_objects PRIVATE
     $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-v;-keep;-Xptxas=-v;-Xptxas=-preserve-relocs;--nvlink-options=-preserve-relocs;-g;-lineinfo>
 )
 
-# target_include_directories(ffdas_objects PRIVATE
-#     ${SRC_DIR}
-#     ${PROJECT_ROOT_DIR}/include
-#     ${PROJECT_ROOT_DIR}/include/utils
-#     ${PROJECT_ROOT_DIR}/src/include
-#     ${PROJECT_ROOT_DIR}/src/include/math
-#     ${CUDA_INCLUDE_DIRS}
-# )
-
 if(FFDAS_USE_NVTX)
   target_compile_definitions(ffdas_objects PRIVATE FFDAS_USE_NVTX)
   target_link_libraries(ffdas_objects PRIVATE CUDA::nvtx3)
@@ -107,17 +98,6 @@ add_library(ffdas SHARED $<TARGET_OBJECTS:ffdas_objects>)
 target_link_libraries(ffdas PUBLIC ${FFDAS_LINK_LIBS})
 set_target_properties(ffdas PROPERTIES
     CUDA_RUNTIME_LIBRARY Shared
-)
-
-# Shared library — static CUDA runtime, for embedding in environments that
-# bundle their own (potentially outdated) CUDA runtime (e.g. MATLAB)
-add_library(ffdas_static_runtime SHARED $<TARGET_OBJECTS:ffdas_objects>)
-target_link_libraries(ffdas_static_runtime PUBLIC ${FFDAS_LINK_LIBS})
-set_target_properties(ffdas_static_runtime PROPERTIES
-    CUDA_RUNTIME_LIBRARY Static
-)
-target_link_options(ffdas_static_runtime PRIVATE
-    $<$<NOT:$<BOOL:${WIN32}>>:-static-libstdc++;-static-libgcc>
 )
 
 # Add Python bindings if enabled and dependencies are available

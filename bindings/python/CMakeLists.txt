@@ -34,17 +34,14 @@ target_include_directories(_ffdas PRIVATE
 if(MSVC)
     target_compile_options(_ffdas PRIVATE /Zc:preprocessor)
 endif()
-if(UNIX AND NOT APPLE)
+
+if(UNIX)
     set_target_properties(_ffdas PROPERTIES
         INSTALL_RPATH "$ORIGIN"
-        BUILD_RPATH "$ORIGIN;${OUTPUT_DIR}"
+        BUILD_RPATH "$ORIGIN"
     )
 endif()
 
-install(TARGETS _ffdas 
-    LIBRARY DESTINATION ffdas/_core
-)
-install(TARGETS ffdas
-    RUNTIME DESTINATION ffdas/_core
-    LIBRARY DESTINATION ffdas/_core
+install(TARGETS _ffdas
+    DESTINATION _core
 )
