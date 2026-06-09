@@ -16,13 +16,16 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <vector_types.h>
-#include <cuda_fp16.h>
-
 #include "ffdas.h"
 
 namespace nb = nanobind;
 using namespace nb::literals;
+
+
+typedef int16_t half;
+typedef struct { int16_t x, y; } half2;
+typedef struct { int x, y; } int2;
+typedef struct { short x, y; } short2;
 
 
 struct DLManagedTensor {

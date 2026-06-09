@@ -93,18 +93,6 @@ class CMakeBuildExt(build_ext):
         except ImportError:
             cmake_args.append("-DFETCH_NANOBIND=ON")
 
-        cuda_root = os.environ.get("CUDA_ROOT")
-        if cuda_root:
-            cmake_args.append(f"-DCUDAToolkit_ROOT={cuda_root}")
-
-        generator = os.environ.get("CMAKE_GENERATOR")
-        if generator:
-            cmake_args.extend(["-G", generator])
-
-        extra = os.environ.get("FFDAS_CMAKE_ARGS", "")
-        if extra:
-            cmake_args.extend(shlex.split(extra))
-
         subprocess.check_call(["cmake"] + cmake_args)
         subprocess.check_call([
             "cmake", "--build", self.build_temp,
