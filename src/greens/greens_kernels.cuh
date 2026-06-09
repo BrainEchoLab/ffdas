@@ -6,28 +6,102 @@
 
 #include "type_utils.h"
 
-using namespace nvcuda::wmma;
 
-
-// Complex matrix multiply via four real WMMAs: (A_r + jA_i)(B_r + jB_i)
-// = (A_r·B_r - A_i·B_i) + j(A_r·B_i + A_i·B_r)
-template<int warps_per_block, int M = 16, int N = 16, int K = 16>
-__global__ void greens_kernel(
-    int samples,  // S samples (frequency bins)
-    int channels,  // M channels (sources)
-    const float3 *srcpos,  // [M]: positions of each source
-    const float *wavenums,  // [S]: wave number k per sample
-    const half2 *x,  // [M * S]: half2 samples (real, imag)
-    int ny,
-    const float3 *dstpos,  // [N]: positions of each target point
-    float2 *out,  // [N * S]: output complex float per target-sample
+// Scalar fallback for SM 53-61. Each thread computes one (dst, batch) output
+// element per frequency bin, looping over all source channels. Source positions
+// are tiled through shared memory to reduce global memory traffic.
+template<typename Tx, int TILE_DST, int TILE_BATCH, int SRC_CHUNK = 32>
+__global__ void greens_kernel_sm53(
+    int samples,
+    int channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const Tx *x,
+    int ndst,
+    const float3 *dstpos,
+    float2 *out,
     int batch_size
 ) {
+    const int dst_base = blockIdx.x * TILE_DST;
+    const int batch_base = blockIdx.y * TILE_BATCH;
+    const int k = blockIdx.z;
+
+    const int dst_local = threadIdx.x / TILE_BATCH;
+    const int batch_local = threadIdx.x % TILE_BATCH;
+    const int dst_idx = dst_base + dst_local;
+    const int batch_idx = batch_base + batch_local;
+
+    const bool valid = (dst_idx < ndst) && (batch_idx < batch_size);
+    const float wavenum = wavenums[k];
+
+    float3 dp;
+    if (valid) dp = dstpos[dst_idx];
+
+    float acc_r = 0.0f, acc_i = 0.0f;
+
+    __shared__ float3 srcpos_sh[SRC_CHUNK];
+
+    for (int src_base = 0; src_base < channels; src_base += SRC_CHUNK) {
+        int chunk_size = min(SRC_CHUNK, channels - src_base);
+
+        for (int i = threadIdx.x; i < chunk_size; i += blockDim.x) {
+            srcpos_sh[i] = srcpos[src_base + i];
+        }
+        __syncthreads();
+
+        if (valid) {
+            for (int j = 0; j < chunk_size; j++) {
+                float3 sp = srcpos_sh[j];
+                float dx = dp.x - sp.x;
+                float dy = dp.y - sp.y;
+                float dz = dp.z - sp.z;
+                float rsq = dx * dx + dy * dy + dz * dz;
+                float rinv = rsqrtf(rsq);
+                float r = rsq * rinv;
+
+                float c, s;
+                __sincosf(wavenum * r, &s, &c);
+                float gr = c * rinv;
+                float gi = s * rinv;
+
+                float2 xv = cast<Tx, float2>(x[batch_idx * (channels * samples) + (src_base + j) * samples + k]);
+                acc_r += gr * xv.x - gi * xv.y;
+                acc_i += gr * xv.y + gi * xv.x;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (valid) {
+        out[k * (ndst * batch_size) + dst_idx * batch_size + batch_idx] = make_float2(acc_r, acc_i);
+    }
+}
+
+
+// Tensor-core kernel via four real WMMAs: (A_r + jA_i)(B_r + jB_i)
+// = (A_r·B_r - A_i·B_i) + j(A_r·B_i + A_i·B_r)
+// The function signature compiles on all architectures (needed for the
+// host-side launch stub), but the WMMA device code is only emitted for SM 70+.
+template<int warps_per_block, int M = 16, int N = 16, int K = 16>
+__global__ void greens_kernel(
+    int samples,
+    int channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const half2 *x,
+    int ny,
+    const float3 *dstpos,
+    float2 *out,
+    int batch_size
+) {
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+    using namespace nvcuda::wmma;
+
     const int tid = blockIdx.x * blockDim.x + threadIdx.x;
     const int warp_id = tid / warpSize;
     const int lane_id = threadIdx.x % warpSize;
 
-    const int nbase = warp_id * M;  // start of the target block for this warp
+    const int nbase = warp_id * M;
     const int batch = blockIdx.y * N;
     const int k = blockIdx.z;
 
@@ -58,17 +132,12 @@ __global__ void greens_kernel(
     __shared__ half B_r_sh[warps_per_block * K * N];
     __shared__ half B_i_sh[warps_per_block * K * N];
 
-    // for matrix a (kernel, row-major)
-    // int row, col, num_rows_per_warp, num_cols_per_warp;
-
     for (int mbase = 0; mbase < channels; mbase += K) {
-        // row major
         int row = lane_id / K;
         int col = lane_id % K;
         int num_rows_per_warp = min(M, warpSize / K);
         int num_cols_per_warp = min(K, warpSize);
 
-        // build kernel tile
         for (int i = row; i < M; i+=num_rows_per_warp) {
             for (int j = col; j < K; j+=num_cols_per_warp) {
                 if (nbase + i < ny && mbase + j < channels) {
@@ -94,13 +163,11 @@ __global__ void greens_kernel(
             }
         }
         
-        // col major
         row = lane_id % K;
         col = lane_id / K;
         num_cols_per_warp = min(M, warpSize / K);
         num_rows_per_warp = min(K, warpSize);
 
-        // build input tile
         for (int i = col; i < N; i+=num_cols_per_warp) {
             for (int j = row; j < K; j+=num_rows_per_warp) {
                 if (i < batch_valid && mbase + j < channels) {
@@ -139,7 +206,6 @@ __global__ void greens_kernel(
     
     __syncthreads();
 
-    // row major
     int row = lane_id / K;
     int col = lane_id % K;
     int num_rows_per_warp = min(M, warpSize / K);
@@ -155,4 +221,5 @@ __global__ void greens_kernel(
             out[k * (ny * batch_size) + (nbase + i) * batch_size + batch + j] = v;
         }
     }
+#endif  // __CUDA_ARCH__ >= 700
 }

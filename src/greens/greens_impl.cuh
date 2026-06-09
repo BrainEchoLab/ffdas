@@ -18,9 +18,7 @@ ffdas_error_t greens_impl(
     const float3 *dstpos,
     const ffdas_tensor_desc &out_desc,
     Ty* out
-) {
-    return FFDAS_ERROR_UNSUPPORTED_TYPE;
-}
+);
 
 
 template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>

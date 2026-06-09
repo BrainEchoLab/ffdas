@@ -1,8 +1,11 @@
 #include "greens_impl.cuh"
 
-#include <cuda_runtime.h>
 #include <climits>
+#include <vector>
 
+#include <cuda_runtime.h>
+
+#include "ffdas.h"
 #include "greens_kernels.cuh"
 #include "contiguous_copy_impl.cuh"
 #include "tensor.cuh"
@@ -12,40 +15,154 @@
 
 namespace ffdas::detail {
 
+template<typename Tx, typename Ty>
+ffdas_error_t greens_launch_sm53(
+    ffdas_context &handle,
+    int64_t samples,
+    int64_t channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const Tx *x,
+    int64_t ndst, 
+    const float3 *dstpos,
+    Ty *out,
+    int64_t batch_size
+) {
+    return FFDAS_ERROR_UNSUPPORTED_TYPE;
+}
+
+template<typename Tx, typename Ty>
+ffdas_error_t greens_launch_sm70(
+    ffdas_context &handle,
+    int64_t samples,
+    int64_t channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const Tx *x,
+    int64_t ndst, 
+    const float3 *dstpos,
+    Ty *out,
+    int64_t batch_size
+) {
+    return FFDAS_ERROR_UNSUPPORTED_TYPE;
+}
+
+
+template<>
+ffdas_error_t greens_launch_sm53<float2, float2>(
+    ffdas_context &handle,
+    int64_t samples,
+    int64_t channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const float2 *x,
+    int64_t ndst, 
+    const float3 *dstpos,
+    float2 *out,
+    int64_t batch_size
+) {
+    device_ptr<float2> work(handle);
+    FFDAS_CHECK(work.alloc(batch_size * ndst * samples * sizeof(float2)));
+
+    constexpr int TILE_DST = 4;
+    constexpr int TILE_BATCH = 32;
+
+    dim3 block_dim(TILE_DST * TILE_BATCH);
+    dim3 grid_dim(
+        (ndst + TILE_DST - 1) / TILE_DST,
+        (batch_size + TILE_BATCH - 1) / TILE_BATCH,
+        samples
+    );
+
+    greens_kernel_sm53<float2, TILE_DST, TILE_BATCH><<<grid_dim, block_dim, 0, handle.stream>>>(
+        static_cast<int>(samples), 
+        static_cast<int>(channels),
+        srcpos, 
+        wavenums, 
+        x,
+        static_cast<int>(ndst), 
+        dstpos, 
+        work.get(),
+        batch_size
+    );
+
+    CUDA_LAUNCH_CHECK();
+
+    ffdas_tensor_desc work_desc(
+        {batch_size, ndst, samples},
+        {1LL, batch_size, batch_size * ndst},
+        builtin_traits<float2>::ffdas_datatype
+    );
+
+    return contiguous_copy_impl<float2, float2>(handle, work_desc, work.get(), out);
+}
+
+
+template<>
+ffdas_error_t greens_launch_sm53<half2, float2>(
+    ffdas_context &handle,
+    int64_t samples,
+    int64_t channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const half2 *x,
+    int64_t ndst, 
+    const float3 *dstpos,
+    float2 *out,
+    int64_t batch_size
+) {
+    device_ptr<float2> work(handle);
+    FFDAS_CHECK(work.alloc(batch_size * ndst * samples * sizeof(float2)));
+
+    constexpr int TILE_DST = 4;
+    constexpr int TILE_BATCH = 32;
+
+    dim3 block_dim(TILE_DST * TILE_BATCH);
+    dim3 grid_dim(
+        (ndst + TILE_DST - 1) / TILE_DST,
+        (batch_size + TILE_BATCH - 1) / TILE_BATCH,
+        samples
+    );
+
+    greens_kernel_sm53<half2, TILE_DST, TILE_BATCH><<<grid_dim, block_dim, 0, handle.stream>>>(
+        static_cast<int>(samples), 
+        static_cast<int>(channels),
+        srcpos, 
+        wavenums, 
+        x,
+        static_cast<int>(ndst), 
+        dstpos, 
+        work.get(),
+        batch_size
+    );
+
+    CUDA_LAUNCH_CHECK();
+
+    ffdas_tensor_desc work_desc(
+        {batch_size, ndst, samples},
+        {1LL, batch_size, batch_size * ndst},
+        builtin_traits<float2>::ffdas_datatype
+    );
+
+    return contiguous_copy_impl<float2, float2>(handle, work_desc, work.get(), out);
+}
 
 // The kernel writes out in (samples, ndst, batch_size) layout. After the kernel,
 // a contiguous copy transposes this into the user's (batch_size, ndst, samples)
 // layout.
 template<>
-ffdas_error_t greens_impl<half2, float2>(
+ffdas_error_t greens_launch_sm70<half2, float2>(
     ffdas_context &handle,
+    int64_t samples,
+    int64_t channels,
     const float3 *srcpos,
     const float *wavenums,
-    const ffdas_tensor_desc &x_desc,
-    const half2* x,
+    const half2 *x,
+    int64_t ndst, 
     const float3 *dstpos,
-    const ffdas_tensor_desc &out_desc,
-    float2* out
+    float2 *out,
+    int64_t batch_size
 ) {
-    if (x_desc.ndim() != 3)
-        return FFDAS_ERROR_INVALID_DIMS;
-
-    int64_t batch_size64 = x_desc.dims[0];
-    int64_t channels64 = x_desc.dims[1];
-    int64_t samples64 = x_desc.dims[2];
-
-    if (batch_size64 > INT_MAX || channels64 > INT_MAX || samples64 > INT_MAX)
-        return FFDAS_ERROR_INVALID_DIMS;
-
-    int batch_size = static_cast<int>(batch_size64);
-    int channels = static_cast<int>(channels64);
-    int samples = static_cast<int>(samples64);
-
-    if (out_desc.ndim() != 3 || out_desc.dims[0] != batch_size64 || out_desc.dims[2] != samples64)
-        return FFDAS_ERROR_INVALID_DIMS;
-
-    int ndst = static_cast<int>(out_desc.dims[1]);
-
     device_ptr<float2> work(handle);
     FFDAS_CHECK(work.alloc(out_desc.nbytes()));
 
@@ -64,18 +181,23 @@ ffdas_error_t greens_impl<half2, float2>(
     );
 
     greens_kernel<warps_per_block, M, N, K><<<grid_dim, block_dim, 0, handle.stream>>>(
-        samples, channels,
-        srcpos, wavenums, x,
-        ndst, dstpos, work.get(),
-        batch_size
+        static_cast<int>(samples), 
+        static_cast<int>(channels),
+        srcpos, 
+        wavenums, 
+        x,
+        static_cast<int>(ndst), 
+        dstpos, 
+        work.get(),
+        static_cast<int>(batch_size)
     );
 
     CUDA_LAUNCH_CHECK();
 
     // kernel output is (batch, ndst, samples) with strides (1, batch_size, batch_size*ndst)
     ffdas_tensor_desc work_desc(
-        {batch_size64, (int64_t)ndst, samples64},
-        {1LL, batch_size64, batch_size64 * (int64_t)ndst},
+        {batch_size, ndst, samples},
+        {1LL, batch_size, batch_size * ndst},
         builtin_traits<float2>::ffdas_datatype
     );
 
@@ -83,34 +205,117 @@ ffdas_error_t greens_impl<half2, float2>(
 }
 
 
-// float2 input: downcast to half2, then call the half2 specialization.
+// float2 input: on SM 70+ downcast to half2 for WMMA, otherwise use the
+// scalar fallback directly (avoids a pointless float2->half2->float2 round-trip).
 template<>
-ffdas_error_t greens_impl<float2, float2>(
+ffdas_error_t greens_launch_sm70<float2, float2>(
+    ffdas_context &handle,
+    int64_t samples,
+    int64_t channels,
+    const float3 *srcpos,
+    const float *wavenums,
+    const half2 *x,
+    int64_t ndst, 
+    const float3 *dstpos,
+    float2 *out,
+    int64_t batch_size
+) {
+    // reconstruct tensor descriptor for x to pass to contiguous_copy
+    std::vector<int64_t> dims = {
+        batch_size,
+        channels,
+        samples
+    };
+    std::vector<int64_t> strides = {
+        channels * samples,
+        samples,
+        1
+    };
+    ffdas_tensor_desc x_desc(dims, strides, builtin_traits<float2>::ffdas_datatype);
+
+    device_ptr<half2*> x_half(handle);
+    FFDAS_CHECK(x_half.alloc(x_desc.nbytes() / 2));
+
+    ffdas_error_t err = contiguous_copy_impl<float2, half2>(
+        handle, 
+        x_desc, 
+        x, 
+        x_half.get()
+    );
+
+    if (err != FFDAS_SUCCESS)
+        return err;
+
+    return greens_launch_sm70<half2, float2>(
+        handle, 
+        samples,
+        channels,
+        srcpos, 
+        wavenums, 
+        x_half.get(),
+        ndst,
+        dstpos, 
+        out,
+        batch_size
+    );
+}
+
+template<typename Tx, typename Ty>
+ffdas_error_t greens_impl(
     ffdas_context &handle,
     const float3 *srcpos,
     const float *wavenums,
     const ffdas_tensor_desc &x_desc,
-    const float2* x,
+    const Tx* x,
     const float3 *dstpos,
     const ffdas_tensor_desc &out_desc,
-    float2* out
+    Ty* out
 ) {
-    device_ptr<void> x_half(handle);
-    FFDAS_CHECK(x_half.alloc(x_desc.nbytes() / 2));
+    if (x_desc.ndim() != 3)
+        return FFDAS_ERROR_INVALID_DIMS;
 
-    ffdas_error_t err = contiguous_copy_impl<float2, half2>(
-        handle, x_desc, x, static_cast<half2*>(x_half.get()));
+    int64_t batch_size = x_desc.dims[0];
+    int64_t channels = x_desc.dims[1];
+    int64_t samples = x_desc.dims[2];
+    int64_t ndst = out_desc.dims[1];
 
-    if (err == FFDAS_SUCCESS) {
-        err = greens_impl<half2, float2>(
-            handle, srcpos, wavenums, x_desc,
-            static_cast<half2*>(x_half.get()),
-            dstpos, out_desc, out);
+    if (out_desc.ndim() != 3 || out_desc.dims[0] != batch_size || out_desc.dims[2] != samples)
+        return FFDAS_ERROR_INVALID_DIMS;
+
+    if (batch_size > INT_MAX || channels > INT_MAX || samples > INT_MAX || ndst > INT_MAX)
+        return FFDAS_ERROR_DIMS_TOO_LARGE;
+
+    if (!x_desc.is_contiguous() || !out_desc.is_contiguous)
+        return FFDAS_ERROR_NON_CONTIGUOUS;
+
+    if (handle.arch_code < 700) {
+        return greens_launch_sm53<Tx, Ty>(
+            handle, 
+            samples,
+            channels, 
+            srcpos, 
+            wavenums,
+            x, 
+            ndst, 
+            dstpos, 
+            out,
+            batch_size
+        );
     }
 
-    return err;
+    return greens_launch_sm70<Tx, Ty>(
+        handle, 
+        samples,
+        channels, 
+        srcpos, 
+        wavenums,
+        x, 
+        ndst, 
+        dstpos, 
+        out,
+        batch_size
+    );
 }
-
 
 }  // namespace ffdas::detail
 

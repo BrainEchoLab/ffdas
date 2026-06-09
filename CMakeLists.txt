@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.26)
 
-# Minimum required CUDA architecture: SM 70 for half precision and tensor core support
-set(MINIMUM_CUDA_ARCH 70)
+# Minimum required CUDA architecture: SM 53 for half precision support.
+# SM 70+ enables tensor-core-accelerated greens; older SMs use a scalar fallback.
+set(MINIMUM_CUDA_ARCH 53)
 
 # Set the CMAKE_CUDA_ARCHITECTURES environment variable to specify the 
 # target architectures, e.g., CMAKE_CUDA_ARCHITECTURES=75 for SM 75
