@@ -164,7 +164,7 @@ ffdas_error_t greens_launch_sm70<half2, float2>(
     int64_t batch_size
 ) {
     device_ptr<float2> work(handle);
-    FFDAS_CHECK(work.alloc(out_desc.nbytes()));
+    FFDAS_CHECK(work.alloc(batch_size * channels * samples * sizeof(float2)));
 
     constexpr int M = 16;
     constexpr int N = 16;
@@ -214,7 +214,7 @@ ffdas_error_t greens_launch_sm70<float2, float2>(
     int64_t channels,
     const float3 *srcpos,
     const float *wavenums,
-    const half2 *x,
+    const float2 *x,
     int64_t ndst, 
     const float3 *dstpos,
     float2 *out,
@@ -233,7 +233,7 @@ ffdas_error_t greens_launch_sm70<float2, float2>(
     };
     ffdas_tensor_desc x_desc(dims, strides, builtin_traits<float2>::ffdas_datatype);
 
-    device_ptr<half2*> x_half(handle);
+    device_ptr<half2> x_half(handle);
     FFDAS_CHECK(x_half.alloc(x_desc.nbytes() / 2));
 
     ffdas_error_t err = contiguous_copy_impl<float2, half2>(
@@ -285,7 +285,7 @@ ffdas_error_t greens_impl(
     if (batch_size > INT_MAX || channels > INT_MAX || samples > INT_MAX || ndst > INT_MAX)
         return FFDAS_ERROR_DIMS_TOO_LARGE;
 
-    if (!x_desc.is_contiguous() || !out_desc.is_contiguous)
+    if (!x_desc.is_contiguous() || !out_desc.is_contiguous())
         return FFDAS_ERROR_NON_CONTIGUOUS;
 
     if (handle.arch_code < 700) {

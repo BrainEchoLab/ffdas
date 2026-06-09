@@ -87,6 +87,6 @@ setup(
             "mkdocs-material>=9.7",
         ],
     },
-    ext_modules=[Extension("ffdas._core._ffdas", sources=[])],
+    ext_modules=[Extension("ffdas._core._ffdas", sources=[], py_limited_api=True)],
     cmdclass={"build_ext": CMakeBuildExt},
 )
