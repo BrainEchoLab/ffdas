@@ -1,25 +1,80 @@
+import glob
 import os
+import re
 import shlex
 import subprocess
-import sys
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
 
-CUDA_MAJOR = int(os.environ.get("FFDAS_CUDA_MAJOR", "13"))
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+_LIB_PATTERN = re.compile(r"ffdas_cu(\d+)")
+
+
+def _find_library_in(directory):
+    """Find libffdas_cu*.so/dll/dylib in directory. Return (lib_dir, cuda_major) or None."""
+    if not os.path.isdir(directory):
+        return None
+    for entry in os.listdir(directory):
+        m = _LIB_PATTERN.search(entry)
+        if m and os.path.isfile(os.path.join(directory, entry)):
+            return directory, int(m.group(1))
+    return None
+
+
+def _find_library(directory):
+    """Search directory and multi-config subdirectories."""
+    result = _find_library_in(directory)
+    if result:
+        return result
+    for config in ["Release", "RelWithDebInfo", "Debug"]:
+        result = _find_library_in(os.path.join(directory, config))
+        if result:
+            return result
+    return None
+
+
+def find_ffdas():
+    """Locate pre-built libffdas_cu*.so and return (lib_dir, cuda_major)."""
+
+    env_dir = os.environ.get("FFDAS_LIB_DIR")
+    if env_dir:
+        result = _find_library(os.path.abspath(env_dir))
+        if result:
+            return result
+        raise RuntimeError(f"FFDAS_LIB_DIR={env_dir} does not contain libffdas_cu*")
+
+    candidates = [os.path.join(REPO_ROOT, "build")]
+    candidates += sorted(glob.glob(os.path.join(REPO_ROOT, "_build*")))
+    candidates += sorted(glob.glob(os.path.join(REPO_ROOT, "build_*")))
+
+    for candidate in candidates:
+        result = _find_library(candidate)
+        if result:
+            return result
+
+    raise RuntimeError(
+        "Pre-built libffdas not found. Build it first:\n"
+        "  cmake -S . -B build -DCMAKE_BUILD_TYPE=Release\n"
+        "  cmake --build build -j"
+    )
+
+
+FFDAS_LIB_DIR, CUDA_MAJOR = find_ffdas()
 
 
 class CMakeBuildExt(build_ext):
     def build_extension(self, ext):
+        ext_fullpath = self.get_ext_fullpath(ext.name)
+        ext_dir = os.path.abspath(os.path.dirname(ext_fullpath))
         build_dir = os.path.join(REPO_ROOT, f"_build_python_cu{CUDA_MAJOR}")
-        install_dir = os.path.abspath(self.build_lib)
 
         cmake_args = [
-            f"-S{REPO_ROOT}",
+            f"-S{os.path.join(REPO_ROOT, 'bindings', 'python')}",
             f"-B{build_dir}",
-            "-DBUILD_PYTHON=ON",
-            "-DBUILD_MEX=OFF",
+            f"-DFFDAS_LIB_DIR={FFDAS_LIB_DIR}",
+            f"-DFFDAS_INCLUDE_DIR={os.path.join(REPO_ROOT, 'include')}",
             "-DCMAKE_BUILD_TYPE=Release",
         ]
 
@@ -32,15 +87,6 @@ class CMakeBuildExt(build_ext):
         cuda_root = os.environ.get("CUDA_ROOT")
         if cuda_root:
             cmake_args.append(f"-DCUDAToolkit_ROOT={cuda_root}")
-            nvcc = os.path.join(cuda_root, "bin", "nvcc")
-            if sys.platform == "win32":
-                nvcc += ".exe"
-            if os.path.isfile(nvcc):
-                cmake_args.append(f"-DCMAKE_CUDA_COMPILER={nvcc}")
-
-        cuda_archs = os.environ.get("CMAKE_CUDA_ARCHITECTURES")
-        if cuda_archs:
-            cmake_args.append(f"-DCMAKE_CUDA_ARCHITECTURES={cuda_archs}")
 
         generator = os.environ.get("CMAKE_GENERATOR")
         if generator:
@@ -57,7 +103,7 @@ class CMakeBuildExt(build_ext):
         ])
         subprocess.check_call([
             "cmake", "--install", build_dir,
-            "--prefix", install_dir, "--config", "Release",
+            "--prefix", ext_dir, "--config", "Release",
         ])
 
 

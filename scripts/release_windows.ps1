@@ -3,31 +3,53 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $DistDir = "$RepoRoot\dist"
 
-$CudaMajor = if ($env:CUDA_MAJOR) { $env:CUDA_MAJOR } else { "13" }
 $CudaRoot = if ($env:CUDA_ROOT) { $env:CUDA_ROOT } else { $null }
 $Target = if ($args.Count -gt 0) { $args[0] } else { "all" }
 $ffdasVersion = "0.1.0"
 
 function Fail($msg) { Write-Error $msg; exit 1 }
 
-# delvewheel excludes per CUDA major version — these are the CUDA DLLs that
-# should NOT be bundled into the wheel (provided by the system toolkit or
-# pip cuda packages at runtime).
+# Validate prerequisites
+if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { Fail "cmake not found" }
+if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { Fail "ninja not found" }
+
+# Detect CUDA root from environment or PATH
+if (-not $CudaRoot) {
+    $nvcc = Get-Command nvcc -ErrorAction SilentlyContinue
+    if ($nvcc) {
+        $CudaRoot = Split-Path -Parent (Split-Path -Parent $nvcc.Source)
+    } else {
+        Fail "CUDA_ROOT not set and nvcc not on PATH"
+    }
+}
+
+$nvccPath = "$CudaRoot\bin\nvcc.exe"
+if (-not (Test-Path $nvccPath)) { Fail "nvcc not found at $nvccPath" }
+
+# Detect CUDA major version
+$nvccOutput = & $nvccPath --version 2>&1 | Out-String
+if ($nvccOutput -match "release (\d+)") {
+    $CudaMajor = $Matches[1]
+} else {
+    Fail "could not detect CUDA major version from nvcc"
+}
+Write-Host "info: detected CUDA major version: $CudaMajor"
+
 if ($CudaMajor -eq "13") {
     $CudaArchitectures = "75-real;80-real;86-real;89-real;90-real;100-real;120"
 } elseif ($CudaMajor -eq "12") {
     $CudaArchitectures = "75-real;80-real;86-real;89-real;90"
 } else {
-    Fail "unsupported CUDA_MAJOR=$CudaMajor (expected 12 or 13)"
+    Fail "unsupported CUDA major version $CudaMajor (expected 12 or 13)"
 }
 
+# delvewheel excludes — CUDA DLLs provided by the system or pip
 $DelvewheelExcludes = @(
     "--exclude", "cublas64_*.dll",
     "--exclude", "cublasLt64_*.dll",
     "--exclude", "cusolver64_*.dll",
     "--exclude", "cusparse64_*.dll"
 )
-
 
 # Set up VS developer environment if not already active
 if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
@@ -42,17 +64,12 @@ if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
     Write-Host "info: loaded VS developer environment from $vsPath"
 }
 
-# Validate prerequisites
-if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) { Fail "cmake not found" }
-if (-not (Get-Command ninja -ErrorAction SilentlyContinue)) { Fail "ninja not found" }
-
 if ($Target -eq "python" -or $Target -eq "all") {
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) { Fail "python not found" }
     if (-not (Get-Command delvewheel -ErrorAction SilentlyContinue)) { Fail "delvewheel not found (pip install delvewheel)" }
 }
 
-Write-Host "info: CUDA_MAJOR=$CudaMajor"
-if ($CudaRoot) { Write-Host "info: CUDA_ROOT=$CudaRoot" }
+Write-Host "info: CUDA_ROOT=$CudaRoot"
 Write-Host "info: CUDA_ARCHITECTURES=$CudaArchitectures"
 Write-Host "info: TARGET=$Target"
 Write-Host "info: DIST_DIR=$DistDir"
@@ -60,39 +77,49 @@ Write-Host ""
 
 if (-not (Test-Path $DistDir)) { New-Item -ItemType Directory -Path $DistDir | Out-Null }
 
+# Stage 1: build the core library
+$LibBuildDir = "$RepoRoot\_build_lib_cu$CudaMajor"
+Write-Host "info: building ffdas_cu$CudaMajor"
+cmake -G Ninja -S $RepoRoot -B $LibBuildDir `
+    -DCMAKE_BUILD_TYPE=Release `
+    -DCUDAToolkit_ROOT="$CudaRoot" `
+    -DCMAKE_CUDA_ARCHITECTURES="$CudaArchitectures"
+cmake --build $LibBuildDir
+
+if (-not (Test-Path "$LibBuildDir\ffdas_cu$CudaMajor.dll")) {
+    Fail "ffdas_cu$CudaMajor.dll not found in $LibBuildDir"
+}
+
+# Stage 2a: MATLAB toolbox
 if ($Target -eq "matlab" -or $Target -eq "all") {
+    $MatlabBuildDir = "$RepoRoot\_build_matlab_cu$CudaMajor"
+    $MatlabDistName = "ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64"
+    Write-Host ""
     Write-Host "info: building MATLAB toolbox"
-    $MatlabCmakeArgs = @(
-        "-G", "Ninja",
-        "-S", $RepoRoot,
-        "-B", "$RepoRoot\_build_matlab_cu$CudaMajor",
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DBUILD_MEX=ON",
-        "-DCMAKE_CUDA_ARCHITECTURES=$CudaArchitectures"
-    )
-    if ($CudaRoot) {
-        $MatlabCmakeArgs += "-DCUDAToolkit_ROOT=$CudaRoot"
-    }
-    cmake @MatlabCmakeArgs
-    cmake --build "$RepoRoot\_build_matlab_cu$CudaMajor"
-    cmake --install "$RepoRoot\_build_matlab_cu$CudaMajor" --prefix "$DistDir\ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64"
-    Compress-Archive -Path "$DistDir\ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64" -DestinationPath "$DistDir\ffdas_cu$CudaMajor-$ffdasVersion-matlab-win_amd64.zip"
+    cmake -G Ninja -S "$RepoRoot\bindings\matlab" -B $MatlabBuildDir `
+        -DCMAKE_BUILD_TYPE=Release `
+        -DFFDAS_LIB_DIR="$LibBuildDir" `
+        -DFFDAS_INCLUDE_DIR="$RepoRoot\include"
+    cmake --build $MatlabBuildDir
+    cmake --install $MatlabBuildDir --prefix "$DistDir\$MatlabDistName"
+    Compress-Archive -Path "$DistDir\$MatlabDistName" -DestinationPath "$DistDir\$MatlabDistName.zip"
     Write-Host ""
 }
 
+# Stage 2b: Python wheel
 if ($Target -eq "python" -or $Target -eq "all") {
     $WheelDir = "$RepoRoot\_build_wheel_cu$CudaMajor"
+    Write-Host ""
     Write-Host "info: building Python wheel (ffdas-cu$CudaMajor)"
-    $env:FFDAS_CUDA_MAJOR = $CudaMajor
-    $env:CMAKE_CUDA_ARCHITECTURES = $CudaArchitectures
+    $env:FFDAS_LIB_DIR = $LibBuildDir
+    $env:CUDA_ROOT = $CudaRoot
     $env:CMAKE_GENERATOR = "Ninja"
-    if ($CudaRoot) { $env:CUDA_ROOT = $CudaRoot }
     Push-Location $RepoRoot
     try {
         if (Test-Path $WheelDir) { Remove-Item -Recurse -Force $WheelDir }
         python -m build --wheel --outdir $WheelDir
         $wheel = (Get-Item "$WheelDir\*.whl").FullName
-        & delvewheel repair $wheel --wheel-dir "$DistDir" --add-path "$RepoRoot\_build_python_cu$CudaMajor" @DelvewheelExcludes
+        & delvewheel repair $wheel --wheel-dir "$DistDir" --add-path "$LibBuildDir" @DelvewheelExcludes
     } finally {
         Pop-Location
     }

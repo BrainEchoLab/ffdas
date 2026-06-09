@@ -6,7 +6,7 @@ def find_win32_dlls():
     if sys.platform != "win32":
         return
 
-    # ffdas.dll and _ffdas.pyd are in _core/
+    # ffdas_cu*.dll and _ffdas.pyd are in _core/
     core_dir = os.path.join(os.path.dirname(__file__), "_core")
     if os.path.isdir(core_dir):
         os.add_dll_directory(core_dir)

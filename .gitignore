@@ -18,10 +18,7 @@ __pycache__/
 *.nsys-rep
 
 # Distribution / packaging
-_build_matlab_cu*/
-_build_python_cu*/
-_build_wheel_cu*/
-_build/
+_build*/
 bin/
 .Python
 build/

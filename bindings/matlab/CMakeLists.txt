@@ -1,6 +1,34 @@
+cmake_minimum_required(VERSION 3.26)
+project(ffdas_matlab LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Pre-built libffdas location
+if(NOT FFDAS_LIB_DIR)
+    message(FATAL_ERROR "FFDAS_LIB_DIR must be set to the directory containing the pre-built libffdas")
+endif()
+if(NOT FFDAS_INCLUDE_DIR)
+    set(FFDAS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../include")
+endif()
+
+# Find the versioned library (libffdas_cu13.so, ffdas_cu13.lib, etc.)
+file(GLOB _ffdas_libs
+    "${FFDAS_LIB_DIR}/libffdas_cu*${CMAKE_SHARED_LIBRARY_SUFFIX}"
+    "${FFDAS_LIB_DIR}/ffdas_cu*.lib")
+list(LENGTH _ffdas_libs _count)
+if(_count EQUAL 0)
+    message(FATAL_ERROR "No libffdas_cu* found in ${FFDAS_LIB_DIR}")
+elseif(_count GREATER 1)
+    message(FATAL_ERROR "Multiple libffdas_cu* found in ${FFDAS_LIB_DIR}: ${_ffdas_libs}")
+endif()
+list(GET _ffdas_libs 0 FFDAS_LIBRARY)
+message(STATUS "Found libffdas: ${FFDAS_LIBRARY}")
+
 find_package(Matlab REQUIRED COMPONENTS MEX_COMPILER)
 
 include_directories(
+    ${FFDAS_INCLUDE_DIR}
     ${Matlab_INCLUDE_DIRS}
     ${Matlab_ROOT_DIR}/toolbox/parallel/gpu/extern/include
 )
@@ -19,7 +47,7 @@ function(add_mex_function target_name source_file)
         NAME ${target_name}
         SRC ${source_file}
         OUTPUT_NAME ${target_name}
-        LINK_TO ffdas ${GPUMEX_BINDER_LIB}
+        LINK_TO ${FFDAS_LIBRARY} ${GPUMEX_BINDER_LIB}
         R2018a
     )
     if(WIN32 AND MSVC)
@@ -76,7 +104,15 @@ add_mex_function(ffdas_contraction
 add_mex_function(ffdas_greens
     "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/+core/src/ffdas_greens.cpp")
 
-# Install rules for packaging
+# Bundle libffdas alongside MEX files (MEX RPATH is $ORIGIN)
+get_filename_component(_ffdas_lib_name "${FFDAS_LIBRARY}" NAME)
+if(WIN32)
+    string(REGEX REPLACE "\\.lib$" ".dll" _ffdas_dll_name "${_ffdas_lib_name}")
+    install(FILES "${FFDAS_LIB_DIR}/${_ffdas_dll_name}" DESTINATION "+ffdas/+core")
+else()
+    install(FILES "${FFDAS_LIBRARY}" DESTINATION "+ffdas/+core")
+endif()
+
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/"
     DESTINATION "+ffdas"
     FILES_MATCHING PATTERN "*.m"

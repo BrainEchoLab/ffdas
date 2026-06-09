@@ -18,12 +18,9 @@ else()
     endforeach()
 endif()
 
-project(ffdas LANGUAGES CXX CUDA)
+project(ffdas VERSION 0.1.0 LANGUAGES CXX CUDA)
 
-option(BUILD_PYTHON "Build Python bindings" OFF)
-option(BUILD_MEX "Build MATLAB (MEX) bindings" OFF)
 option(FFDAS_USE_NVTX "Enable NVTX profiling annotations" ON)
-option(FETCH_NANOBIND "Automatically fetch nanobind from `https://github.com/wjakob/nanobind.git` if it is not found" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -68,14 +65,17 @@ set(FFDAS_SOURCES
     ${SRC_DIR}/tensor_ops/scatter.cu
 )
 
-# Objects library used in both shared and static targets
-add_library(ffdas_objects OBJECT ${FFDAS_SOURCES})
+set(FFDAS_OUTPUT_NAME "ffdas_cu${CUDAToolkit_VERSION_MAJOR}")
 
-set_target_properties(ffdas_objects PROPERTIES
+add_library(ffdas SHARED ${FFDAS_SOURCES})
+
+set_target_properties(ffdas PROPERTIES
+    OUTPUT_NAME "${FFDAS_OUTPUT_NAME}"
     POSITION_INDEPENDENT_CODE ON
+    CUDA_RUNTIME_LIBRARY Shared
 )
 
-target_compile_options(ffdas_objects PRIVATE
+target_compile_options(ffdas PRIVATE
     -DFFDAS_BUILDING_LIBRARY
     $<$<COMPILE_LANGUAGE:CUDA>:--extended-lambda;--ftz=true;--fmad=true;-O3;--threads;0>
     $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<BOOL:${MSVC}>>:-Xcompiler=/Zc:preprocessor>
@@ -83,35 +83,19 @@ target_compile_options(ffdas_objects PRIVATE
     $<$<AND:$<COMPILE_LANGUAGE:CUDA>,$<CONFIG:Debug>>:-v;-keep;-Xptxas=-v;-Xptxas=-preserve-relocs;--nvlink-options=-preserve-relocs;-g;-lineinfo>
 )
 
-if(FFDAS_USE_NVTX)
-  target_compile_definitions(ffdas_objects PRIVATE FFDAS_USE_NVTX)
-  target_link_libraries(ffdas_objects PRIVATE CUDA::nvtx3)
-endif()
-
 set(FFDAS_LINK_LIBS CUDA::cuda_driver CUDA::cublas CUDA::cusolver)
 if(FFDAS_USE_NVTX)
+    target_compile_definitions(ffdas PRIVATE FFDAS_USE_NVTX)
     list(APPEND FFDAS_LINK_LIBS CUDA::nvtx3)
 endif()
-
-# Shared library — dynamic CUDA runtime
-add_library(ffdas SHARED $<TARGET_OBJECTS:ffdas_objects>)
 target_link_libraries(ffdas PUBLIC ${FFDAS_LINK_LIBS})
-set_target_properties(ffdas PROPERTIES
-    CUDA_RUNTIME_LIBRARY Shared
-)
 
-# Add Python bindings if enabled and dependencies are available
-if(BUILD_PYTHON)
-    message(STATUS "Python bindings enabled")
-    add_subdirectory(bindings/python)
-else()
-    message(STATUS "Skipping Python bindings compilation")
-endif()
+message(STATUS "CUDA toolkit: ${CUDAToolkit_VERSION} (major ${CUDAToolkit_VERSION_MAJOR})")
+message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
+message(STATUS "Library name: ${FFDAS_OUTPUT_NAME}")
 
-# Add MATLAB bindings if enabled and dependencies are available
-if(BUILD_MEX)
-    message(STATUS "MATLAB bindings enabled")
-    add_subdirectory(bindings/matlab)
-else()
-    message(STATUS "Skipping MEX bindings compilation")
-endif()
+install(TARGETS ffdas
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib)
+install(FILES include/ffdas.h DESTINATION include)
