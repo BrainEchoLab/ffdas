@@ -30,6 +30,7 @@ typedef enum {
     FFDAS_ERROR_ALLOCATION_FAILED = 10,
     FFDAS_ERROR_DEVICE_MEMORY_INSUFFICIENT = 11,
     FFDAS_ERROR_HOST_MEMORY_INSUFFICIENT = 12,
+    FFDAS_ERROR_INVALID_DEVICE = 13,
 
     FFDAS_ERROR_DEVICE_NOT_SUPPORTED = 20,
     FFDAS_ERROR_INSUFFICIENT_COMPUTE_CAPABILITY = 21,
@@ -284,6 +285,10 @@ FFDAS_API ffdas_error_t ffdas_greens(
     const float *dstpos,
     ffdas_tensor_desc_t out_desc,
     void* out
+);
+
+FFDAS_API ffdas_error_t ffdas_device_count(
+    int *count
 );
 
 FFDAS_API ffdas_error_t ffdas_device_get(

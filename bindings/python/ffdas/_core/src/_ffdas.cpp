@@ -328,6 +328,12 @@ NB_MODULE(_ffdas, m) {
             self.destroy();
         });
 
+    m.def("device_count", []() {
+        int count;
+        check(ffdas_device_count(&count));
+        return count;
+    });
+
     m.def("device_get", []() {
         int device;
         check(ffdas_device_get(&device));

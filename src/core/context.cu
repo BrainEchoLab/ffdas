@@ -185,7 +185,18 @@ ffdas_error_t ffdas_device_get(int *device) {
 
 
 ffdas_error_t ffdas_device_set(int device) {
+    int count;
+    CUDA_CHECK(cudaGetDeviceCount(&count));
+    if (device < 0 || device >= count)
+        return FFDAS_ERROR_INVALID_DEVICE;
     CUDA_CHECK(cudaSetDevice(device));
+    return FFDAS_SUCCESS;
+}
+
+
+ffdas_error_t ffdas_device_count(int *count) {
+    CHECK_NULL_PTR(count);
+    CUDA_CHECK(cudaGetDeviceCount(count));
     return FFDAS_SUCCESS;
 }
 
