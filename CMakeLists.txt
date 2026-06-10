@@ -7,7 +7,7 @@ set(MINIMUM_CUDA_ARCH 53)
 # Set the CMAKE_CUDA_ARCHITECTURES environment variable to specify the
 # target architectures, e.g., CMAKE_CUDA_ARCHITECTURES=75 for SM 75
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES all)
+    set(CMAKE_CUDA_ARCHITECTURES native)
 else()
     foreach(arch ${CMAKE_CUDA_ARCHITECTURES})
         if(arch LESS MINIMUM_CUDA_ARCH)

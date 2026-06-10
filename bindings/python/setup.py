@@ -64,12 +64,11 @@ BUILD_DIR, CUDA_MAJOR = _detect_cuda_major()
 
 
 class CMakeBuildExt(build_ext):
-    _LIB_PATTERNS = ["libffdas_cu*", "ffdas_cu*.dll", "libffdas_cu*.dylib"]
-
     def _bundled_libs(self):
         d = os.path.join(self.build_lib, "ffdas", "_core")
+        lib_patterns = [f"libffdas_cu{CUDA_MAJOR}", f"ffdas_cu{CUDA_MAJOR}.dll", f"libffdas_cu{CUDA_MAJOR}.dylib"]
         libs = []
-        for pattern in self._LIB_PATTERNS:
+        for pattern in lib_patterns:
             libs.extend(glob.glob(os.path.join(d, pattern)))
         return libs
 
