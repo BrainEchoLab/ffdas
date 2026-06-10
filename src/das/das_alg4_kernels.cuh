@@ -199,6 +199,7 @@ void load_b_frag(
 
 __device__ __forceinline__
 bool warp_count_unique(unsigned mask, int x, unsigned &count, unsigned &rank) {
+#if FFDAS_HAVE_SP_MMA
     const unsigned lane = threadIdx.x & 31;
 
     const unsigned peers = __match_any_sync(mask, x);  // lanes with identical s within the strided group
@@ -213,6 +214,8 @@ bool warp_count_unique(unsigned mask, int x, unsigned &count, unsigned &rank) {
     count = __popc(leaders);  // same for all lanes in the group
 
     return is_leader;
+#endif  // FFDAS_HAVE_SP_MMA
+    return 0;
 }
 
 // Build the metadata register for the sparse MMA instruction. Each thread's
