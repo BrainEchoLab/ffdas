@@ -93,3 +93,5 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/bindings/matlab/+ffdas/
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/bindings/matlab/examples/
     DESTINATION examples COMPONENT matlab
     FILES_MATCHING PATTERN "*.m")
+
+add_custom_target(ffdas_matlab_all DEPENDS ${FFDAS_MEX_TARGETS})
