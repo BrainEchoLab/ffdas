@@ -174,7 +174,6 @@ def build_matlab(core_build_dir):
         "-B", str(build_dir),
         f"-DCMAKE_PREFIX_PATH={core_build_dir}",
         "-DCMAKE_BUILD_TYPE=Release",
-        "-G", "Ninja",
     ]
     if is_windows():
         cmake_args.extend(["-G", "Ninja"])
