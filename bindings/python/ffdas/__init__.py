@@ -13,6 +13,15 @@ def _load_core():
         import ffdas_core
         lib_path = Path(ffdas_core.__file__).parent / ffdas_core.LIB_NAME
     except ImportError:
+        pass
+
+    # Development: cmake installs the core library alongside the extension
+    if lib_path is None:
+        candidate = Path(__file__).parent / "_core" / lib_name
+        if candidate.exists():
+            lib_path = candidate
+
+    if lib_path is None:
         lib_dir = os.environ.get("FFDAS_LIB_DIR")
         if lib_dir:
             lib_path = Path(lib_dir) / lib_name

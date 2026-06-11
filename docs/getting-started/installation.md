@@ -38,6 +38,22 @@ Requires MATLAB R2018b+ with the Parallel Computing Toolbox and a system CUDA in
 - For Python bindings: Python 3.12+, nanobind, scikit-build-core
 - For MATLAB bindings: MATLAB R2018b+, Parallel Computing Toolbox
 
+### Windows: Visual Studio developer environment
+
+On Windows, the CUDA compiler requires the MSVC toolchain to be on PATH. Open a **Developer Command Prompt** or activate the environment from a regular terminal:
+
+```powershell
+# Find the VS installation
+$vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" `
+    -latest -property installationPath
+
+# Activate the developer environment
+Import-Module "$vsPath\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+Enter-VsDevShell -VsInstallPath $vsPath -Arch amd64 -SkipAutomaticLocation
+```
+
+Alternatively, launch the **x64 Native Tools Command Prompt** from the Start menu (search for "x64 Native Tools"). All build commands below assume this environment is active on Windows.
+
 ### Core library
 
 ```bash
@@ -67,56 +83,93 @@ The minimum supported architecture is SM 53. SM 70+ enables tensor-core-accelera
 
 If `CMAKE_CUDA_ARCHITECTURES` is not specified, CMake targets the architecture of the locally installed GPU (`native`).
 
+On Windows, the default preset does not specify a generator. Ninja is recommended for CUDA builds:
+
+```powershell
+cmake --preset default -G Ninja
+cmake --build _build
+```
+
 To use a specific CUDA toolkit:
 
-```bash
-cmake --preset default \
-    -DCMAKE_CUDA_COMPILER=/usr/local/cuda-13/bin/nvcc \
-    -DCUDAToolkit_ROOT=/usr/local/cuda-13
-```
+=== "Linux"
+
+    ```bash
+    cmake --preset default \
+        -DCMAKE_CUDA_COMPILER=/usr/local/cuda-13/bin/nvcc \
+        -DCUDAToolkit_ROOT=/usr/local/cuda-13
+    ```
+
+=== "Windows"
+
+    ```powershell
+    cmake --preset default -G Ninja `
+        -DCMAKE_CUDA_COMPILER="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.0/bin/nvcc.exe" `
+        -DCUDAToolkit_ROOT="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.0"
+    ```
 
 ### Python bindings
 
 The bindings are built as a standalone project that links against the core library. Build the core library first, then install the bindings with pip:
 
-```bash
-# 1. Build the core library
-cmake --preset default
-cmake --build _build
+=== "Linux"
 
-# 2. Install the Python bindings (editable)
-CMAKE_PREFIX_PATH=$PWD/_build pip install -e bindings/python --no-build-isolation
-```
+    ```bash
+    # 1. Build the core library
+    cmake --preset default
+    cmake --build _build
 
-scikit-build-core invokes CMake for the nanobind extension, using `CMAKE_PREFIX_PATH` to locate the core library. On Linux, the extension's build-tree RPATH handles runtime library resolution automatically.
+    # 2. Install the Python bindings (editable)
+    pip install nanobind
+    CMAKE_PREFIX_PATH=$PWD/_build pip install -e bindings/python --no-build-isolation
+    ```
 
-On Windows, set `FFDAS_LIB_DIR` to the build directory so the library can be found at import time:
+=== "Windows"
 
-```powershell
-$env:FFDAS_LIB_DIR = "$PWD\_build"
-CMAKE_PREFIX_PATH="$PWD\_build" pip install -e bindings\python --no-build-isolation
-```
+    ```powershell
+    # 1. Build the core library
+    cmake --preset default -G Ninja
+    cmake --build _build
 
-nanobind must be installed before running the editable install (it is listed in the build requirements, but `--no-build-isolation` skips automatic installation):
+    # 2. Install the Python bindings (editable)
+    pip install nanobind
+    $env:CMAKE_PREFIX_PATH = "$PWD\_build"
+    pip install -e bindings\python --no-build-isolation
+    ```
 
-```bash
-pip install nanobind
-```
+scikit-build-core invokes CMake for the nanobind extension, using `CMAKE_PREFIX_PATH` to locate the core library. The core shared library is installed alongside the extension so that it can be found at runtime without setting any environment variables.
+
+After modifying C++ or CUDA source files, rebuild the core library and reinstall the bindings.
 
 ### MATLAB bindings
 
-```bash
-# 1. Build the core library (if not already done)
-cmake --preset default
-cmake --build _build
+=== "Linux"
 
-# 2. Build the MATLAB MEX bindings
-cmake -S bindings/matlab -B _build_matlab -DCMAKE_PREFIX_PATH=$PWD/_build
-cmake --build _build_matlab
+    ```bash
+    # 1. Build the core library (if not already done)
+    cmake --preset default
+    cmake --build _build
 
-# 3. Install
-cmake --install _build_matlab --prefix /path/to/install
-```
+    # 2. Build the MATLAB MEX bindings
+    cmake -S bindings/matlab -B _build_matlab -DCMAKE_PREFIX_PATH=$PWD/_build
+    cmake --build _build_matlab
+
+    # 3. Install
+    cmake --install _build_matlab --prefix /path/to/install
+    ```
+
+=== "Windows"
+
+    ```powershell
+    cmake --preset default -G Ninja
+    cmake --build _build
+
+    cmake -S bindings\matlab -B _build_matlab -G Ninja `
+        -DCMAKE_PREFIX_PATH="$PWD\_build"
+    cmake --build _build_matlab
+
+    cmake --install _build_matlab --prefix C:\path\to\install
+    ```
 
 The MEX files use `$ORIGIN` RPATH on Linux, so the shared library must be in the same directory. The install step places both the MEX files and the shared library under `+ffdas/+core/`.
 
@@ -137,9 +190,19 @@ addpath("/path/to/install")
 
 The `release.py` script at the repository root automates the full release workflow: building the core library for multiple CUDA versions, packaging Python wheels, and creating MATLAB archives.
 
-```bash
-CUDA12_ROOT=/usr/local/cuda-12 CUDA13_ROOT=/usr/local/cuda-13 python release.py
-```
+=== "Linux"
+
+    ```bash
+    CUDA12_ROOT=/usr/local/cuda-12 CUDA13_ROOT=/usr/local/cuda-13 python release.py
+    ```
+
+=== "Windows"
+
+    ```powershell
+    $env:CUDA12_ROOT = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+    $env:CUDA13_ROOT = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0"
+    python release.py
+    ```
 
 See `python release.py --help` for options.
 
@@ -151,6 +214,8 @@ See `python release.py --help` for options.
 
 **CUDA runtime not found at import time.** If the import fails with an `OSError` loading the shared library, the CUDA runtime libraries are not on the library search path. Install the CUDA toolkit system-wide, or use `pip install cuda-toolkit[cudart,cublas,cusolver]==12.*` to install them via pip.
 
-**Windows: DLL not found.** Set `FFDAS_LIB_DIR` to the directory containing `ffdas.dll` for development builds.
-
 **Architecture error during build.** If you see errors about unsupported SM versions, set `CMAKE_CUDA_ARCHITECTURES` to match your GPU. Run `nvidia-smi` to check your GPU model.
+
+**Windows: DLL not found.** For development builds, the core library is installed alongside the extension automatically. If it still cannot be found, set `FFDAS_LIB_DIR` to the directory containing `ffdas.dll`, or add that directory to `PATH`.
+
+**Windows: compiler not found.** Make sure you are in a Visual Studio developer command prompt. See the [Windows: Visual Studio developer environment](#windows-visual-studio-developer-environment) section above.

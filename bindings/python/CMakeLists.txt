@@ -22,6 +22,15 @@ if(MSVC)
     target_compile_options(_ffdas PRIVATE /Zc:preprocessor)
 endif()
 
-set_target_properties(_ffdas PROPERTIES INSTALL_RPATH "")
+if(UNIX)
+    set_target_properties(_ffdas PROPERTIES INSTALL_RPATH "$ORIGIN")
+endif()
 
 install(TARGETS _ffdas DESTINATION ffdas/_core)
+
+# Install the core library alongside the extension for development.
+# For release wheels, pyproject.toml excludes it — the core library
+# ships in its own package (ffdas-core-cu*).
+install(IMPORTED_RUNTIME_ARTIFACTS ffdas::ffdas
+    LIBRARY DESTINATION ffdas/_core
+    RUNTIME DESTINATION ffdas/_core)
