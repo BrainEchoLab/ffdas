@@ -135,13 +135,13 @@ addpath("/path/to/install")
 
 ### Release builds
 
-The `build.py` script at the repository root automates the full release workflow: building the core library for multiple CUDA versions, packaging Python wheels, and creating MATLAB archives.
+The `release.py` script at the repository root automates the full release workflow: building the core library for multiple CUDA versions, packaging Python wheels, and creating MATLAB archives.
 
 ```bash
-CUDA12_ROOT=/usr/local/cuda-12 CUDA13_ROOT=/usr/local/cuda-13 python build.py
+CUDA12_ROOT=/usr/local/cuda-12 CUDA13_ROOT=/usr/local/cuda-13 python release.py
 ```
 
-See `python build.py --help` for options.
+See `python release.py --help` for options.
 
 ## Troubleshooting
 

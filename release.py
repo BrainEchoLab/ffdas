@@ -10,9 +10,9 @@ Environment variables:
     CUDA_ROOT    Fallback if the version-specific variable is not set
 
 Usage:
-    python build.py                     # build everything for CUDA 12 + 13
-    python build.py --cuda 12           # CUDA 12 only
-    python build.py --target python     # Python packages only
+    python release.py                     # build everything for CUDA 12 + 13
+    python release.py --cuda 12           # CUDA 12 only
+    python release.py --target python     # Python packages only
 """
 
 import argparse
