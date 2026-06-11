@@ -38,7 +38,7 @@ Requires Python 3.12+ and a CUDA-capable GPU. CuPy or another DLPack-compatible 
 
 ### MATLAB
 
-Download the prebuilt MEX binaries for your platform from the [GitHub Releases](https://github.com/luukverhoef/ffdas/releases) page and add the bindings directory to your MATLAB path:
+Download the prebuilt MEX binaries for your platform from the [GitHub Releases](https://github.com/brainecholab/ffdas/releases) page and add the bindings directory to your MATLAB path:
 
 ```matlab
 addpath("/path/to/ffdas/bindings/matlab")
