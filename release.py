@@ -77,7 +77,9 @@ def project_version():
 
 
 def platform_tag():
-    return "win_amd64" if is_windows() else "linux_x86_64"
+    system = "win" if is_windows() else "linux"
+    mach = platform.machine().lower()
+    return f"{system}_{mach}"
 
 
 # Phase 1: Core library
