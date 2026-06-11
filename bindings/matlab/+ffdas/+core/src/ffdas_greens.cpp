@@ -45,7 +45,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
         out_shape[i+1] = dstpos.shape(i);
     }
 
-    ndarray::ndarray out = ndarray::make_ndarray({batch_size, ndst, samples}, x.class_id, x.complexity);
+    auto out = ndarray::make_ndarray({batch_size, ndst, samples}, x.class_id, x.complexity);
 
     // The output array gets constructed through mex, which removes any unit trailing dimensions. Since
     // ffdas_greens expects a 3d output tensor, we update the (ffdas) descriptor's dimensions by

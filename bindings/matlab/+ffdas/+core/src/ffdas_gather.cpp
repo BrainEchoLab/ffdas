@@ -59,7 +59,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
         out_dims[i] = (i == axis) ? indices.numel() : x.shape(i);
     }
 
-    ndarray::ndarray out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
+    auto out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
 
     ScopedTensorDesc x_desc(x);
     ScopedTensorDesc out_desc(out);

@@ -37,7 +37,12 @@ def run(*cmd, env=None, **kwargs):
     cmd_str = " ".join(str(c) for c in cmd)
     print(f"  > {cmd_str}", flush=True)
     full_env = {**os.environ, **(env or {})}
-    subprocess.run([str(c) for c in cmd], check=True, env=full_env, **kwargs)
+    try:
+        subprocess.run([str(c) for c in cmd], check=True, env=full_env, **kwargs)
+    except subprocess.CalledProcessError as e:
+        print(e.stdout)
+        print(e.stderr)
+        raise e
 
 
 def is_windows():
@@ -109,6 +114,8 @@ def package_core_wheel(cuda_ver, core_build_dir, out_dir):
 
     with tempfile.TemporaryDirectory() as tmp:
         try:
+            print("hello", cuda_ver, os.listdir(tmp), os.listdir(pkg_dir))
+            print(sys.executable)
             run("python", "-m", "build", "--wheel",
                 str(pkg_dir), "--outdir", tmp,
                 env={"FFDAS_CUDA": cuda_ver})
@@ -165,6 +172,7 @@ def build_matlab(core_build_dir):
         "-B", str(build_dir),
         f"-DCMAKE_PREFIX_PATH={core_build_dir}",
         "-DCMAKE_BUILD_TYPE=Release",
+        "-G", "Ninja",
     ]
     if is_windows():
         cmake_args.extend(["-G", "Ninja"])

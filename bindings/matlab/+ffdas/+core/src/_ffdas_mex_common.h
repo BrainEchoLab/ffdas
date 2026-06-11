@@ -102,10 +102,10 @@ std::string array_to_string(const mxArray* x) {
     return out;
 }
 
-template<typename... Args>
 struct ScopedTensorDesc {
     ffdas_tensor_desc_t desc = nullptr;
 
+    template<typename... Args>
     explicit ScopedTensorDesc(const ndarray::ndarray<Args...> &a) {
         check(ffdas_create_tensor_desc(
             &desc, a.ndim_val(), a.dims.data(), a.strides.data(),

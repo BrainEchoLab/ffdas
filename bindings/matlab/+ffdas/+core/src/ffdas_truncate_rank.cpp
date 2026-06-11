@@ -44,7 +44,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     x.reshape({n, m});
 
-    ndarray::ndarray out = ndarray::make_ndarray_like(x);
+    auto out = ndarray::make_ndarray_like(x);
 
     ScopedTensorDesc x_desc(x);
     ScopedTensorDesc out_desc(out);

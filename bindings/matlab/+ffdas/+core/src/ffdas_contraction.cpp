@@ -81,7 +81,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
         out_dims.push_back(it->second);
     }
 
-    ndarray::ndarray out = ndarray::make_ndarray(out_dims, a.class_id, a.complexity);
+    auto out = ndarray::make_ndarray(out_dims, a.class_id, a.complexity);
 
     ScopedTensorDesc a_desc(a);
     ScopedTensorDesc b_desc(b);

@@ -107,7 +107,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     // out follows the input data type
     mxClassID out_cls = x.class_id;
     mxComplexity out_cplx = x.complexity;
-    ndarray::ndarray out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
+    auto out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
 
     ScopedTensorDesc x_desc(x);
     ScopedTensorDesc out_desc(out);

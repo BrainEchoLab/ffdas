@@ -75,7 +75,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     for (int i = 0; i < nq - 1; i++)
         out_dims.push_back(querypos.shape(i));
 
-    ndarray::ndarray result = ndarray::make_ndarray(out_dims, x.class_id, x.complexity);
+    auto result = ndarray::make_ndarray(out_dims, x.class_id, x.complexity);
 
     ScopedTensorDesc x_desc(x);
 
