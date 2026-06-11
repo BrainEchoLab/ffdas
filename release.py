@@ -149,7 +149,10 @@ def build_bindings_wheel(core_build_dir, out_dir):
         run("python", "-m", "build", "--wheel",
             str(ROOT / "bindings" / "python"),
             "--outdir", tmp,
-            env={"CMAKE_PREFIX_PATH": str(core_build_dir)})
+            env={
+                "CMAKE_PREFIX_PATH": str(core_build_dir),
+                "SKBUILD_CMAKE_ARGS": "-DFFDAS_BUNDLE_CORE=OFF",
+            })
 
         for whl in Path(tmp).glob("*.whl"):
             if is_windows():

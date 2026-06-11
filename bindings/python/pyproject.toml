@@ -17,7 +17,6 @@ docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.7"]
 
 [tool.scikit-build]
 wheel.py-api = "cp312"
-wheel.exclude = ["ffdas/_core/libffdas*", "ffdas/_core/ffdas.dll"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
