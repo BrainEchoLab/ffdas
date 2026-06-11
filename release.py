@@ -116,8 +116,6 @@ def package_core_wheel(cuda_ver, core_build_dir, out_dir):
 
     with tempfile.TemporaryDirectory() as tmp:
         try:
-            print("hello", cuda_ver, os.listdir(tmp), os.listdir(pkg_dir))
-            print(sys.executable)
             run("python", "-m", "build", "--wheel",
                 str(pkg_dir), "--outdir", tmp,
                 env={"FFDAS_CUDA": cuda_ver})
