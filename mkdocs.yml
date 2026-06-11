@@ -1,6 +1,6 @@
 site_name: ffdas
-repo_url: https://github.com/luukverhoef/ffdas
-repo_name: luukverhoef/ffdas
+repo_url: https://github.com/brainecholab/ffdas
+repo_name: brainecholab/ffdas
 
 theme:
   name: material
