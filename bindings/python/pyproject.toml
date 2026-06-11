@@ -1,6 +1,22 @@
 [build-system]
-requires = ["setuptools>=70"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core>=0.10", "nanobind>=2.0"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "ffdas"
+version = "0.1.0"
+description = "CUDA-accelerated library of delay-and-sum and related primitives for ultrasound image reconstruction"
+requires-python = ">=3.12"
+dependencies = ["array-api-compat"]
+
+[project.optional-dependencies]
+cu12 = ["ffdas-core-cu12==0.1.0"]
+cu13 = ["ffdas-core-cu13==0.1.0"]
+dev = ["pytest>=6.0", "pytest-cov"]
+docs = ["mkdocs>=1.6,<2", "mkdocs-material>=9.7"]
+
+[tool.scikit-build]
+wheel.py-api = "cp312"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

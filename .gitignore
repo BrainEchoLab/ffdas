@@ -15,6 +15,13 @@ __pycache__/
 # MATLAB autosave extension
 *.asv
 
+# CMake user-local preset overrides
+CMakeUserPresets.json
+
+# Build script staging
+_staging_matlab/
+_install*/
+
 # macOS
 .DS_Store
 

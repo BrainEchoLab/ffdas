@@ -1,46 +1,27 @@
-find_package(Python COMPONENTS Interpreter Development.Module Development.SABIModule REQUIRED)
+cmake_minimum_required(VERSION 3.21)
+project(ffdas_python LANGUAGES CXX)
+
+find_package(ffdas REQUIRED)
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
 
 find_package(nanobind CONFIG QUIET)
 if(NOT nanobind_FOUND)
-    option(FETCH_NANOBIND "Fetch nanobind via FetchContent" OFF)
-    if(NOT FETCH_NANOBIND)
-        message(FATAL_ERROR
-            "nanobind not found. Install via pip or set FETCH_NANOBIND=ON")
-    endif()
-    include(FetchContent)
-    FetchContent_Declare(nanobind
-        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
-        GIT_TAG v2.6.1
-        GIT_SHALLOW TRUE)
-    FetchContent_MakeAvailable(nanobind)
+    execute_process(
+        COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+        OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE nanobind_ROOT)
+    find_package(nanobind CONFIG REQUIRED)
 endif()
 
 nanobind_add_module(_ffdas
     "${CMAKE_CURRENT_SOURCE_DIR}/ffdas/_core/src/_ffdas.cpp"
     STABLE_ABI)
 
-target_link_libraries(_ffdas PRIVATE ffdas)
+target_link_libraries(_ffdas PRIVATE ffdas::ffdas)
 
 if(MSVC)
     target_compile_options(_ffdas PRIVATE /Zc:preprocessor)
 endif()
 
-if(UNIX)
-    set_target_properties(_ffdas PROPERTIES INSTALL_RPATH "$ORIGIN")
-endif()
+set_target_properties(_ffdas PROPERTIES INSTALL_RPATH "")
 
-if(FFDAS_DEVELOPMENT_BUILD)
-    foreach(_config DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
-        set_target_properties(_ffdas PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY_${_config} "${FFDAS_PYTHON_DEV_DIR}"
-            RUNTIME_OUTPUT_DIRECTORY_${_config} "${FFDAS_PYTHON_DEV_DIR}")
-    endforeach()
-endif()
-
-# Install component for packaging
-install(TARGETS _ffdas
-    LIBRARY DESTINATION ffdas/_core
-    COMPONENT python)
-install(TARGETS ffdas
-    LIBRARY DESTINATION ffdas/_core COMPONENT python
-    RUNTIME DESTINATION ffdas/_core COMPONENT python)
+install(TARGETS _ffdas DESTINATION ffdas/_core)

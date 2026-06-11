@@ -4,8 +4,6 @@ cmake_minimum_required(VERSION 3.26)
 # SM 70+ enables tensor-core-accelerated greens; older SMs use a scalar fallback.
 set(MINIMUM_CUDA_ARCH 53)
 
-# Set the CMAKE_CUDA_ARCHITECTURES environment variable to specify the
-# target architectures, e.g., CMAKE_CUDA_ARCHITECTURES=75 for SM 75
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES native)
 else()
@@ -20,9 +18,6 @@ endif()
 project(ffdas VERSION 0.1.0 LANGUAGES CXX CUDA)
 
 option(FFDAS_USE_NVTX "Enable NVTX profiling annotations" ON)
-option(FFDAS_BUILD_PYTHON "Build Python bindings" OFF)
-option(FFDAS_BUILD_MATLAB "Build MATLAB bindings" OFF)
-option(FFDAS_DEVELOPMENT_BUILD "Output binding binaries directly to source tree" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,8 +27,7 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 find_package(CUDAToolkit REQUIRED)
 
-set(PROJECT_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set(SRC_DIR "${PROJECT_ROOT_DIR}/src")
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(FFDAS_SOURCES
     ${SRC_DIR}/core/context.cu
@@ -55,13 +49,11 @@ set(FFDAS_SOURCES
     ${SRC_DIR}/tensor_ops/scatter.cu
 )
 
-set(FFDAS_OUTPUT_NAME "ffdas_cu${CUDAToolkit_VERSION_MAJOR}")
-
 add_library(ffdas SHARED ${FFDAS_SOURCES})
 
 target_include_directories(ffdas
     PUBLIC
-        $<BUILD_INTERFACE:${PROJECT_ROOT_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
     PRIVATE
         ${SRC_DIR}/core
@@ -75,7 +67,7 @@ target_include_directories(ffdas
 )
 
 set_target_properties(ffdas PROPERTIES
-    OUTPUT_NAME "${FFDAS_OUTPUT_NAME}"
+    OUTPUT_NAME ffdas
     POSITION_INDEPENDENT_CODE ON
 )
 
@@ -112,9 +104,7 @@ else()
         $<HOST_LINK:-static-libstdc++;-static-libgcc>)
 endif()
 
-# NVIDIA's MSBuild CUDA targets use --keep-dir set to a per-target
-# intermediate directory but don't create it. Without this, nvcc fails
-# with "Failed to create the host compiler response file".
+# VS generator: nvcc needs the intermediate directory to exist
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
     add_custom_command(TARGET ffdas PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory
@@ -123,179 +113,43 @@ endif()
 
 message(STATUS "CUDA toolkit: ${CUDAToolkit_VERSION} (major ${CUDAToolkit_VERSION_MAJOR})")
 message(STATUS "CUDA architectures: ${CMAKE_CUDA_ARCHITECTURES}")
-message(STATUS "Library name: ${FFDAS_OUTPUT_NAME}")
 
-# Build-tree config export for standalone binding builds or external consumers
+# Build-tree metadata for binding builds and build.py
+file(WRITE "${CMAKE_BINARY_DIR}/ffdas_cuda_major.txt"
+    "${CUDAToolkit_VERSION_MAJOR}")
+file(WRITE "${CMAKE_BINARY_DIR}/ffdas_version.txt"
+    "${PROJECT_VERSION}")
+
+# Build-tree config export (used by binding builds via CMAKE_PREFIX_PATH)
 export(TARGETS ffdas
     NAMESPACE ffdas::
     FILE "${CMAKE_BINARY_DIR}/ffdasConfig.cmake")
-file(WRITE "${CMAKE_BINARY_DIR}/ffdas_cuda_major.txt"
-    "${CUDAToolkit_VERSION_MAJOR}")
 
-# Core library install
+# Install-tree config export
+include(GNUInstallDirs)
+
 install(TARGETS ffdas EXPORT ffdasTargets
-    LIBRARY DESTINATION lib COMPONENT core
-    RUNTIME DESTINATION bin COMPONENT core
-    ARCHIVE DESTINATION lib COMPONENT core)
-install(FILES include/ffdas.h DESTINATION include COMPONENT core)
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES include/ffdas.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 install(EXPORT ffdasTargets
     NAMESPACE ffdas::
-    DESTINATION lib/cmake/ffdas COMPONENT core)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ffdas)
 
-# Development build: set output directories for binding targets
-if(FFDAS_DEVELOPMENT_BUILD)
-    if(FFDAS_BUILD_PYTHON)
-        set(FFDAS_PYTHON_DEV_DIR
-            "${CMAKE_SOURCE_DIR}/bindings/python/ffdas/_core"
-            CACHE INTERNAL "")
-    endif()
-    if(FFDAS_BUILD_MATLAB)
-        set(FFDAS_MATLAB_DEV_DIR
-            "${CMAKE_SOURCE_DIR}/bindings/matlab/+ffdas/+core"
-            CACHE INTERNAL "")
-    endif()
-endif()
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/ffdasConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/ffdasConfig_install.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ffdas)
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/ffdasConfigVersion.cmake"
+    COMPATIBILITY SameMajorVersion)
 
-# Bindings
-if(FFDAS_BUILD_PYTHON)
-    add_subdirectory(bindings/python)
-    file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/ffdas_python_files.txt"
-        CONTENT "$<TARGET_FILE:_ffdas>\n$<TARGET_FILE:ffdas>\n")
-endif()
-if(FFDAS_BUILD_MATLAB)
-    add_subdirectory(bindings/matlab)
-endif()
-
-# Development build: copy shared library to binding source directories
-if(FFDAS_DEVELOPMENT_BUILD)
-    set(_ffdas_dev_dirs "")
-    if(FFDAS_BUILD_PYTHON)
-        list(APPEND _ffdas_dev_dirs "${FFDAS_PYTHON_DEV_DIR}")
-    endif()
-    if(FFDAS_BUILD_MATLAB)
-        list(APPEND _ffdas_dev_dirs "${FFDAS_MATLAB_DEV_DIR}")
-    endif()
-    foreach(_dir IN LISTS _ffdas_dev_dirs)
-        add_custom_command(TARGET ffdas POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-                $<TARGET_FILE:ffdas> "${_dir}/")
-    endforeach()
-endif()
-
-if(FFDAS_BUILD_PYTHON AND FFDAS_BUILD_MATLAB)
-    find_package(Python COMPONENTS Interpreter)
-
-    set(FFDAS_DIST_DIR "${CMAKE_BINARY_DIR}/dist" CACHE PATH
-        "Output directory for release artifacts")
-
-    set(_cu "cu${CUDAToolkit_VERSION_MAJOR}")
-    if(WIN32)
-        set(_plat "win_amd64")
-    else()
-        set(_plat "linux_x86_64")
-    endif()
-
-    set(_wheel "ffdas_${_cu}-${PROJECT_VERSION}-cp312-abi3-${_plat}.whl")
-
-    message("${_wheel}")
-    message("${FFDAS_DIST_DIR}")
-    message("${CMAKE_BINARY_DIR}")
-
-    if(WIN32)
-        add_custom_target(wheel
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${FFDAS_DIST_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E env "FFDAS_BUILD_DIR=${CMAKE_BINARY_DIR}"
-                "$<TARGET_FILE:Python::Interpreter>" -m build --wheel
-                --outdir "${FFDAS_DIST_DIR}"
-                "${CMAKE_SOURCE_DIR}/bindings/python"
-            COMMAND delvewheel repair "${FFDAS_DIST_DIR}/${_wheel}"
-                --wheel-dir "${FFDAS_DIST_DIR}"
-                --add-path "${CMAKE_BINARY_DIR}"
-                --exclude "cublas64_*.dll"
-                --exclude "cublasLt64_*.dll"
-                --exclude "cusolver64_*.dll"
-                --exclude "cusparse64_*.dll"
-            DEPENDS ffdas _ffdas
-            VERBATIM
-        )
-    else()
-        add_custom_target(wheel
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${FFDAS_DIST_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E env "FFDAS_BUILD_DIR=${CMAKE_BINARY_DIR}"
-                "$<TARGET_FILE:Python::Interpreter>" -m build --wheel
-                --outdir "${FFDAS_DIST_DIR}"
-                "${CMAKE_SOURCE_DIR}/bindings/python"
-            COMMAND auditwheel repair "${FFDAS_DIST_DIR}/${_wheel}"
-                --wheel-dir "${FFDAS_DIST_DIR}"
-                --exclude "libcudart.so.*"
-                --exclude "libcublas.so.*"
-                --exclude "libcusolver.so.*"
-                --exclude "libcublasLt.so.*"
-                --exclude "libcusparse.so.*"
-                --exclude "libnvToolsExt.so.*"
-                --exclude "libcuda.so.*"
-            COMMAND ${CMAKE_COMMAND} -E rm "${FFDAS_DIST_DIR}/${_wheel}"
-            DEPENDS ffdas _ffdas
-            VERBATIM
-        )
-    endif()
-
-    set(_matlab "ffdas_${_cu}-${PROJECT_VERSION}-matlab-${_plat}")
-
-    add_custom_target(matlab_package
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${FFDAS_DIST_DIR}"
-        COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}"
-            --component matlab --prefix "${FFDAS_DIST_DIR}/${_matlab}"
-        COMMAND ${CMAKE_COMMAND} -E chdir "${FFDAS_DIST_DIR}"
-            ${CMAKE_COMMAND} -E tar cf "${_matlab}.zip" --format=zip -- "${_matlab}"
-        COMMAND ${CMAKE_COMMAND} -E rm -rf "${FFDAS_DIST_DIR}/${_matlab}"
-        DEPENDS ffdas ffdas_matlab_all
-        VERBATIM
-    )
-
-    add_custom_target(release DEPENDS wheel matlab_package)
-endif()
-
-
-# # linux
-# CUDACXX=/usr/local/cuda-12/bin/nvcc CMAKE_INSTALL_PREFIX=dist cmake -S . -B _build -DCMAKE_BUILD_TYPE=Release -DFFDAS_BUILD_PYTHON=ON -DFFDAS_BUILD_MATLAB=ON -DFETCH_NANOBIND=ON -DCMAKE_CUDA_ARCHITECTURES="53-real;70-real;75-real;80-real;86-real;89-real;90" && cmake --build _build --target install
-# cmake --build _build
-# python -m build --wheel --outdir dist bindings/python
-# auditwheel repair dist/ffdas_cu12-0.1.0-cp312-abi3-linux_x86_64.whl --wheel-dir dist/ --exclude libcudart.so.* --exclude libcublas.so.* --exclude libcusolver.so.* --exclude libcublasLt.so.* --exclude libcusparse.so.* --exclude libnvToolsExt.so.* --exclude libcuda.so.*
-# cmake --install _build --component matlab --prefix dist/ffdas_cu12-0.1.0-matlab-linux_x86_64/
-# cd dist
-# zip -r ffdas_cu12-0.1.0-matlab-linux_x86_64.zip ffdas_cu12-0.1.0-matlab-linux_x86_64/
-# rm -r ffdas_cu12-0.1.0-matlab-linux_x86_64/
-
-# cmake -S . -B _build -DCMAKE_BUILD_TYPE=Release -DFFDAS_BUILD_PYTHON=ON -DFFDAS_BUILD_MATLAB=ON -DCUDACXX=/usr/local/cuda-13/bin/nvcc -DFETCH_NANOBIND=ON -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"
-# cmake --build _build
-# python -m build --wheel --outdir dist bindings/python
-# auditwheel repair dist/ffdas_cu13-0.1.0-cp312-abi3-linux_x86_64.whl --wheel-dir dist/ --exclude libcudart.so.* --exclude libcublas.so.* --exclude libcusolver.so.* --exclude libcublasLt.so.* --exclude libcusparse.so.* --exclude libnvToolsExt.so.* --exclude libcuda.so.*
-# cmake --install _build --component matlab --prefix dist/ffdas_cu13-0.1.0-matlab-linux_x86_64/
-# cd dist
-# zip -r ffdas_cu13-0.1.0-matlab-linux_x86_64.zip ffdas_cu13-0.1.0-matlab-linux_x86_64/
-# rm -r ffdas_cu13-0.1.0-matlab-linux_x86_64/
-
-# # windows
-# $vsPath = & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-# Import-Module "$vsPath\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
-# Enter-VsDevShell -VsInstallPath $vsPath -Arch amd64 -SkipAutomaticLocation
-
-# cmake -S . -B _build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFFDAS_BUILD_PYTHON=ON -DFFDAS_BUILD_MATLAB=ON -DCUDACXX="c:/program files/nvidia gpu computing toolkit/cuda/v13.0/bin/nvcc.exe" -DFETCH_NANOBIND=ON -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90-real;100-real;120"
-# cmake --build _build
-# python -m build --wheel --outdir dist bindings/python
-# delvewheel repair dist/ffdas_cu13-0.1.0-cp312-abi3-win_amd64.whl --wheel-dir dist/ --add-path _build --exclude cublas64_*.dll --exclude cublasLt64_*.dll --exclude cusolver64_*.dll --exclude cusparse64_*.dll
-# cmake --install _build --component matlab --prefix dist/ffdas_cu13-0.1.0-matlab-win_amd64/ 
-# Compress-Archive -Path dist/ffdas_cu13-0.1.0-matlab-win_amd64/ -DestinationPath dist/ffdas_cu13-0.1.0-matlab-win_amd64.zip
-# Remove-Item -Recurse dist/ffdas_cu13-0.1.0-matlab-win_amd64
-
-# cmake -S . -B _build -G Ninja -DCMAKE_BUILD_TYPE=Release -DFFDAS_BUILD_PYTHON=ON -DFFDAS_BUILD_MATLAB=ON -DCUDACXX="c:/program files/nvidia gpu computing toolkit/cuda/v12.5/bin/nvcc.exe" -DFETCH_NANOBIND=ON -DCMAKE_CUDA_ARCHITECTURES="53-real;70-real;75-real;80-real;86-real;89-real;90"
-# cmake --build _build
-# python -m build --wheel --outdir dist bindings/python
-# delvewheel repair dist/ffdas_cu12-0.1.0-cp312-abi3-win_amd64.whl --wheel-dir dist/ --add-path _build --exclude cublas64_*.dll --exclude cublasLt64_*.dll --exclude cusolver64_*.dll --exclude cusparse64_*.dll
-# cmake --install _build --component matlab --prefix dist/ffdas_cu12-0.1.0-matlab-win_amd64/ 
-# Compress-Archive -Path dist/ffdas_cu12-0.1.0-matlab-win_amd64/ -DestinationPath dist/ffdas_cu12-0.1.0-matlab-win_amd64.zip
-# Remove-Item -Recurse dist/ffdas_cu12-0.1.0-matlab-win_amd64
-
-# CUDACXX=/usr/local/cuda-12/bin/nvcc cmake -S . -B _build_cu12 -DCMAKE_BUILD_TYPE=Release -DFFDAS_BUILD_PYTHON=ON -DFFDAS_BUILD_MATLAB=ON -DFETCH_NANOBIND=ON -DCMAKE_CUDA_ARCHITECTURES="53-real;70-real;75-real;80-real;86-real;89-real;90"
-# cmake --build _build_cu12 --target release
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ffdasConfig_install.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ffdas
+    RENAME ffdasConfig.cmake)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ffdasConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ffdas)

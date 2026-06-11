@@ -1,32 +1,56 @@
-import sys
+import ctypes
 import os
+import sys
+from pathlib import Path
 
 
-def find_win32_dlls():
-    if sys.platform != "win32":
-        return
-
-    # ffdas_cu*.dll and _ffdas.pyd are in _core/
-    core_dir = os.path.join(os.path.dirname(__file__), "_core")
-    if os.path.isdir(core_dir):
-        os.add_dll_directory(core_dir)
+def _load_core():
+    """Preload the ffdas shared library so the nanobind extension can find it."""
+    lib_name = "ffdas.dll" if sys.platform == "win32" else "libffdas.so"
+    lib_path = None
 
     try:
-        from cuda.pathfinder import (
-            load_nvidia_dynamic_lib, DynamicLibNotFoundError)
+        import ffdas_core
+        lib_path = Path(ffdas_core.__file__).parent / ffdas_core.LIB_NAME
     except ImportError:
+        lib_dir = os.environ.get("FFDAS_LIB_DIR")
+        if lib_dir:
+            lib_path = Path(lib_dir) / lib_name
+
+    if lib_path is None:
         return
+
+    if sys.platform == "win32":
+        os.add_dll_directory(str(lib_path.parent))
+        try:
+            from cuda.pathfinder import load_nvidia_dynamic_lib
+            lib = load_nvidia_dynamic_lib("cudart")
+            if lib.abs_path is not None:
+                os.add_dll_directory(
+                    os.path.dirname(os.path.realpath(lib.abs_path)))
+        except Exception:
+            pass
+
     try:
-        lib = load_nvidia_dynamic_lib("cudart")
-    except DynamicLibNotFoundError:
-        pass
-    else:
-        if lib.abs_path is not None:
-            cuda_dll_path = os.path.dirname(os.path.realpath(lib.abs_path))
-            os.add_dll_directory(cuda_dll_path)
+        ctypes.CDLL(
+            str(lib_path),
+            mode=ctypes.RTLD_GLOBAL if sys.platform != "win32" else 0,
+        )
+    except OSError as e:
+        cuda_ver = ""
+        try:
+            import ffdas_core
+            cuda_ver = f" (CUDA {ffdas_core.CUDA_VERSION})"
+        except Exception:
+            pass
+        raise ImportError(
+            f"Failed to load ffdas shared library{cuda_ver}. "
+            f"Ensure the matching CUDA runtime is installed.\n"
+            f"Original error: {e}"
+        ) from e
 
 
-find_win32_dlls()
+_load_core()
 
 
 from ._core._ffdas import (  # noqa: E402
@@ -49,8 +73,8 @@ from ._core._ffdas import (  # noqa: E402
     Algorithm,
 )
 from ._core.tensor import (  # noqa: E402
-    gather, 
-    scatter, 
+    gather,
+    scatter,
     contiguous_copy,
     empty_like,
     zeros_like,
@@ -63,12 +87,12 @@ from ._core.library import (  # noqa: E402
     set_cuda_device,
 )
 from .das import (  # noqa: E402
-    das, 
+    das,
     das_sparse,
 )
 from .truncate_rank import truncate_rank  # noqa: E402
 from .interpolation import (  # noqa: E402
-    Interpolator, 
+    Interpolator,
     interpolate,
 )
 from .greens import greens  # noqa: E402
@@ -107,15 +131,15 @@ __all__ = [
     "set_cuda_device",
     "InterpMode",
     "Algorithm",
-    "gather", 
-    "scatter", 
+    "gather",
+    "scatter",
     "contiguous_copy",
-    "das", 
+    "das",
     "das_sparse",
     "truncate_rank",
     "greens",
     "einsum",
-    "Interpolator", 
+    "Interpolator",
     "interpolate",
     "cdist",
     "rect_dist",

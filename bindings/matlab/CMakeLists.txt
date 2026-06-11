@@ -1,3 +1,7 @@
+cmake_minimum_required(VERSION 3.21)
+project(ffdas_matlab LANGUAGES CXX)
+
+find_package(ffdas REQUIRED)
 find_package(Matlab REQUIRED COMPONENTS MEX_COMPILER)
 
 include_directories(
@@ -7,9 +11,7 @@ include_directories(
 
 if(WIN32)
     set(GPUMEX_BINDER_LIB gpumexbinder)
-    link_directories(
-        ${Matlab_ROOT_DIR}/extern/lib/win64/microsoft
-    )
+    link_directories(${Matlab_ROOT_DIR}/extern/lib/win64/microsoft)
 else()
     set(GPUMEX_BINDER_LIB mwgpumexbinder)
 endif()
@@ -21,7 +23,7 @@ function(add_mex_function target_name source_file)
         NAME ${target_name}
         SRC ${source_file}
         OUTPUT_NAME ${target_name}
-        LINK_TO ffdas ${GPUMEX_BINDER_LIB}
+        LINK_TO ffdas::ffdas ${GPUMEX_BINDER_LIB}
         R2018a
     )
     if(WIN32 AND MSVC)
@@ -38,14 +40,6 @@ function(add_mex_function target_name source_file)
     set_target_properties(${target_name} PROPERTIES
         INSTALL_RPATH "$ORIGIN"
     )
-
-    if(FFDAS_DEVELOPMENT_BUILD)
-        foreach(_config DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
-            set_target_properties(${target_name} PROPERTIES
-                LIBRARY_OUTPUT_DIRECTORY_${_config} "${FFDAS_MATLAB_DEV_DIR}"
-                RUNTIME_OUTPUT_DIRECTORY_${_config} "${FFDAS_MATLAB_DEV_DIR}")
-        endforeach()
-    endif()
 
     set(FFDAS_MEX_TARGETS ${FFDAS_MEX_TARGETS} ${target_name} PARENT_SCOPE)
 endfunction()
@@ -69,29 +63,23 @@ add_mex_function(ffdas_das_sparse "${MEX_SRC_DIR}/ffdas_das_sparse.cpp")
 add_mex_function(ffdas_contraction "${MEX_SRC_DIR}/ffdas_contraction.cpp")
 add_mex_function(ffdas_greens "${MEX_SRC_DIR}/ffdas_greens.cpp")
 
-# Install helpers
-function(ffdas_install_matlab_binaries component)
-    foreach(_target IN LISTS FFDAS_MEX_TARGETS)
-        install(TARGETS ${_target}
-            LIBRARY DESTINATION +ffdas/+core COMPONENT ${component}
-            RUNTIME DESTINATION +ffdas/+core COMPONENT ${component})
-    endforeach()
-    install(TARGETS ffdas
-        LIBRARY DESTINATION +ffdas/+core COMPONENT ${component}
-        RUNTIME DESTINATION +ffdas/+core COMPONENT ${component})
-endfunction()
+# Install MEX binaries
+foreach(_target IN LISTS FFDAS_MEX_TARGETS)
+    install(TARGETS ${_target}
+        LIBRARY DESTINATION +ffdas/+core
+        RUNTIME DESTINATION +ffdas/+core)
+endforeach()
 
-# Dev: binaries only
-ffdas_install_matlab_binaries(matlab-dev)
+# Install the core shared library alongside MEX files
+install(IMPORTED_RUNTIME_ARTIFACTS ffdas::ffdas
+    LIBRARY DESTINATION +ffdas/+core
+    RUNTIME DESTINATION +ffdas/+core)
 
-# Release: binaries + source
-ffdas_install_matlab_binaries(matlab)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/bindings/matlab/+ffdas/
-    DESTINATION +ffdas COMPONENT matlab
+# Install MATLAB source files and examples
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/+ffdas/
+    DESTINATION +ffdas
     FILES_MATCHING PATTERN "*.m"
     PATTERN "src" EXCLUDE)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/bindings/matlab/examples/
-    DESTINATION examples COMPONENT matlab
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples/
+    DESTINATION examples
     FILES_MATCHING PATTERN "*.m")
-
-add_custom_target(ffdas_matlab_all DEPENDS ${FFDAS_MEX_TARGETS})
