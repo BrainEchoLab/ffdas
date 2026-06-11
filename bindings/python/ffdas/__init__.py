@@ -15,12 +15,6 @@ def _load_core():
     except ImportError:
         pass
 
-    # Development: cmake installs the core library alongside the extension
-    if lib_path is None:
-        candidate = Path(__file__).parent / "_core" / lib_name
-        if candidate.exists():
-            lib_path = candidate
-
     if lib_path is None:
         lib_dir = os.environ.get("FFDAS_LIB_DIR")
         if lib_dir:

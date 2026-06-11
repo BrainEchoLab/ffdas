@@ -22,18 +22,6 @@ if(MSVC)
     target_compile_options(_ffdas PRIVATE /Zc:preprocessor)
 endif()
 
-if(UNIX)
-    set_target_properties(_ffdas PROPERTIES INSTALL_RPATH "$ORIGIN")
-endif()
+set_target_properties(_ffdas PROPERTIES INSTALL_RPATH "")
 
 install(TARGETS _ffdas DESTINATION ffdas/_core)
-
-# Install the core library alongside the extension for development.
-# For release wheels, pass -DFFDAS_BUNDLE_CORE=OFF via SKBUILD_CMAKE_ARGS.
-option(FFDAS_BUNDLE_CORE
-    "Install the core shared library alongside the extension" ON)
-if(FFDAS_BUNDLE_CORE)
-    install(IMPORTED_RUNTIME_ARTIFACTS ffdas::ffdas
-        LIBRARY DESTINATION ffdas/_core
-        RUNTIME DESTINATION ffdas/_core)
-endif()

@@ -110,48 +110,57 @@ To use a specific CUDA toolkit:
 
 ### Python bindings
 
-The bindings are built as a standalone project that links against the core library. Build the core library first, then install the bindings with pip:
+The bindings are a standalone project that links against an installed core library. Build and install the core library first, then install the bindings with pip:
 
 === "Linux"
 
     ```bash
-    # 1. Build the core library
+    # 1. Build and install the core library
     cmake --preset default
     cmake --build _build
+    cmake --install _build --prefix _install
 
-    # 2. Install the Python bindings (editable)
+    # 2. Make the shared library findable at runtime
+    export LD_LIBRARY_PATH=$PWD/_install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+
+    # 3. Install the Python bindings (editable)
     pip install nanobind
-    CMAKE_PREFIX_PATH=$PWD/_build pip install -e bindings/python --no-build-isolation
+    CMAKE_PREFIX_PATH=$PWD/_install pip install -e bindings/python --no-build-isolation
     ```
 
 === "Windows"
 
     ```powershell
-    # 1. Build the core library
+    # 1. Build and install the core library
     cmake --preset default -G Ninja
     cmake --build _build
+    cmake --install _build --prefix _install
 
-    # 2. Install the Python bindings (editable)
+    # 2. Make the DLL findable at runtime
+    $env:Path = "$PWD\_install\bin;$env:Path"
+
+    # 3. Install the Python bindings (editable)
     pip install nanobind
-    $env:CMAKE_PREFIX_PATH = "$PWD\_build"
+    $env:CMAKE_PREFIX_PATH = "$PWD\_install"
     pip install -e bindings\python --no-build-isolation
     ```
 
-scikit-build-core invokes CMake for the nanobind extension, using `CMAKE_PREFIX_PATH` to locate the core library. The core shared library is installed alongside the extension so that it can be found at runtime without setting any environment variables.
+scikit-build-core invokes CMake for the nanobind extension, using `CMAKE_PREFIX_PATH` to locate the installed core library. The shared library must be on the system library search path (`LD_LIBRARY_PATH` on Linux, `PATH` on Windows) for `import ffdas` to work.
 
-After modifying C++ or CUDA source files, rebuild the core library and reinstall the bindings.
+After modifying C++ or CUDA source files, rebuild and reinstall the core library, then reinstall the bindings.
 
 ### MATLAB bindings
 
 === "Linux"
 
     ```bash
-    # 1. Build the core library (if not already done)
+    # 1. Build and install the core library (if not already done)
     cmake --preset default
     cmake --build _build
+    cmake --install _build --prefix _install
 
     # 2. Build the MATLAB MEX bindings
-    cmake -S bindings/matlab -B _build_matlab -DCMAKE_PREFIX_PATH=$PWD/_build
+    cmake -S bindings/matlab -B _build_matlab -DCMAKE_PREFIX_PATH=$PWD/_install
     cmake --build _build_matlab
 
     # 3. Install
@@ -163,9 +172,10 @@ After modifying C++ or CUDA source files, rebuild the core library and reinstall
     ```powershell
     cmake --preset default -G Ninja
     cmake --build _build
+    cmake --install _build --prefix _install
 
     cmake -S bindings\matlab -B _build_matlab -G Ninja `
-        -DCMAKE_PREFIX_PATH="$PWD\_build"
+        -DCMAKE_PREFIX_PATH="$PWD\_install"
     cmake --build _build_matlab
 
     cmake --install _build_matlab --prefix C:\path\to\install
@@ -216,6 +226,6 @@ See `python release.py --help` for options.
 
 **Architecture error during build.** If you see errors about unsupported SM versions, set `CMAKE_CUDA_ARCHITECTURES` to match your GPU. Run `nvidia-smi` to check your GPU model.
 
-**Windows: DLL not found.** For development builds, the core library is installed alongside the extension automatically. If it still cannot be found, set `FFDAS_LIB_DIR` to the directory containing `ffdas.dll`, or add that directory to `PATH`.
+**Shared library not found at import time.** `import ffdas` requires the core shared library to be findable. For installed packages this is handled automatically by `ffdas-core-cu*`. For development builds, ensure the install prefix is on the library search path (`LD_LIBRARY_PATH` on Linux, `PATH` on Windows). Alternatively, set `FFDAS_LIB_DIR` to the directory containing the shared library.
 
 **Windows: compiler not found.** Make sure you are in a Visual Studio developer command prompt. See the [Windows: Visual Studio developer environment](#windows-visual-studio-developer-environment) section above.
