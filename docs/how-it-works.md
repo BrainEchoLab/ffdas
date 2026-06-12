@@ -1,6 +1,6 @@
 # How It Works
 
-This page explains the design of the delay-and-sum kernels in ffdas: why GPU implementations of DAS tend to underperform, and what ffdas does differently. Understanding these internals is not required to use the library, but it helps when choosing algorithm variants and reasoning about performance. For practical tuning advice, see the [performance guide](performance.md).
+This page explains the design of the delay-and-sum kernels in ffdas: why GPU implementations of delay-and-sum tend to underperform, and what ffdas does differently. Understanding these internals is not required to use the library, but it helps when choosing algorithm variants and reasoning about performance. For practical tuning advice, see the [performance guide](performance.md).
 
 For a detailed treatment with profiling data and roofline analysis, see the accompanying paper:
 
@@ -23,7 +23,7 @@ If you use ffdas in your work, please cite this paper:
 
 ## The computational challenge
 
-Delay-and-sum reconstructs an image by, for each target voxel, interpolating and summing aligned samples from every receiver and transmit event. On a 128³ grid with a 32×32 matrix array and 16 transmit events, a single volume requires roughly $128^3 \times 1024 \times 16 \approx 3.4 \times 10^{10}$ accumulation operations. At kilohertz volume rates, this pushes sustained throughput to the limits of even high-end consumer GPUs.
+Delay-and-sum reconstructs an image by, for each target voxel, interpolating and summing aligned samples from every receiver and transmit event. On a 128^3 grid with a 32*32 matrix array and 16 transmit events, a single volume requires roughly $128^3 \times 1024 \times 16 \approx 3.4 \times 10^{10}$ accumulation operations. At kilohertz volume rates, this pushes sustained throughput to the limits of even high-end consumer GPUs.
 
 A natural thought is to precompute the delay from every receiver to every voxel and store these in an array. At this scale, that would take $N \times M \times Q \times 4$ bytes $\approx 128$ GiB — impractical on most systems. ffdas instead computes all delays in-kernel from the receiver and voxel positions, which keeps memory requirements manageable and makes the reconstruction independent of any precomputed delay table.
 
@@ -67,7 +67,7 @@ For typical configurations, `ALG2` is roughly 40% faster than `ALG1`, with an ad
 
 Modern GPUs provide tensor cores — specialized matrix multiply-accumulate (MMA) units that operate on small dense matrix tiles with significantly higher throughput than scalar floating-point units. DAS does not naturally map to a dense matrix operation, since each voxel needs only two samples per receiver. But spatial locality makes it possible to repackage the computation into dense tiles.
 
-For a group of neighboring voxels, the required sample indices from any given receiver cluster tightly: because the voxels are close in space, their path lengths to the receiver are similar, so their sample indices differ by at most a few positions. `ALG4` exploits this by processing receivers in tiles and iterating over the distinct sample positions that appear within each tile. For each unique sample index, it assembles a weight matrix (voxels × receivers) and a sample matrix (receivers × batch items), then multiplies them with an MMA instruction. Accumulating over all unique indices, receiver tiles, and transmit events yields the final image.
+For a group of neighboring voxels, the required sample indices from any given receiver cluster tightly: because the voxels are close in space, their path lengths to the receiver are similar, so their sample indices differ by at most a few positions. `ALG4` exploits this by processing receivers in tiles and iterating over the distinct sample positions that appear within each tile. For each unique sample index, it assembles a weight matrix (voxels * receivers) and a sample matrix (receivers * batch items), then multiplies them with an MMA instruction. Accumulating over all unique indices, receiver tiles, and transmit events yields the final image.
 
 The tighter the sample indices cluster within a voxel tile, the fewer MMA iterations are needed and the higher the throughput. Clustering depends on imaging geometry: voxels far from the array have similar path lengths to each receiver and share most sample indices, while voxels close to the array show more variation. This means the tensor core advantage is largest for deep imaging and diminishes near the transducer surface.
 

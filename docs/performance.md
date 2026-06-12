@@ -12,15 +12,15 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 | `ALG2` | Yes (internal) | Yes | No | SM 53+ | ~1.4× |
 | `ALG4` | Yes (internal) | Yes | No | SM 70+ | ~1.6–2× with FP16 |
 
-`DEFAULT` currently dispatches to `ALG1` unconditionally. It does not auto-select.
+`DEFAULT` currently dispatches to `ALG1` unconditionally. It does not yet auto-select.
 
 **When to use which:**
 
-`ALG1` is the right choice when you are reconstructing a single frame (no batch dimension), when you need `float64` or `complex128` precision, or when GPU memory is tight — it uses the standard input layout and avoids the temporary allocation for the permuted copy. It is also the simplest path for verifying correctness before optimizing.
+`ALG1` is the right choice when you are reconstructing a single frame (no batch dimension), when you need `float64` or `complex128` precision, or when GPU memory is tight. It uses the standard input layout and avoids a temporary allocation for a permuted copy if possible. It is also the simplest path for verifying correctness before optimizing.
 
-`ALG2` is the recommended default for batched reconstruction. If you are processing more than one frame at a time and your data fits in GPU memory, `ALG2` will be faster than `ALG1` in virtually all configurations. The batch size must be a multiple of the internal vector width (typically 4 or 8 depending on the data type).
+`ALG2` is the recommended default for batched reconstruction. If you can process more than one frame at a time and your data fits in GPU memory, `ALG2` will be faster than `ALG1` in virtually all configurations. The batch size must be a multiple of the internal vector width (typically 4 or 8 depending on the data type).
 
-`ALG4` provides the highest throughput, particularly with FP16 inputs, and is the variant benchmarked in the paper. Its advantage over `ALG2` is most pronounced for large, dense voxel grids where spatial locality ensures tight clustering of sample indices within each warp tile. The speedup is geometry-dependent: voxels far from the array benefit most (tight index clustering), while voxels close to the array see less improvement (more index spread per tile). For typical imaging geometries where most of the volume is at moderate to large depth, `ALG4` with FP16 input is the fastest option available.
+`ALG4` provides the highest throughput, particularly with FP16 inputs. Its advantage over `ALG2` is most pronounced for large, dense voxel grids where spatial locality ensures tight clustering of sample indices across neighboring voxels. The speedup is typically geometry-dependent: voxels far from the array benefit most (tight index clustering), while voxels close to the array see less improvement (larger index range across subsequent voxels). For typical imaging geometries where most of the volume is at moderate to large depth, `ALG4` with FP16 input is the fastest option available.
 
 `ALG3` is reserved and not currently implemented.
 
@@ -84,7 +84,7 @@ The `use_fp16` flag on `das` controls only the *storage* format, and accumulatio
 
 ### channels_trailing
 
-The `channels_trailing` parameter controls how the channel data dimensions are interpreted. The C API always expects `(batch, channels, sequence, samples)` with samples contiguous. When `channels_trailing` is `True`, the binding swaps the channels and sequence dimensions in the tensor descriptor, so the user can pass data in `(batch, sequence, channels, samples)` order.
+The `channels_trailing` parameter controls how the channel data dimensions are interpreted. The C API always expects `(batch, channels, sequence, samples)` with samples contiguous. When `channels_trailing` is `True`, the binding swaps the channels and sequence dimensions in the tensor descriptor, so you can pass data in `(batch, sequence, channels, samples)` order. Note that this may trigger a contiguous copy of the input data internally.
 
 In Python, the default is `False` (channels before sequence). In MATLAB, the default is `True` (channels after sequence, which after the column-major reversal means channels are the faster-varying dimension).
 
@@ -138,7 +138,7 @@ For kernel-level analysis, Nsight Compute can capture hardware performance count
 
 ## Performance of other operations
 
-**`greens`**: uses tensor core instructions natively. Performance scales with source count × frequency count × target count. The kernel is compute-bound once the source and target counts are large enough. Requires SM 70+.
+**`greens`**: uses tensor core instructions natively. Performance scales with source count * frequency count * target count. The kernel is compute-bound once the source and target counts are large enough. Requires SM 70+, but a scalar fallback option exists for SM 53+.
 
 **`truncate_rank`**: dominated by the cuSOLVER SVD, which scales as $O(\min(m,n)^2 \cdot \max(m,n))$ where $m$ is the number of frames and $n$ is the product of spatial dimensions. For a 64-frame sequence on a 64³ grid, $m = 64$ and $n \approx 2.6 \times 10^5$, so the SVD processes a tall-skinny matrix. The reconstruction step (matrix multiply of the selected singular vectors) is fast by comparison.
 
@@ -153,18 +153,3 @@ For kernel-level analysis, Nsight Compute can capture hardware performance count
 The Python API currently uses a single internal CUDA stream per device, created automatically on first use. There is no public API to set or query the stream. For applications that need to overlap ffdas calls with other GPU work or enforce ordering with respect to external streams, use the C API directly, which provides `ffdas_set_stream` and `ffdas_get_stream` on the library handle.
 
 This is a known limitation of the Python bindings. Stream-aware Python APIs are planned for a future release.
-
-## Quick reference
-
-For a 128³ grid, 32×32 array, batch 128, single transmit event ($Q = 1$), on an RTX 4080 Super:
-
-| Configuration | Approximate throughput |
-|---|---|
-| ALG1, FP32 | ~170 volumes/s |
-| ALG1, FP16 | ~190 volumes/s |
-| ALG2, FP32 | ~260 volumes/s |
-| ALG2, FP16 | ~320 volumes/s |
-| ALG4, FP32 | ~370 volumes/s |
-| ALG4, FP16 | ~1000 volumes/s |
-
-These numbers are derived from profiling on a single GPU with locked clock speed. For $Q$ compounded transmit events, divide by $Q$. Actual throughput depends on GPU model, clock speed, imaging geometry, and thermal conditions. Measure on your own hardware with `Timer` for authoritative numbers.
