@@ -25,7 +25,7 @@ EXAMPLES_SRC = ROOT / "bindings" / "python" / "examples"
 
 CUPY_PACKAGES = {
     "12": ["cupy-cuda12x", "nvidia-cufft-cu12"],
-    "13": ["cupy-cuda13x", "nvidia-cufft-cu13"],
+    "13": ["cupy-cuda13x", "nvidia-cufft"],
 }
 
 
