@@ -5,18 +5,18 @@
 === "CUDA 13"
 
     ```bash
-    pip install ffdas[cu13]
+    pip install ffdas[cuda13]
     ```
 
 === "CUDA 12"
 
     ```bash
-    pip install ffdas[cu12]
+    pip install ffdas[cuda12]
     ```
 
 Requires Python 3.12+ and a CUDA-capable GPU (SM 53+, SM 70+ recommended). CuPy or another DLPack-compatible GPU array library is needed to create the input arrays.
 
-The `ffdas` package contains the Python bindings. The `[cu12]` / `[cu13]` extra pulls in the matching core library (`ffdas-core-cu12` or `ffdas-core-cu13`), which contains the GPU-accelerated shared library built against that CUDA version.
+The `ffdas` package contains the Python bindings. The `[cuda12]` / `[cuda13]` extra pulls in the matching core library (`ffdas-core-cuda12` or `ffdas-core-cuda13`), which contains the GPU-accelerated shared library built against that CUDA version.
 
 ## MATLAB
 
@@ -218,7 +218,7 @@ See `python release.py --help` for options.
 
 ## Troubleshooting
 
-**Core library not found at import time.** If `import ffdas` raises `ImportError: Could not find the ffdas core library`, the CUDA extra was not included when installing. The correct command is `pip install ffdas[cu12]` or `pip install ffdas[cu13]` — the bracket suffix pulls in the GPU-accelerated core library. Some shells (e.g. zsh) require quoting: `pip install 'ffdas[cu12]'`.
+**Core library not found at import time.** If `import ffdas` raises `ImportError: Could not find the ffdas core library`, the CUDA extra was not included when installing. The correct command is `pip install ffdas[cuda12]` or `pip install ffdas[cuda13]` — the bracket suffix pulls in the GPU-accelerated core library. Some shells (e.g. zsh) require quoting: `pip install 'ffdas[cuda12]'`.
 
 **CUDA toolkit not found.** Verify `nvcc --version` works. If the toolkit is installed in a non-standard location, set `CUDAToolkit_ROOT` and `CMAKE_CUDA_COMPILER`.
 

@@ -23,7 +23,7 @@ def _load_core():
         raise ImportError(
             "Could not find the ffdas core library. "
             "If you installed ffdas from PyPI, make sure you included the "
-            "CUDA extra, e.g.: pip install ffdas[cu12] or pip install ffdas[cu13]. "
+            "CUDA extra, e.g.: pip install ffdas[cuda12] or pip install ffdas[cuda13]. "
             "For development builds, set the FFDAS_LIB_DIR environment variable "
             "to the directory containing the shared library."
         )

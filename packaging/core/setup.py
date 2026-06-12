@@ -12,7 +12,7 @@ class BinaryDistribution(Distribution):
 cuda_ver = os.environ.get("FFDAS_CUDA", "12")
 
 setup(
-    name=f"ffdas-core-cu{cuda_ver}",
+    name=f"ffdas-core-cuda{cuda_ver}",
     version="0.1.0",
     description=f"ffdas core library (CUDA {cuda_ver})",
     packages=["ffdas_core"],

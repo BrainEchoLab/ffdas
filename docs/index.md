@@ -7,7 +7,7 @@ ffdas is a CUDA-accelerated library of delay-and-sum and related primitives for 
 Install the Python package with pip:
 
 ```bash
-pip install ffdas[cu13]
+pip install ffdas[cuda13]
 ```
 
 For MATLAB, download the prebuilt MEX binaries from the [GitHub Releases](https://github.com/brainecholab/ffdas/releases) page. For building from source, see the [installation guide](getting-started/installation.md).

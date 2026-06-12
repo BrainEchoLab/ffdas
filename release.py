@@ -85,7 +85,7 @@ def platform_tag():
 # Phase 1: Core library
 
 def build_core(cuda_ver, cuda_root):
-    build_dir = ROOT / f"_build_cu{cuda_ver}"
+    build_dir = ROOT / f"_build_cuda{cuda_ver}"
     archs = CUDA_ARCHITECTURES[cuda_ver]
 
     cmake_args = [
@@ -195,7 +195,7 @@ def package_matlab_zip(cuda_ver, core_build_dir, matlab_build_dir, out_dir):
     )
 
     ver = project_version()
-    zip_name = f"ffdas-cu{cuda_ver}-{ver}-matlab-{platform_tag()}.zip"
+    zip_name = f"ffdas_cuda{cuda_ver}-{ver}-matlab-{platform_tag()}.zip"
     zip_path = out_dir / zip_name
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -250,13 +250,13 @@ def main():
             package_core_wheel(ver, core_builds[ver], out_dir)
 
         print(f"\n{'=' * 60}")
-        print(f"  Python bindings wheel")
+        print("  Python bindings wheel")
         print(f"{'=' * 60}")
         build_bindings_wheel(core_builds[args.cuda[0]], out_dir)
 
     if "matlab" in args.target:
         print(f"\n{'=' * 60}")
-        print(f"  MATLAB MEX build")
+        print("  MATLAB MEX build")
         print(f"{'=' * 60}")
         matlab_build = build_matlab(core_builds[args.cuda[0]])
 
@@ -269,7 +269,7 @@ def main():
             print(f"  -> {zip_path.name}")
 
     print(f"\n{'=' * 60}")
-    print(f"  Build outputs")
+    print("  Build outputs")
     print(f"{'=' * 60}")
     for f in sorted(out_dir.iterdir()):
         if f.suffix in (".whl", ".zip"):

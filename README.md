@@ -31,7 +31,7 @@ interpolated = ffdas.interpolate(
 ### Python
 
 ```bash
-pip install ffdas[cu13]
+pip install ffdas[cuda13]
 ```
 
 Requires Python 3.12+ and a CUDA-capable GPU. CuPy or another DLPack-compatible GPU array library is needed to create the input arrays.
