@@ -126,6 +126,7 @@ k = 8;
 sparse_idx = sort_idx(:,:,:,1:k);
 sparse_weights = ffdas.utils.take_along_axis(weights, sparse_idx, 4);
 sparse_offsets = ffdas.utils.take_along_axis(offsets, sparse_idx, 4);
+sparse_idx = int32(sparse_idx);
 
 timer_sparse = ffdas.utils.Timer();
 timer_sparse.start();
