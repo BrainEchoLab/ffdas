@@ -158,7 +158,6 @@ def build_bindings_wheel(core_build_dir, out_dir):
             if is_windows():
                 run("delvewheel", "repair", str(whl),
                     "--wheel-dir", str(out_dir),
-                    "--add-path", str(core_build_dir),
                     "--exclude", "ffdas.dll")
             else:
                 run("auditwheel", "repair", str(whl),
