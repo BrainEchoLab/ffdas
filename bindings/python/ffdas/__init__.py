@@ -30,14 +30,28 @@ def _load_core():
 
     if sys.platform == "win32":
         os.add_dll_directory(str(lib_path.parent))
+
+        # Python 3.8+ does not search PATH for DLL dependencies.
+        # Add the CUDA toolkit bin directory explicitly so that
+        # cudart, cublas, cusolver etc. are found when loading ffdas.dll.
+        cuda_bin_found = False
         try:
             from cuda.pathfinder import load_nvidia_dynamic_lib
             lib = load_nvidia_dynamic_lib("cudart")
             if lib.abs_path is not None:
                 os.add_dll_directory(
                     os.path.dirname(os.path.realpath(lib.abs_path)))
+                cuda_bin_found = True
         except Exception:
             pass
+
+        if not cuda_bin_found:
+            cuda_path = os.environ.get("CUDA_PATH", "")
+            if cuda_path:
+                cuda_bin = os.path.join(cuda_path, "bin")
+                if os.path.isdir(cuda_bin):
+                    os.add_dll_directory(cuda_bin)
+                    cuda_bin_found = True
 
     try:
         ctypes.CDLL(
@@ -51,11 +65,18 @@ def _load_core():
             cuda_ver = f" (CUDA {ffdas_core.CUDA_VERSION})"
         except Exception:
             pass
+        hint = ""
+        if sys.platform == "win32" and not os.environ.get("CUDA_PATH"):
+            hint = (
+                " The CUDA_PATH environment variable is not set — if the "
+                "CUDA toolkit is installed, ensure its bin directory is "
+                "accessible (e.g. set CUDA_PATH).\n"
+            )
         raise ImportError(
             f"Failed to load the ffdas shared library{cuda_ver} from {lib_path}. "
             f"Ensure the matching CUDA runtime is installed and that your "
-            f"GPU driver supports the required CUDA version. On Linux, the CUDA "
-            f"runtime libraries must be on LD_LIBRARY_PATH; on Windows, on PATH.\n"
+            f"GPU driver supports the required CUDA version.\n"
+            f"{hint}"
             f"Original error: {e}"
         ) from e
 
