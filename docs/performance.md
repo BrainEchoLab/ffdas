@@ -8,9 +8,9 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 
 | Variant | Layout permutation | Batch required | float64 | SM requirement | Relative speed |
 |---|---|---|---|---|---|
-| `ALG1` | None | No | Yes | SM 53+ | 1× (baseline) |
-| `ALG2` | Yes (internal) | Yes | No | SM 53+ | ~1.4× |
-| `ALG4` | Yes (internal) | Yes | No | SM 70+ | ~1.6–2× with FP16 |
+| `ALG1` | None | No | Yes | SM 53+ | 1x (baseline) |
+| `ALG2` | Yes (internal) | Yes | No | SM 53+ | ~1.4x |
+| `ALG4` | Yes (internal) | Yes | No | SM 70+ | ~1.6--2x with FP16 |
 
 `DEFAULT` currently dispatches to `ALG1` unconditionally. It does not yet auto-select.
 
@@ -20,7 +20,7 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 
 `ALG2` is the recommended default for batched reconstruction. If you can process more than one frame at a time and your data fits in GPU memory, `ALG2` will be faster than `ALG1` in virtually all configurations. The batch size must be a multiple of the internal vector width (typically 4 or 8 depending on the data type).
 
-`ALG4` provides the highest throughput, particularly with FP16 inputs. Its advantage over `ALG2` is most pronounced for large, dense voxel grids where spatial locality ensures tight clustering of sample indices across neighboring voxels. The speedup is typically geometry-dependent: voxels far from the array benefit most (tight index clustering), while voxels close to the array see less improvement (larger index range across subsequent voxels). For typical imaging geometries where most of the volume is at moderate to large depth, `ALG4` with FP16 input is the fastest option available.
+`ALG4` provides the highest throughput, particularly with FP16 inputs. Its advantage over `ALG2` is most pronounced for large, dense voxel grids where neighboring voxels share similar sample indices. The speedup is geometry-dependent: voxels far from the array benefit most (tight index clustering), while voxels close to the array see less improvement. For typical imaging geometries where most of the volume is at moderate to large depth, `ALG4` with FP16 input is the fastest option.
 
 `ALG3` is reserved and not currently implemented.
 
@@ -47,7 +47,7 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 
 ffdas supports three input precisions for `das`:
 
-**FP16 (half-precision)** halves memory traffic compared to FP32 and doubles the effective bandwidth for the optimized algorithms. Most ultrasound acquisition systems produce data well within FP16's dynamic range (~3.3 decimal digits, ±65504). The output is always accumulated in FP32 regardless of input precision, so the final image maintains full 32-bit accuracy. FP16 provides the largest speedup when combined with `ALG2` or `ALG4`.
+**FP16 (half-precision)** halves memory traffic compared to FP32 and doubles the effective bandwidth for the optimized algorithms. Most ultrasound acquisition systems produce data within FP16's dynamic range (~3.3 decimal digits, +/-65504). The output is always accumulated in FP32 regardless of input precision, so the final image maintains full 32-bit accuracy. FP16 provides the largest speedup when combined with `ALG2` or `ALG4`.
 
 In Python, set `use_fp16=True` to have the library convert FP32 inputs to FP16 internally, or provide a `TensorView` wrapping half-precision data directly:
 
@@ -138,13 +138,13 @@ For kernel-level analysis, Nsight Compute can capture hardware performance count
 
 ## Performance of other operations
 
-**`greens`**: uses tensor core instructions natively. Performance scales with source count * frequency count * target count. The kernel is compute-bound once the source and target counts are large enough. Requires SM 70+, but a scalar fallback option exists for SM 53+.
+**`greens`**: uses tensor core instructions natively. Performance scales with source count x frequency count x target count. The kernel is compute-bound once the source and target counts are large enough. Requires SM 70+, but a scalar fallback exists for SM 53+.
 
-**`truncate_rank`**: dominated by the cuSOLVER SVD, which scales as $O(\min(m,n)^2 \cdot \max(m,n))$ where $m$ is the number of frames and $n$ is the product of spatial dimensions. For a 64-frame sequence on a 64³ grid, $m = 64$ and $n \approx 2.6 \times 10^5$, so the SVD processes a tall-skinny matrix. The reconstruction step (matrix multiply of the selected singular vectors) is fast by comparison.
+**`truncate_rank`**: dominated by the cuSOLVER SVD, which scales as $O(\min(m,n)^2 \cdot \max(m,n))$ where $m$ is the number of frames and $n$ is the product of spatial dimensions. For a 64-frame sequence on a 64^3 grid, $m = 64$ and $n \approx 2.6 \times 10^5$, so the SVD processes a tall-skinny matrix. The reconstruction step (matrix multiply of the selected singular vectors) is fast by comparison.
 
 **`einsum`**: dispatches to cuBLAS GEMM. Performance matches cuBLAS for the equivalent matrix dimensions after the contraction modes are mapped to a GEMM problem.
 
-**`interpolate`**: the initial `Interpolator` construction builds a spatial hash over the grid, which takes a fraction of a millisecond for typical grid sizes. Each subsequent interpolation call performs a point-location lookup per query point followed by weight evaluation. Using `preprocess=True` caches the lookup results so that subsequent calls with different value arrays skip the point-location step — this is relevant when interpolating many frames on the same grid and query positions.
+**`interpolate`**: the initial `Interpolator` construction builds a spatial hash over the grid, which takes a fraction of a millisecond for typical grid sizes. Each subsequent interpolation call performs a point-location lookup per query point followed by weight evaluation. Using `preprocess=True` caches the lookup results so that subsequent calls with different value arrays skip the point-location step -- this is relevant when interpolating many frames on the same grid and query positions.
 
 **`gather` / `scatter`**: simple GPU kernels. Vectorized loads are used when alignment and data type permit. Performance is bandwidth-limited.
 
