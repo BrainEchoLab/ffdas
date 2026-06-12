@@ -3,6 +3,8 @@ import os
 import sys
 from pathlib import Path
 
+_dll_dirs = []
+
 
 def _load_core():
     lib_name = "ffdas.dll" if sys.platform == "win32" else "libffdas.so"
@@ -29,7 +31,7 @@ def _load_core():
         )
 
     if sys.platform == "win32":
-        os.add_dll_directory(str(lib_path.parent))
+        _dll_dirs.append(os.add_dll_directory(str(lib_path.parent)))
 
         # Python 3.8+ does not search PATH for DLL dependencies.
         # Add the CUDA toolkit bin directory explicitly so that
@@ -39,8 +41,8 @@ def _load_core():
             from cuda.pathfinder import load_nvidia_dynamic_lib
             lib = load_nvidia_dynamic_lib("cudart")
             if lib.abs_path is not None:
-                os.add_dll_directory(
-                    os.path.dirname(os.path.realpath(lib.abs_path)))
+                _dll_dirs.append(os.add_dll_directory(
+                    os.path.dirname(os.path.realpath(lib.abs_path))))
                 cuda_bin_found = True
         except Exception:
             pass
@@ -50,7 +52,7 @@ def _load_core():
             if cuda_path:
                 cuda_bin = os.path.join(cuda_path, "bin")
                 if os.path.isdir(cuda_bin):
-                    os.add_dll_directory(cuda_bin)
+                    _dll_dirs.append(os.add_dll_directory(cuda_bin))
                     cuda_bin_found = True
 
     try:
