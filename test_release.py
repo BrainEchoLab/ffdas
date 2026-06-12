@@ -48,7 +48,11 @@ def find_wheel(dist_dir, prefix):
 def find_cuda_versions(dist_dir):
     versions = set()
     for whl in dist_dir.glob("ffdas_core_cuda*-*.whl"):
+<<<<<<< HEAD
         # ffdas_core_cuda12-0.1.0-... -> "12"
+=======
+        # ffdas_core_cuda12-0.1.0-... → "12"
+>>>>>>> refs/remotes/origin/main
         rest = whl.name.split("ffdas_core_cuda")[1]
         ver = rest.split("-")[0]
         versions.add(ver)
@@ -108,14 +112,22 @@ def test_error_path(dist_dir, tmpdir):
         print("  PASS")
         return True
 
+<<<<<<< HEAD
     print("  FAIL — error does not mention pip install ffdas[cudaXX]:")
+=======
+    print("  FAIL — error does not mention pip install ffdas[cuda...]:")
+>>>>>>> refs/remotes/origin/main
     for line in result.stderr.strip().splitlines()[-5:]:
         print(f"    {line}")
     return False
 
 
 def test_cuda_version(dist_dir, cuda_ver, tmpdir, run_examples):
+<<<<<<< HEAD
     """Run all tests for one CUDA version. Returns dict of name -> bool."""
+=======
+    """Run all tests for one CUDA version. Returns dict of name → bool."""
+>>>>>>> refs/remotes/origin/main
     results = {}
 
     heading(f"CUDA {cuda_ver}: setting up environment")
