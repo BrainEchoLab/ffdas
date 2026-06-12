@@ -166,7 +166,7 @@ def interpolate(
 
     Args:
         gridpos: Grid vertex positions, shape (nz, ny, nx, 3).
-        x: Values on the grid, shape (nz, ny, nx, ...).
+        x: Values on the grid, shape ([batch,] nz, ny, nx).
         querypos: Evaluation points, shape (..., 3).
         mode: "nearest" or "linear".
         fill: Fill value for points outside the grid. Default 0.

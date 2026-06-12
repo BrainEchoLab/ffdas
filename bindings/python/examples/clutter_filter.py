@@ -50,8 +50,6 @@ vessel_radius = 0.0025
 n_rings = 128
 
 t = cp.linspace(0, 2 * math.pi, n_rings // 2, endpoint=False, dtype=cp.float32)
-offset_1 = 0.0003 * cp.random.normal(n_rings // 2, 3, dtype=cp.float32)  # type: ignore
-offset_2 = 0.0003 * cp.random.normal(n_rings // 2, 3, dtype=cp.float32)  # type: ignore
 
 right_depth_1 = zmin + 0.25 * (zmax - zmin)
 right_depth_2 = zmin + 0.75 * (zmax - zmin)

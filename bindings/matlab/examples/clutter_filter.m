@@ -34,7 +34,7 @@ zmin = 0.010;  zmax = 0.026;
 % ring 1 lives in the xz plane, ring 2 in the yz plane
 vessel_radius = 0.0025;
 n_rings = 128;
-t = gpuArray(single(linspace(0, 2 * pi, n_rings / 2, Endpoint=false)));
+t = gpuArray(single((0:n_rings/2 - 1) * (2 * pi / (n_rings / 2))));
 
 right_depth_1 = zmin + 0.25 * (zmax - zmin);
 right_depth_2 = zmin + 0.75 * (zmax - zmin);

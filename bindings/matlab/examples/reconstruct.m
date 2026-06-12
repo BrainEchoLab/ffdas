@@ -23,8 +23,7 @@ ymin = -0.008; ymax = 0.008;
 zmin = 0.010;  zmax = 0.026;
 
 
-% simulate rf data for a normal-incidence plane wave.
-% see simulation.py for a walkthrough of greens propagation
+% simulate rf data for a normal-incidence plane wave
 
 batch_size = 128;
 n_scatterers = 16384;

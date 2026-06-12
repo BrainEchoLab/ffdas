@@ -31,8 +31,7 @@ ymin, ymax = -0.008, 0.008
 zmin, zmax = 0.010, 0.026
 
 
-# simulate rf data for a normal-incidence plane wave.
-# see simulation.py for a walkthrough of greens propagation
+# simulate rf data for a normal-incidence plane wave
 
 
 def trefoil(t):
@@ -48,23 +47,6 @@ def trefoil(t):
 
 batch_size = 128
 n_scatterers = 4096
-
-# tube_radius = 0.00025
-# bg_radius = 0.008
-# contrast = 1000.0
-
-# p = contrast * tube_radius**2 / (contrast * tube_radius**2 + bg_radius**2 - tube_radius**2)
-
-# t = 2 * cp.pi * cp.random.rand(batch_size, n_scatterers, dtype=cp.float32)
-# u = cp.random.rand(1, n_scatterers, 1, dtype=cp.float32)
-# is_tube = cp.random.rand(1, n_scatterers, 1) < p
-# r = cp.where(
-#     is_tube,
-#     tube_radius * cp.sqrt(u),
-#     tube_radius + cp.sqrt(tube_radius**2 + u * (bg_radius**2 - tube_radius**2)),
-# )
-# scatter_pos = trefoil(t) + r * cp.random.randn(batch_size, n_scatterers, 3, dtype=cp.float32)
-
 
 tube_sigma = 0.0001
 bg_sigma = 0.008
