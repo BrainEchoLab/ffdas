@@ -24,8 +24,8 @@ TESTS_SRC = ROOT / "bindings" / "python" / "tests"
 EXAMPLES_SRC = ROOT / "bindings" / "python" / "examples"
 
 CUPY_PACKAGES = {
-    "12": "cupy-cuda12x",
-    "13": "cupy-cuda13x",
+    "12": ["cupy-cuda12x", "nvidia-cufft-cu12"],
+    "13": ["cupy-cuda13x", "nvidia-cufft-cu13"],
 }
 
 
@@ -136,11 +136,11 @@ def test_cuda_version(dist_dir, cuda_ver, tmpdir, run_examples):
 
     # install dependencies
     heading(f"CUDA {cuda_ver}: installing dependencies")
-    cupy_pkg = CUPY_PACKAGES.get(cuda_ver)
-    if cupy_pkg:
-        r = env.run_python("-m", "pip", "install", "-q", cupy_pkg, check=False)
+    cupy_pkgs = CUPY_PACKAGES.get(cuda_ver, [])
+    if cupy_pkgs:
+        r = env.run_python("-m", "pip", "install", "-q", *cupy_pkgs, check=False)
         if r.returncode != 0:
-            print(f"  WARNING: could not install {cupy_pkg}")
+            print(f"  WARNING: could not install {cupy_pkgs}")
             print("  GPU tests will likely fail")
     env.pip_install("pytest", "matplotlib", "Pillow")
 

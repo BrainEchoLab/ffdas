@@ -29,7 +29,7 @@ ROOT = Path(__file__).parent.resolve()
 BUILD_DIR = ROOT / "_build"
 
 CUDA_ARCHITECTURES = {
-    "12": "53-real;70-real;75-real;80-real;86-real;89-real;90",
+    "12": "53-real;60-real;70-real;75-real;80-real;86-real;89-real;90",
     "13": "75-real;80-real;86-real;89-real;90-real;100-real;120",
 }
 
