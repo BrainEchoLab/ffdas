@@ -89,4 +89,4 @@ Propagated field at the target positions: `([batch,] ..., frequencies)` in Pytho
 
 ## Sign Convention
 
-The kernel computes $e^{ik r}/r$. To get the outgoing-wave Green's function $e^{-i 2\pi f r / c}/r$, pass negative wavenumbers: `wavenums = -2 * pi * freqs / sound_speed`. This convention matches the examples in `simulation.py` and `reconstruct.py`.
+The kernel computes $e^{ik r}/r$. To get the outgoing-wave Green's function $e^{-i 2\pi f r / c}/r$, pass negative wavenumbers: `wavenums = -2 * pi * freqs / sound_speed`. This convention matches the examples in `reconstruct.py` and `compound.py`.

@@ -218,6 +218,8 @@ See `python release.py --help` for options.
 
 ## Troubleshooting
 
+**Core library not found at import time.** If `import ffdas` raises `ImportError: Could not find the ffdas core library`, the CUDA extra was not included when installing. The correct command is `pip install ffdas[cu12]` or `pip install ffdas[cu13]` — the bracket suffix pulls in the GPU-accelerated core library. Some shells (e.g. zsh) require quoting: `pip install 'ffdas[cu12]'`.
+
 **CUDA toolkit not found.** Verify `nvcc --version` works. If the toolkit is installed in a non-standard location, set `CUDAToolkit_ROOT` and `CMAKE_CUDA_COMPILER`.
 
 **Python import error.** If `import ffdas` fails with a missing `_ffdas` module, the nanobind extension was not built or is not in the expected location. For editable installs, verify the core library build completed and that `CMAKE_PREFIX_PATH` was set correctly during `pip install`.

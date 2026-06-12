@@ -8,8 +8,8 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 
 | Variant | Layout permutation | Batch required | float64 | SM requirement | Relative speed |
 |---|---|---|---|---|---|
-| `ALG1` | None | No | Yes | SM 70+ | 1× (baseline) |
-| `ALG2` | Yes (internal) | Yes | No | SM 70+ | ~1.4× |
+| `ALG1` | None | No | Yes | SM 53+ | 1× (baseline) |
+| `ALG2` | Yes (internal) | Yes | No | SM 53+ | ~1.4× |
 | `ALG4` | Yes (internal) | Yes | No | SM 70+ | ~1.6–2× with FP16 |
 
 `DEFAULT` currently dispatches to `ALG1` unconditionally. It does not auto-select.
@@ -78,34 +78,7 @@ In Python, set `use_fp16=True` to have the library convert FP32 inputs to FP16 i
 
 ### Compute precision
 
-The `use_fp16` flag on `das` controls only the *storage* format, and accumulation always happens in FP32 (or FP64 for double-precision inputs). 
-<!-- 
-## Batch sizing
-
-The batch dimension is the primary lever for GPU utilization with `ALG2` and `ALG4`. These algorithms tile over the batch dimension so that threads in a warp access consecutive batch items at each sample position. Larger batches mean wider coalesced memory transactions and better amortization of per-voxel geometric calculations (delay and weight computation are shared across all batch items for a given voxel).
-
-Practical guidance:
-
-- **Batch 1** (no batch dimension): only `ALG1` is available.
-- **Batch 8–32**: `ALG2` becomes effective. The GPU is partially saturated; throughput scales roughly linearly with batch size in this range.
-- **Batch 64–256**: both `ALG2` and `ALG4` reach near-peak throughput. The per-voxel-per-frame cost plateaus as the GPU becomes fully saturated.
-- **Batch >256**: throughput continues to scale linearly (more frames at the same per-frame cost). Memory becomes the main constraint.
-
-The batch size must be a multiple of the algorithm's internal vector width. `ALG2` and `ALG4` will return an error if the batch size is not divisible by this value (typically 4 for complex data, 8 for real data). If your natural batch size doesn't divide evenly, pad with zeros.
-
-## Scaling behavior
-
-Performance scales near-linearly with problem dimensions once the GPU is saturated:
-
-**Grid size** (number of voxels): linear. Doubling the grid doubles the runtime. This is expected since each voxel is independent and the workload is dominated by the per-voxel sum over channels.
-
-**Array size** (number of receivers): linear. Each additional receiver adds one distance calculation and one sample interpolation per voxel per transmit event.
-
-**Sequence events**: linear. DAS processes each transmit event independently and sums the results. Achievable frame rates for compounding with $Q$ events are approximately $1/Q$ times the single-event rate. For example, a configuration that achieves 5 kHz with $Q = 1$ reaches ~300 Hz with $Q = 16$.
-
-**Sample count**: affects input data size and memory footprint but not the per-voxel cost, since each voxel interpolates at most one sample per receiver per event regardless of $K$.
-
-**GPU architecture**: the optimizations in ffdas are designed around the memory hierarchy of NVIDIA GPUs (warp-level coalescing, sector-aligned access, tensor core MMA tiles). Performance characteristics have been validated on Ada Lovelace (RTX 40-series) but the principles apply to Volta, Turing, and Ampere as well. Different architectures have different sector sizes, cache hierarchies, and tensor core tile dimensions, so absolute throughput will vary. Hopper and Blackwell architectures may benefit from different tile configurations. -->
+The `use_fp16` flag on `das` controls only the *storage* format, and accumulation always happens in FP32 (or FP64 for double-precision inputs).
 
 ## Data layout
 

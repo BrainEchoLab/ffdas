@@ -74,9 +74,12 @@ The Python and MATLAB bindings follow the layout conventions of their respective
 The [`bindings/python/examples/`](bindings/python/examples/) directory contains self-contained scripts that simulate data and demonstrate each part of the pipeline:
 
 - **`reconstruct.py`** — End-to-end volume reconstruction: simulate diverging-wave channel data via Green's function propagation, compute transmit geometry, and reconstruct a 3D image with `das`.
-- **`simulation.py`** — Frequency-domain acoustic simulation with `greens`, followed by a receive-only DAS reconstruction (as in photoacoustics).
+- **`compound.py`** — Coherent plane-wave compounding: transmit at several steering angles and combine the resulting images with `das`.
+- **`sparse_compounding.py`** — Focused-wave compounding with `das_sparse`: each voxel selects a per-target subset of transmit events.
 - **`clutter_filter.py`** — Clutter filtering on a frame sequence: separate stationary tissue from moving flow using `truncate_rank`.
 - **`interpolation.py`** — Reconstruct on a spherical grid, then interpolate back to Cartesian coordinates.
+
+Equivalent MATLAB examples are in [`bindings/matlab/examples/`](bindings/matlab/examples/).
 
 ## Requirements
 
