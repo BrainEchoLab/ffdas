@@ -85,6 +85,21 @@ Equivalent MATLAB examples are in [`bindings/matlab/examples/`](bindings/matlab/
 
 ffdas requires an NVIDIA GPU with compute capability 5.3 (Maxwell) or higher. The `greens` function uses tensor core instructions and requires compute capability 7.0 (Volta) or higher; calling it on an older GPU produces a runtime error.
 
+## Citation
+
+If you use ffdas in your work, please cite:
+
+> L. Verhoef and P. Kruizinga, "ffdas: Volumetric ultrasound reconstruction at warp speed," arXiv:2606.13259, 2026. [[paper]](https://arxiv.org/abs/2606.13259)
+
+```bibtex
+@article{verhoef2026ffdas,
+    title={ffdas: Volumetric ultrasound reconstruction at warp speed},
+    author={Verhoef, Luuk and Kruizinga, Pieter},
+    journal={arXiv preprint arXiv:2606.13259},
+    year={2026},
+}
+```
+
 ## License
 
 MIT License (see `LICENSE.txt`)
