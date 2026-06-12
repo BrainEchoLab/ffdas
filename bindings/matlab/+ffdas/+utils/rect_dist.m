@@ -15,5 +15,10 @@ function d = rect_dist(points, sz)
     dy = max(abs(points(2, :)) - half(2), 0);
     dz = abs(points(3, :));
     d = sqrt(dx.^2 + dy.^2 + dz.^2);
-    d = reshape(d, trailing);
+
+    if numel(trailing) == 1
+        d = reshape(d, trailing, 1);
+    else
+        d = reshape(d, trailing);
+    end
 end
