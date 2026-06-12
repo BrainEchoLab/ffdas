@@ -48,7 +48,7 @@ Requires MATLAB R2018b+ with the Parallel Computing Toolbox.
 
 ### Building from Source
 
-See the [installation guide](docs/getting-started/installation.md) for building from source, including platform-specific instructions and CMake options.
+See the [installation guide](https://brainecholab.github.io/ffdas/getting-started/installation/) for building from source, including platform-specific instructions and CMake options.
 
 ## Operations
 
@@ -65,9 +65,9 @@ Python also provides spatial utility functions (`cdist`, `rect_dist`, `angle`) f
 
 ## Conventions
 
-Positions and time offsets passed to `das` are in **sampling wavelengths** (`c / f_s`), making the kernel unitless. In practice this means scaling spatial coordinates by `f_s / c` and expressing time offsets in samples. `greens` and `interpolate` are unit-agnostic — positions just need to be consistent with the wavenumbers or query points respectively. The [quickstart](docs/getting-started/quickstart.md) walks through this conversion for a concrete transmit setup.
+Positions and time offsets passed to `das` are in **sampling wavelengths** (`c / f_s`), making the kernel unitless. In practice this means scaling spatial coordinates by `f_s / c` and expressing time offsets in samples. `greens` and `interpolate` are unit-agnostic — positions just need to be consistent with the wavenumbers or query points respectively. The [quickstart](https://brainecholab.github.io/ffdas/getting-started/quickstart/) walks through this conversion for a concrete transmit setup.
 
-The Python and MATLAB bindings follow the layout conventions of their respective languages. In Python, arrays are row-major with the coordinate dimension last: positions have shape `(..., 3)`. In MATLAB, arrays are column-major with the coordinate dimension first: `(3, ...)`. The rest of the API is analogous between the two. See the [conventions reference](docs/conventions.md) for details.
+The Python and MATLAB bindings follow the layout conventions of their respective languages. In Python, arrays are row-major with the coordinate dimension last: positions have shape `(..., 3)`. In MATLAB, arrays are column-major with the coordinate dimension first: `(3, ...)`. The rest of the API is analogous between the two. See the [conventions reference](https://brainecholab.github.io/ffdas/conventions/) for details.
 
 ## Examples
 
