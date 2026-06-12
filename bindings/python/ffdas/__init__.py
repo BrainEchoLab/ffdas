@@ -56,10 +56,14 @@ def _load_core():
                     cuda_bin_found = True
 
     try:
-        ctypes.CDLL(
-            str(lib_path),
-            mode=ctypes.RTLD_GLOBAL if sys.platform != "win32" else 0,
-        )
+        if sys.platform == "win32":
+            # winmode=0 uses the standard Windows search order, which
+            # includes PATH. The CUDA installer adds its bin directories
+            # to PATH, so this finds cudart, cublas, cusolver etc.
+            # regardless of toolkit layout (e.g. CUDA 13 uses bin\x64).
+            ctypes.CDLL(str(lib_path), winmode=0)
+        else:
+            ctypes.CDLL(str(lib_path), mode=ctypes.RTLD_GLOBAL)
     except OSError as e:
         cuda_ver = ""
         try:
