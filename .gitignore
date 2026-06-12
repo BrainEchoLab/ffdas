@@ -18,8 +18,8 @@ __pycache__/
 # CMake user-local preset overrides
 CMakeUserPresets.json
 
-# Build script staging
-_staging_matlab/
+# Build outputs
+_build*/
 _install*/
 
 # macOS
@@ -30,7 +30,6 @@ _install*/
 *.nsys-rep
 
 # Distribution / packaging
-_build*/
 bin/
 .Python
 build/

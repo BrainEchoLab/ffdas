@@ -26,6 +26,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).parent.resolve()
+BUILD_DIR = ROOT / "_build"
 
 CUDA_ARCHITECTURES = {
     "12": "53-real;70-real;75-real;80-real;86-real;89-real;90",
@@ -85,7 +86,7 @@ def platform_tag():
 # Phase 1: Core library
 
 def build_core(cuda_ver, cuda_root):
-    build_dir = ROOT / f"_build_cuda{cuda_ver}"
+    build_dir = BUILD_DIR / f"cuda{cuda_ver}"
     archs = CUDA_ARCHITECTURES[cuda_ver]
 
     cmake_args = [
@@ -138,15 +139,19 @@ def package_core_wheel(cuda_ver, core_build_dir, out_dir):
         finally:
             (core_mod / lib_filename()).unlink(missing_ok=True)
             (core_mod / "CUDA_VERSION").unlink(missing_ok=True)
+            # setuptools leaves build artifacts in the source directory
+            shutil.rmtree(pkg_dir / "build", ignore_errors=True)
+            for d in pkg_dir.glob("*.egg-info"):
+                shutil.rmtree(d, ignore_errors=True)
 
 
 # Phase 3: Python bindings wheel
 
 def build_bindings_wheel(core_build_dir, out_dir):
+    py_dir = ROOT / "bindings" / "python"
     with tempfile.TemporaryDirectory() as tmp:
         run("python", "-m", "build", "--wheel",
-            str(ROOT / "bindings" / "python"),
-            "--outdir", tmp,
+            str(py_dir), "--outdir", tmp,
             env={"CMAKE_PREFIX_PATH": str(core_build_dir)})
 
         for whl in Path(tmp).glob("*.whl"):
@@ -160,11 +165,15 @@ def build_bindings_wheel(core_build_dir, out_dir):
                     "--wheel-dir", str(out_dir),
                     "--exclude", "libffdas.so")
 
+    shutil.rmtree(py_dir / "build", ignore_errors=True)
+    for d in py_dir.glob("*.egg-info"):
+        shutil.rmtree(d, ignore_errors=True)
+
 
 # Phase 4: MATLAB
 
 def build_matlab(core_build_dir):
-    build_dir = ROOT / "_build_matlab"
+    build_dir = BUILD_DIR / "matlab"
 
     cmake_args = [
         "cmake",
@@ -182,7 +191,7 @@ def build_matlab(core_build_dir):
 
 
 def package_matlab_zip(cuda_ver, core_build_dir, matlab_build_dir, out_dir):
-    staging = ROOT / "_staging_matlab"
+    staging = BUILD_DIR / "staging"
     if staging.exists():
         shutil.rmtree(staging)
 
@@ -195,7 +204,7 @@ def package_matlab_zip(cuda_ver, core_build_dir, matlab_build_dir, out_dir):
     )
 
     ver = project_version()
-    zip_name = f"ffdas_cuda{cuda_ver}-{ver}-matlab-{platform_tag()}.zip"
+    zip_name = f"ffdas-cuda{cuda_ver}-{ver}-matlab-{platform_tag()}.zip"
     zip_path = out_dir / zip_name
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -217,7 +226,17 @@ def main():
     parser.add_argument(
         "--target", nargs="+", default=["python", "matlab"],
         help="Targets to build (default: python matlab)")
+    parser.add_argument(
+        "--clean", action="store_true",
+        help="remove all build artifacts and exit")
     args = parser.parse_args()
+
+    if args.clean:
+        for d in [BUILD_DIR, ROOT / "dist"]:
+            if d.exists():
+                print(f"removing {d}")
+                shutil.rmtree(d)
+        return
 
     for ver in args.cuda:
         if ver not in CUDA_ARCHITECTURES:
