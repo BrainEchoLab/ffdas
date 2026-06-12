@@ -5,7 +5,6 @@ from pathlib import Path
 
 
 def _load_core():
-    """Preload the ffdas shared library so the nanobind extension can find it."""
     lib_name = "ffdas.dll" if sys.platform == "win32" else "libffdas.so"
     lib_path = None
 
@@ -21,7 +20,13 @@ def _load_core():
             lib_path = Path(lib_dir) / lib_name
 
     if lib_path is None:
-        return
+        raise ImportError(
+            "Could not find the ffdas core library. "
+            "If you installed ffdas from PyPI, make sure you included the "
+            "CUDA extra, e.g.: pip install ffdas[cu12] or pip install ffdas[cu13]. "
+            "For development builds, set the FFDAS_LIB_DIR environment variable "
+            "to the directory containing the shared library."
+        )
 
     if sys.platform == "win32":
         os.add_dll_directory(str(lib_path.parent))
@@ -47,8 +52,10 @@ def _load_core():
         except Exception:
             pass
         raise ImportError(
-            f"Failed to load ffdas shared library{cuda_ver}. "
-            f"Ensure the matching CUDA runtime is installed.\n"
+            f"Failed to load the ffdas shared library{cuda_ver} from {lib_path}. "
+            f"Ensure the matching CUDA runtime is installed and that your "
+            f"GPU driver supports the required CUDA version. On Linux, the CUDA "
+            f"runtime libraries must be on LD_LIBRARY_PATH; on Windows, on PATH.\n"
             f"Original error: {e}"
         ) from e
 
