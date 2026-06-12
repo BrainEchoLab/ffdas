@@ -1,0 +1,1332 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../how-it-works/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Performance Guide - ffdas</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#performance-guide" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="ffdas" class="md-header__button md-logo" aria-label="ffdas" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ffdas
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Performance Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/brainecholab/ffdas" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    brainecholab/ffdas
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ffdas" class="md-nav__button md-logo" aria-label="ffdas" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ffdas
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/brainecholab/ffdas" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    brainecholab/ffdas
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How It Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Precision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Precision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input precision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compute-precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compute precision
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channels_trailing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels_trailing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contiguity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contiguity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timing-and-profiling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timing and profiling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Timing and profiling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#timer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nvtx-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NVTX annotations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nsight-compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nsight Compute
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-of-other-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance of other operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stream-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream management
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/das/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    das
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/greens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    greens
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/truncate_rank/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    truncate_rank
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/einsum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    einsum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/interpolation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    interpolate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gather / scatter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm selection
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Precision
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Precision">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#input-precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Input precision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#compute-precision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compute precision
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data layout
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data layout">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#channels_trailing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        channels_trailing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contiguity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contiguity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#timing-and-profiling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timing and profiling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Timing and profiling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#timer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nvtx-annotations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NVTX annotations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nsight-compute" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nsight Compute
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#performance-of-other-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Performance of other operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stream-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stream management
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="performance-guide">Performance Guide<a class="headerlink" href="#performance-guide" title="Permanent link">&para;</a></h1>
+<p>This page provides practical guidance for getting the most out of ffdas. It covers algorithm selection, precision, batch sizing, and scaling behavior. For the underlying design rationale, see <a href="../how-it-works/">how it works</a>.</p>
+<h2 id="algorithm-selection">Algorithm selection<a class="headerlink" href="#algorithm-selection" title="Permanent link">&para;</a></h2>
+<p>The <code>algorithm</code> parameter on <code>das</code> and <code>das_sparse</code> selects the kernel variant. The choice affects throughput, memory usage, and which data types and configurations are supported.</p>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Layout permutation</th>
+<th>Batch required</th>
+<th>float64</th>
+<th>SM requirement</th>
+<th>Relative speed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ALG1</code></td>
+<td>None</td>
+<td>No</td>
+<td>Yes</td>
+<td>SM 53+</td>
+<td>1x (baseline)</td>
+</tr>
+<tr>
+<td><code>ALG2</code></td>
+<td>Yes (internal)</td>
+<td>Yes</td>
+<td>No</td>
+<td>SM 53+</td>
+<td>~1.4x</td>
+</tr>
+<tr>
+<td><code>ALG4</code></td>
+<td>Yes (internal)</td>
+<td>Yes</td>
+<td>No</td>
+<td>SM 70+</td>
+<td>~1.6--2x with FP16</td>
+</tr>
+</tbody>
+</table>
+<p><code>DEFAULT</code> currently dispatches to <code>ALG1</code> unconditionally. It does not yet auto-select.</p>
+<p><strong>When to use which:</strong></p>
+<p><code>ALG1</code> is the right choice when you are reconstructing a single frame (no batch dimension), when you need <code>float64</code> or <code>complex128</code> precision, or when GPU memory is tight. It uses the standard input layout and avoids a temporary allocation for a permuted copy if possible. It is also the simplest path for verifying correctness before optimizing.</p>
+<p><code>ALG2</code> is the recommended default for batched reconstruction. If you can process more than one frame at a time and your data fits in GPU memory, <code>ALG2</code> will be faster than <code>ALG1</code> in virtually all configurations. The batch size must be a multiple of the internal vector width (typically 4 or 8 depending on the data type).</p>
+<p><code>ALG4</code> provides the highest throughput, particularly with FP16 inputs. Its advantage over <code>ALG2</code> is most pronounced for large, dense voxel grids where neighboring voxels share similar sample indices. The speedup is geometry-dependent: voxels far from the array benefit most (tight index clustering), while voxels close to the array see less improvement. For typical imaging geometries where most of the volume is at moderate to large depth, <code>ALG4</code> with FP16 input is the fastest option.</p>
+<p><code>ALG3</code> is reserved and not currently implemented.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Python</label><label for="__tabbed_1_2">MATLAB</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="kn">from</span> <span class="nn">ffdas</span> <span class="kn">import</span> <span class="n">Algorithm</span>
+
+<span class="c1"># explicit algorithm selection</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span> <span class="n">srcpos</span><span class="p">,</span> <span class="n">dstpos</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span>
+                   <span class="n">algorithm</span><span class="o">=</span><span class="n">Algorithm</span><span class="o">.</span><span class="n">ALG4</span><span class="p">,</span> <span class="n">use_fp16</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c">% algorithm is an int32: 0=DEFAULT, 1=ALG1, 2=ALG2, 4=ALG4</span>
+<span class="n">output</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">ffdas</span><span class="p">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span><span class="w"> </span><span class="n">srcpos</span><span class="p">,</span><span class="w"> </span><span class="n">dstpos</span><span class="p">,</span><span class="w"> </span><span class="n">offsets</span><span class="p">,</span><span class="w"> </span><span class="n">weights</span><span class="p">,</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="n">wavenum</span><span class="p">,</span><span class="w"> </span><span class="nb">int32</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="precision">Precision<a class="headerlink" href="#precision" title="Permanent link">&para;</a></h2>
+<h3 id="input-precision">Input precision<a class="headerlink" href="#input-precision" title="Permanent link">&para;</a></h3>
+<p>ffdas supports three input precisions for <code>das</code>:</p>
+<p><strong>FP16 (half-precision)</strong> halves memory traffic compared to FP32 and doubles the effective bandwidth for the optimized algorithms. Most ultrasound acquisition systems produce data within FP16's dynamic range (~3.3 decimal digits, +/-65504). The output is always accumulated in FP32 regardless of input precision, so the final image maintains full 32-bit accuracy. FP16 provides the largest speedup when combined with <code>ALG2</code> or <code>ALG4</code>.</p>
+<p>In Python, set <code>use_fp16=True</code> to have the library convert FP32 inputs to FP16 internally, or provide a <code>TensorView</code> wrapping half-precision data directly:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Python</label><label for="__tabbed_2_2">MATLAB</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c1"># automatic conversion (fused with layout permutation)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span> <span class="n">srcpos</span><span class="p">,</span> <span class="n">dstpos</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">use_fp16</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># manual: wrap a float16 array as a half TensorView</span>
+<span class="n">rf_half</span> <span class="o">=</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">cp</span><span class="o">.</span><span class="n">float16</span><span class="p">),</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">half</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf_half</span><span class="p">,</span> <span class="n">srcpos</span><span class="p">,</span> <span class="n">dstpos</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">weights</span><span class="p">)</span>
+
+<span class="c1"># complex IQ data: use half2 view</span>
+<span class="n">rf_half2</span> <span class="o">=</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rf</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">*</span><span class="n">rf</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">half2</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c">% set use_fp16 to true (8th positional argument)</span>
+<span class="n">output</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">ffdas</span><span class="p">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span><span class="w"> </span><span class="n">srcpos</span><span class="p">,</span><span class="w"> </span><span class="n">dstpos</span><span class="p">,</span><span class="w"> </span><span class="n">offsets</span><span class="p">,</span><span class="w"> </span><span class="n">weights</span><span class="p">,</span><span class="w"> </span><span class="p">[],</span><span class="w"> </span><span class="n">wavenum</span><span class="p">,</span><span class="w"> </span><span class="nb">int32</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>FP32 (single-precision)</strong> is the default and sufficient for the vast majority of ultrasound imaging. All internal geometric calculations (delays, weights, distances) use FP32 regardless of input precision.</p>
+<p><strong>FP64 (double-precision)</strong> is supported only by <code>ALG1</code>. Spatial operations (<code>das</code>, <code>greens</code>, <code>interpolate</code>) use <code>float3</code>/<code>float4</code> position types internally, so positions are always single-precision even when the signal data is double. Double precision is primarily useful for algebraic operations like <code>einsum</code> and <code>truncate_rank</code> where the computation does not involve spatial coordinates.</p>
+<h3 id="compute-precision">Compute precision<a class="headerlink" href="#compute-precision" title="Permanent link">&para;</a></h3>
+<p>The <code>use_fp16</code> flag on <code>das</code> controls only the <em>storage</em> format, and accumulation always happens in FP32 (or FP64 for double-precision inputs).</p>
+<h2 id="data-layout">Data layout<a class="headerlink" href="#data-layout" title="Permanent link">&para;</a></h2>
+<h3 id="channels_trailing">channels_trailing<a class="headerlink" href="#channels_trailing" title="Permanent link">&para;</a></h3>
+<p>The <code>channels_trailing</code> parameter controls how the channel data dimensions are interpreted. The C API always expects <code>(batch, channels, sequence, samples)</code> with samples contiguous. When <code>channels_trailing</code> is <code>True</code>, the binding swaps the channels and sequence dimensions in the tensor descriptor, so you can pass data in <code>(batch, sequence, channels, samples)</code> order. Note that this may trigger a contiguous copy of the input data internally.</p>
+<p>In Python, the default is <code>False</code> (channels before sequence). In MATLAB, the default is <code>True</code> (channels after sequence, which after the column-major reversal means channels are the faster-varying dimension).</p>
+<p>For <code>ALG2</code> and <code>ALG4</code>, the library permutes the data internally to the batch-inner layout regardless of <code>channels_trailing</code>, so the flag does not affect kernel throughput. It does affect the permutation cost (which is small) and whether the user needs to transpose their data before calling <code>das</code>.</p>
+<h3 id="contiguity">Contiguity<a class="headerlink" href="#contiguity" title="Permanent link">&para;</a></h3>
+<p><code>ALG1</code> checks whether the input is C-contiguous and copies it if not. <code>ALG2</code> and <code>ALG4</code> always copy the input into the batch-inner layout, so contiguity of the input does not matter for those variants.</p>
+<p>All position arrays (<code>srcpos</code>, <code>dstpos</code>) and parameter arrays (<code>offsets</code>, <code>weights</code>) are cast to contiguous <code>float32</code> internally if they are not already.</p>
+<h2 id="timing-and-profiling">Timing and profiling<a class="headerlink" href="#timing-and-profiling" title="Permanent link">&para;</a></h2>
+<h3 id="timer">Timer<a class="headerlink" href="#timer" title="Permanent link">&para;</a></h3>
+<p><code>ffdas.utils.Timer</code> records CUDA events on the library's internal stream, so it measures actual GPU execution time rather than host-side wall time:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Python</label><label for="__tabbed_3_2">MATLAB</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="k">with</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">Timer</span><span class="p">()</span> <span class="k">as</span> <span class="n">t</span><span class="p">:</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">ffdas</span><span class="o">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span> <span class="n">srcpos</span><span class="p">,</span> <span class="n">dstpos</span><span class="p">,</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span>
+                       <span class="n">algorithm</span><span class="o">=</span><span class="n">Algorithm</span><span class="o">.</span><span class="n">ALG4</span><span class="p">,</span> <span class="n">use_fp16</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">elapsed_ms</span><span class="p">()</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> ms&quot;</span><span class="p">)</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">t</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">ffdas</span><span class="p">.</span><span class="n">utils</span><span class="p">.</span><span class="n">Timer</span><span class="p">();</span>
+<span class="n">t</span><span class="p">.</span><span class="n">start</span><span class="p">();</span>
+<span class="n">output</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="n">ffdas</span><span class="p">.</span><span class="n">das</span><span class="p">(</span><span class="n">rf</span><span class="p">,</span><span class="w"> </span><span class="n">srcpos</span><span class="p">,</span><span class="w"> </span><span class="n">dstpos</span><span class="p">,</span><span class="w"> </span><span class="n">offsets</span><span class="p">,</span><span class="w"> </span><span class="n">weights</span><span class="p">);</span>
+<span class="n">t</span><span class="p">.</span><span class="n">stop</span><span class="p">();</span>
+<span class="nb">fprintf</span><span class="p">(</span><span class="s">&quot;%.1f ms\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">t</span><span class="p">.</span><span class="n">elapsed_ms</span><span class="p">());</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The timer synchronizes the stop event before returning, so <code>elapsed_ms()</code> reflects the completed kernel time. For benchmarking, run a warmup iteration before timing to avoid measuring JIT compilation and allocation overhead.</p>
+<h3 id="nvtx-annotations">NVTX annotations<a class="headerlink" href="#nvtx-annotations" title="Permanent link">&para;</a></h3>
+<p>ffdas emits NVTX range annotations for all major operations when built with <code>FFDAS_USE_NVTX=ON</code> (the default). These are visible in NVIDIA Nsight Systems and Nsight Compute, making it straightforward to profile ffdas calls alongside the rest of your application. The annotations are zero-cost when no profiling tool is attached.</p>
+<h3 id="nsight-compute">Nsight Compute<a class="headerlink" href="#nsight-compute" title="Permanent link">&para;</a></h3>
+<p>For kernel-level analysis, Nsight Compute can capture hardware performance counters. Useful metrics to look at:</p>
+<ul>
+<li><strong>L1 Payload Efficiency</strong> (<code>l1tex__average_t_sectors_per_request_pipe_lsu_mem_global_op_ld.ratio</code>): bytes used vs. bytes transferred. ALG1 ~40%, ALG2/ALG4 ~100%.</li>
+<li><strong>DRAM throughput</strong> (<code>dram__bytes.sum.per_second</code>): how close to peak memory bandwidth.</li>
+<li><strong>Warp stall reasons</strong> (<code>smsp__warps_issue_stalled_*</code>): Long Scoreboard (memory latency), Math Throttle (compute saturation), Branch Resolving (control flow).</li>
+<li><strong>Tensor core utilization</strong> (for ALG4): fraction of cycles using MMA instructions.</li>
+</ul>
+<h2 id="performance-of-other-operations">Performance of other operations<a class="headerlink" href="#performance-of-other-operations" title="Permanent link">&para;</a></h2>
+<p><strong><code>greens</code></strong>: uses tensor core instructions natively. Performance scales with source count x frequency count x target count. The kernel is compute-bound once the source and target counts are large enough. Requires SM 70+, but a scalar fallback exists for SM 53+.</p>
+<p><strong><code>truncate_rank</code></strong>: dominated by the cuSOLVER SVD, which scales as <span class="arithmatex">\(O(\min(m,n)^2 \cdot \max(m,n))\)</span> where <span class="arithmatex">\(m\)</span> is the number of frames and <span class="arithmatex">\(n\)</span> is the product of spatial dimensions. For a 64-frame sequence on a 64^3 grid, <span class="arithmatex">\(m = 64\)</span> and <span class="arithmatex">\(n \approx 2.6 \times 10^5\)</span>, so the SVD processes a tall-skinny matrix. The reconstruction step (matrix multiply of the selected singular vectors) is fast by comparison.</p>
+<p><strong><code>einsum</code></strong>: dispatches to cuBLAS GEMM. Performance matches cuBLAS for the equivalent matrix dimensions after the contraction modes are mapped to a GEMM problem.</p>
+<p><strong><code>interpolate</code></strong>: the initial <code>Interpolator</code> construction builds a spatial hash over the grid, which takes a fraction of a millisecond for typical grid sizes. Each subsequent interpolation call performs a point-location lookup per query point followed by weight evaluation. Using <code>preprocess=True</code> caches the lookup results so that subsequent calls with different value arrays skip the point-location step -- this is relevant when interpolating many frames on the same grid and query positions.</p>
+<p><strong><code>gather</code> / <code>scatter</code></strong>: simple GPU kernels. Vectorized loads are used when alignment and data type permit. Performance is bandwidth-limited.</p>
+<h2 id="stream-management">Stream management<a class="headerlink" href="#stream-management" title="Permanent link">&para;</a></h2>
+<p>The Python API currently uses a single internal CUDA stream per device, created automatically on first use. There is no public API to set or query the stream. For applications that need to overlap ffdas calls with other GPU work or enforce ordering with respect to external streams, use the C API directly, which provides <code>ffdas_set_stream</code> and <code>ffdas_get_stream</code> on the library handle.</p>
+<p>This is a known limitation of the Python bindings. Stream-aware Python APIs are planned for a future release.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

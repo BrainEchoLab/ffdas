@@ -1,0 +1,1362 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../..">
+      
+      
+        <link rel="next" href="../quickstart/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Installation - ffdas</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#installation" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ffdas" class="md-header__button md-logo" aria-label="ffdas" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ffdas
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Installation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/brainecholab/ffdas" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    brainecholab/ffdas
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ffdas" class="md-nav__button md-logo" aria-label="ffdas" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ffdas
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/brainecholab/ffdas" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    brainecholab/ffdas
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MATLAB
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-from-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building from source
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Building from source">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-visual-studio-developer-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows: Visual Studio developer environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core library
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python bindings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matlab-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MATLAB bindings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cmake-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CMake options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-builds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release builds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../conventions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Conventions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../how-it-works/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How It Works
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/das/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    das
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/greens/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    greens
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/truncate_rank/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    truncate_rank
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/einsum/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    einsum
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/interpolation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    interpolate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/tensor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gather / scatter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/utilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#matlab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MATLAB
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#building-from-source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Building from source
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Building from source">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-visual-studio-developer-environment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows: Visual Studio developer environment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core library
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#python-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python bindings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#matlab-bindings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MATLAB bindings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cmake-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CMake options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#release-builds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Release builds
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<h2 id="python">Python<a class="headerlink" href="#python" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">CUDA 13</label><label for="__tabbed_1_2">CUDA 12</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>ffdas<span class="o">[</span>cuda13<span class="o">]</span>
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>ffdas<span class="o">[</span>cuda12<span class="o">]</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>Requires Python 3.12+ and a CUDA-capable GPU (SM 53+, SM 70+ recommended). CuPy or another DLPack-compatible GPU array library is needed to create the input arrays.</p>
+<p>The <code>ffdas</code> package contains the Python bindings. The <code>[cuda12]</code> / <code>[cuda13]</code> extra pulls in the matching core library (<code>ffdas-core-cuda12</code> or <code>ffdas-core-cuda13</code>), which contains the GPU-accelerated shared library built against that CUDA version.</p>
+<h2 id="matlab">MATLAB<a class="headerlink" href="#matlab" title="Permanent link">&para;</a></h2>
+<p>Download the prebuilt MEX archive for your platform and CUDA version from the <a href="https://github.com/brainecholab/ffdas/releases">GitHub Releases</a> page. Extract it and add the directory to your MATLAB path:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">addpath</span><span class="p">(</span><span class="s">&quot;/path/to/ffdas-matlab&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Requires MATLAB R2018b+ with the Parallel Computing Toolbox and a system CUDA installation matching the archive's CUDA version.</p>
+<h2 id="building-from-source">Building from source<a class="headerlink" href="#building-from-source" title="Permanent link">&para;</a></h2>
+<h3 id="requirements">Requirements<a class="headerlink" href="#requirements" title="Permanent link">&para;</a></h3>
+<ul>
+<li>CMake 3.26+</li>
+<li>CUDA Toolkit (12.x or 13.x)</li>
+<li>C++ compiler with C++17 support (GCC 9+, Clang 10+, or MSVC 2019+)</li>
+<li>For Python bindings: Python 3.12+, nanobind, scikit-build-core</li>
+<li>For MATLAB bindings: MATLAB R2018b+, Parallel Computing Toolbox</li>
+</ul>
+<h3 id="windows-visual-studio-developer-environment">Windows: Visual Studio developer environment<a class="headerlink" href="#windows-visual-studio-developer-environment" title="Permanent link">&para;</a></h3>
+<p>On Windows, the CUDA compiler requires the MSVC toolchain to be on PATH. Open a <strong>Developer Command Prompt</strong> or activate the environment from a regular terminal:</p>
+<div class="highlight"><pre><span></span><code><span class="c"># Find the VS installation</span>
+<span class="nv">$vsPath</span> <span class="p">=</span> <span class="p">&amp;</span> <span class="s2">&quot;C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe&quot;</span> <span class="p">`</span>
+    <span class="n">-latest</span> <span class="n">-property</span> <span class="n">installationPath</span>
+
+<span class="c"># Activate the developer environment</span>
+<span class="nb">Import-Module</span> <span class="s2">&quot;$vsPath\Common7\Tools\Microsoft.VisualStudio.DevShell.dll&quot;</span>
+<span class="nb">Enter-VsDevShell</span> <span class="n">-VsInstallPath</span> <span class="nv">$vsPath</span> <span class="n">-Arch</span> <span class="n">amd64</span> <span class="n">-SkipAutomaticLocation</span>
+</code></pre></div>
+<p>Alternatively, launch the <strong>x64 Native Tools Command Prompt</strong> from the Start menu (search for "x64 Native Tools"). All build commands below assume this environment is active on Windows.</p>
+<h3 id="core-library">Core library<a class="headerlink" href="#core-library" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>cmake<span class="w"> </span>--preset<span class="w"> </span>default
+cmake<span class="w"> </span>--build<span class="w"> </span>_build
+</code></pre></div>
+<p>This builds the <code>libffdas.so</code> (Linux) or <code>ffdas.dll</code> (Windows) shared library. The library links CUDA privately — the public API is pure C with no CUDA types.</p>
+<p>To target a specific GPU architecture:</p>
+<div class="highlight"><pre><span></span><code>cmake<span class="w"> </span>--preset<span class="w"> </span>default<span class="w"> </span>-DCMAKE_CUDA_ARCHITECTURES<span class="o">=</span><span class="m">86</span>
+</code></pre></div>
+<p>The minimum supported architecture is SM 53. SM 70+ enables tensor-core-accelerated Green's function summation. Common values:</p>
+<table>
+<thead>
+<tr>
+<th>Architecture</th>
+<th>GPUs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>53</td>
+<td>Maxwell, Jetson Nano, GTX 10-series (mobile)</td>
+</tr>
+<tr>
+<td>60</td>
+<td>Pascal</td>
+</tr>
+<tr>
+<td>70</td>
+<td>Volta, V100, Titan V</td>
+</tr>
+<tr>
+<td>75</td>
+<td>Turing, RTX 20-series, Quadro RTX</td>
+</tr>
+<tr>
+<td>80</td>
+<td>Ampere, A100</td>
+</tr>
+<tr>
+<td>86</td>
+<td>Ampere, RTX 30-series, A-series</td>
+</tr>
+<tr>
+<td>89</td>
+<td>Ada, RTX 40-series, L-series</td>
+</tr>
+<tr>
+<td>90</td>
+<td>Hopper, H100, GH200</td>
+</tr>
+<tr>
+<td>100</td>
+<td>Blackwell, B100</td>
+</tr>
+<tr>
+<td>120</td>
+<td>Blackwell, RTX 50-series, RTX PRO</td>
+</tr>
+</tbody>
+</table>
+<p>If <code>CMAKE_CUDA_ARCHITECTURES</code> is not specified, CMake targets the architecture of the locally installed GPU (<code>native</code>).</p>
+<p>On Windows, the default preset does not specify a generator. Ninja is recommended for CUDA builds:</p>
+<div class="highlight"><pre><span></span><code><span class="n">cmake</span> <span class="p">-</span><span class="n">-preset</span> <span class="k">default</span> <span class="n">-G</span> <span class="n">Ninja</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-build</span> <span class="n">_build</span>
+</code></pre></div>
+<p>To use a specific CUDA toolkit:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Linux</label><label for="__tabbed_2_2">Windows</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code>cmake<span class="w"> </span>--preset<span class="w"> </span>default<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DCMAKE_CUDA_COMPILER<span class="o">=</span>/usr/local/cuda-13/bin/nvcc<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DCUDAToolkit_ROOT<span class="o">=</span>/usr/local/cuda-13
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">cmake</span> <span class="p">-</span><span class="n">-preset</span> <span class="k">default</span> <span class="n">-G</span> <span class="n">Ninja</span> <span class="p">`</span>
+    <span class="n">-DCMAKE_CUDA_COMPILER</span><span class="p">=</span><span class="s2">&quot;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.0/bin/nvcc.exe&quot;</span> <span class="p">`</span>
+    <span class="n">-DCUDAToolkit_ROOT</span><span class="p">=</span><span class="s2">&quot;C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.0&quot;</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<h3 id="python-bindings">Python bindings<a class="headerlink" href="#python-bindings" title="Permanent link">&para;</a></h3>
+<p>The bindings are a standalone project that links against an installed core library. Build and install the core library first, then install the bindings with pip:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Linux</label><label for="__tabbed_3_2">Windows</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Build and install the core library</span>
+cmake<span class="w"> </span>--preset<span class="w"> </span>default
+cmake<span class="w"> </span>--build<span class="w"> </span>_build
+cmake<span class="w"> </span>--install<span class="w"> </span>_build<span class="w"> </span>--prefix<span class="w"> </span>_install
+
+<span class="c1"># 2. Make the shared library findable at runtime</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">LD_LIBRARY_PATH</span><span class="o">=</span><span class="nv">$PWD</span>/_install/lib<span class="si">${</span><span class="nv">LD_LIBRARY_PATH</span><span class="p">:+:</span><span class="nv">$LD_LIBRARY_PATH</span><span class="si">}</span>
+
+<span class="c1"># 3. Install the Python bindings (editable)</span>
+pip<span class="w"> </span>install<span class="w"> </span>nanobind
+<span class="nv">CMAKE_PREFIX_PATH</span><span class="o">=</span><span class="nv">$PWD</span>/_install<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>bindings/python<span class="w"> </span>--no-build-isolation
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c"># 1. Build and install the core library</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-preset</span> <span class="k">default</span> <span class="n">-G</span> <span class="n">Ninja</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-build</span> <span class="n">_build</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-install</span> <span class="n">_build</span> <span class="p">-</span><span class="n">-prefix</span> <span class="n">_install</span>
+
+<span class="c"># 2. Make the DLL findable at runtime</span>
+<span class="nv">$env:Path</span> <span class="p">=</span> <span class="s2">&quot;$PWD\_install\bin;$env:Path&quot;</span>
+
+<span class="c"># 3. Install the Python bindings (editable)</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">nanobind</span>
+<span class="nv">$env:CMAKE_PREFIX_PATH</span> <span class="p">=</span> <span class="s2">&quot;$PWD\_install&quot;</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="n">-e</span> <span class="n">bindings</span><span class="p">\</span><span class="n">python</span> <span class="p">-</span><span class="n">-no-build-isolation</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>scikit-build-core invokes CMake for the nanobind extension, using <code>CMAKE_PREFIX_PATH</code> to locate the installed core library. The shared library must be on the system library search path (<code>LD_LIBRARY_PATH</code> on Linux, <code>PATH</code> on Windows) for <code>import ffdas</code> to work.</p>
+<p>After modifying C++ or CUDA source files, rebuild and reinstall the core library, then reinstall the bindings.</p>
+<h3 id="matlab-bindings">MATLAB bindings<a class="headerlink" href="#matlab-bindings" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Linux</label><label for="__tabbed_4_2">Windows</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="c1"># 1. Build and install the core library (if not already done)</span>
+cmake<span class="w"> </span>--preset<span class="w"> </span>default
+cmake<span class="w"> </span>--build<span class="w"> </span>_build
+cmake<span class="w"> </span>--install<span class="w"> </span>_build<span class="w"> </span>--prefix<span class="w"> </span>_install
+
+<span class="c1"># 2. Build the MATLAB MEX bindings</span>
+cmake<span class="w"> </span>-S<span class="w"> </span>bindings/matlab<span class="w"> </span>-B<span class="w"> </span>_build_matlab<span class="w"> </span>-DCMAKE_PREFIX_PATH<span class="o">=</span><span class="nv">$PWD</span>/_install
+cmake<span class="w"> </span>--build<span class="w"> </span>_build_matlab
+
+<span class="c1"># 3. Install</span>
+cmake<span class="w"> </span>--install<span class="w"> </span>_build_matlab<span class="w"> </span>--prefix<span class="w"> </span>/path/to/install
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="n">cmake</span> <span class="p">-</span><span class="n">-preset</span> <span class="k">default</span> <span class="n">-G</span> <span class="n">Ninja</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-build</span> <span class="n">_build</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-install</span> <span class="n">_build</span> <span class="p">-</span><span class="n">-prefix</span> <span class="n">_install</span>
+
+<span class="n">cmake</span> <span class="n">-S</span> <span class="n">bindings</span><span class="p">\</span><span class="n">matlab</span> <span class="n">-B</span> <span class="n">_build_matlab</span> <span class="n">-G</span> <span class="n">Ninja</span> <span class="p">`</span>
+    <span class="n">-DCMAKE_PREFIX_PATH</span><span class="p">=</span><span class="s2">&quot;$PWD\_install&quot;</span>
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-build</span> <span class="n">_build_matlab</span>
+
+<span class="n">cmake</span> <span class="p">-</span><span class="n">-install</span> <span class="n">_build_matlab</span> <span class="p">-</span><span class="n">-prefix</span> <span class="n">C</span><span class="p">:\</span><span class="n">path</span><span class="p">\</span><span class="n">to</span><span class="p">\</span><span class="n">install</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>The MEX files use <code>$ORIGIN</code> RPATH on Linux, so the shared library must be in the same directory. The install step places both the MEX files and the shared library under <code>+ffdas/+core/</code>.</p>
+<p>Add the install prefix to your MATLAB path:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">addpath</span><span class="p">(</span><span class="s">&quot;/path/to/install&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="cmake-options">CMake options<a class="headerlink" href="#cmake-options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CMAKE_CUDA_ARCHITECTURES</code></td>
+<td><code>native</code></td>
+<td>Target CUDA architectures (minimum: 53)</td>
+</tr>
+<tr>
+<td><code>FFDAS_USE_NVTX</code></td>
+<td><code>ON</code></td>
+<td>Enable NVTX profiling annotations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="release-builds">Release builds<a class="headerlink" href="#release-builds" title="Permanent link">&para;</a></h3>
+<p>The <code>release.py</code> script at the repository root automates the full release workflow: building the core library for multiple CUDA versions, packaging Python wheels, and creating MATLAB archives.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Linux</label><label for="__tabbed_5_2">Windows</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nv">CUDA12_ROOT</span><span class="o">=</span>/usr/local/cuda-12<span class="w"> </span><span class="nv">CUDA13_ROOT</span><span class="o">=</span>/usr/local/cuda-13<span class="w"> </span>python<span class="w"> </span>release.py
+</code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="highlight"><pre><span></span><code><span class="nv">$env:CUDA12_ROOT</span> <span class="p">=</span> <span class="s2">&quot;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6&quot;</span>
+<span class="nv">$env:CUDA13_ROOT</span> <span class="p">=</span> <span class="s2">&quot;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.0&quot;</span>
+<span class="n">python</span> <span class="n">release</span><span class="p">.</span><span class="n">py</span>
+</code></pre></div>
+</div>
+</div>
+</div>
+<p>See <code>python release.py --help</code> for options.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<p><strong>Core library not found at import time.</strong> If <code>import ffdas</code> raises <code>ImportError: Could not find the ffdas core library</code>, the CUDA extra was not included when installing. The correct command is <code>pip install ffdas[cuda12]</code> or <code>pip install ffdas[cuda13]</code> — the bracket suffix pulls in the GPU-accelerated core library. Some shells (e.g. zsh) require quoting: <code>pip install 'ffdas[cuda12]'</code>.</p>
+<p><strong>CUDA toolkit not found.</strong> Verify <code>nvcc --version</code> works. If the toolkit is installed in a non-standard location, set <code>CUDAToolkit_ROOT</code> and <code>CMAKE_CUDA_COMPILER</code>.</p>
+<p><strong>Python import error.</strong> If <code>import ffdas</code> fails with a missing <code>_ffdas</code> module, the nanobind extension was not built or is not in the expected location. For editable installs, verify the core library build completed and that <code>CMAKE_PREFIX_PATH</code> was set correctly during <code>pip install</code>.</p>
+<p><strong>CUDA runtime not found at import time.</strong> If the import fails with an <code>OSError</code> loading the shared library, the CUDA runtime libraries are not on the library search path. Install the CUDA toolkit system-wide, or use <code>pip install cuda-toolkit[cudart,cublas,cusolver]==12.*</code> to install them via pip.</p>
+<p><strong>Architecture error during build.</strong> If you see errors about unsupported SM versions, set <code>CMAKE_CUDA_ARCHITECTURES</code> to match your GPU. Run <code>nvidia-smi</code> to check your GPU model.</p>
+<p><strong>Shared library not found at import time.</strong> <code>import ffdas</code> requires the core shared library to be findable. For installed packages this is handled automatically by <code>ffdas-core-cu*</code>. For development builds, ensure the install prefix is on the library search path (<code>LD_LIBRARY_PATH</code> on Linux, <code>PATH</code> on Windows). Alternatively, set <code>FFDAS_LIB_DIR</code> to the directory containing the shared library.</p>
+<p><strong>Windows: compiler not found.</strong> Make sure you are in a Visual Studio developer command prompt. See the <a href="#windows-visual-studio-developer-environment">Windows: Visual Studio developer environment</a> section above.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../js/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
