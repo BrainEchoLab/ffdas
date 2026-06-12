@@ -172,7 +172,7 @@ fig, axes = plt.subplots(1, 2, figsize=(10, 8), sharey=True)
 axes[0].imshow(
     cp.asnumpy(db_xz),
     extent=[float(x[0]) * 1e3, float(x[-1]) * 1e3, float(z[-1]) * 1e3, float(z[0]) * 1e3],
-    cmap="gray", vmin=-32, vmax=0, aspect="equal",
+    cmap="gray", vmin=-24, vmax=0, aspect="equal",
 )
 axes[0].set_xlabel("x [mm]")
 axes[0].set_ylabel("z [mm]")
@@ -181,7 +181,7 @@ axes[0].set_title("xz max projection")
 axes[1].imshow(
     cp.asnumpy(db_yz),
     extent=[float(y[0]) * 1e3, float(y[-1]) * 1e3, float(z[-1]) * 1e3, float(z[0]) * 1e3],
-    cmap="gray", vmin=-32, vmax=0, aspect="equal",
+    cmap="gray", vmin=-24, vmax=0, aspect="equal",
 )
 axes[1].set_xlabel("y [mm]")
 axes[1].set_title("yz max projection")

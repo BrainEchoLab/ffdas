@@ -79,7 +79,7 @@ rf = rf[:, :, None, :]  # (batch, channels, 1, samples)
 
 
 # reconstruction grid: 64^3 voxels centered on the phantom
-nz, ny, nx = 128, 128, 128
+nz, ny, nx = 64, 64, 64
 x = cp.linspace(xmin, xmax, nx, dtype=cp.float32)
 y = cp.linspace(ymin, ymax, ny, dtype=cp.float32)
 z = cp.linspace(zmin, zmax, nz, dtype=cp.float32)
