@@ -83,6 +83,9 @@ class Interpolator:
         Returns:
             Interpolated values at the query points.
         """
+        if self._plan is None:
+            raise RuntimeError("Interpolator has been destroyed")
+
         if len(x.shape) < 3 or len(x.shape) > 4:
             raise ValueError(
                 f"x must be three or four-dimensional (got {tuple(x.shape)})"
@@ -122,10 +125,19 @@ class Interpolator:
         Args:
             querypos: Points to preprocess, shape (..., 3).
         """
+        if self._plan is None:
+            raise RuntimeError("Interpolator has been destroyed")
         querypos = astype(querypos, "float32")
         _ffdas.interpolation_preprocess(
             get_library_handle(), self._plan, querypos
         )
+
+    def close(self) -> None:
+        """Release the internal plan and its GPU resources."""
+        self._plan = None
+
+    def __del__(self):
+        self.close()
 
 
 @overload

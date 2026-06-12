@@ -4,7 +4,22 @@ This page explains the design of the delay-and-sum kernels in ffdas: why GPU imp
 
 For a detailed treatment with profiling data and roofline analysis, see the accompanying paper:
 
-> L. Verhoef and P. Kruizinga, "Real-Time Volumetric Ultrasound Imaging for Ultrafast Applications," 2026. If you use ffdas in your work, please cite this paper.
+> L. Verhoef and P. Kruizinga, "ffdas: Volumetric ultrasound reconstruction at warp speed," arXiv preprint arXiv:2606.13259, 2026. [https://arxiv.org/abs/2606.13259](https://arxiv.org/abs/2606.13259)
+
+If you use ffdas in your work, please cite this paper:
+
+```bibtex
+@article{verhoef2026ffdas,
+    title   = {ffdas: Volumetric ultrasound reconstruction at warp speed},
+    author  = {Verhoef, Luuk and Kruizinga, Pieter},
+    journal = {arXiv preprint arXiv:2606.13259},
+    year    = {2026},
+    eprint  = {2606.13259},
+    archivePrefix = {arXiv},
+    primaryClass  = {physics.med-ph},
+    url     = {https://arxiv.org/abs/2606.13259},
+}
+```
 
 ## The computational challenge
 
