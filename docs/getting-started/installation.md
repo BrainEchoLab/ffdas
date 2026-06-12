@@ -73,13 +73,16 @@ The minimum supported architecture is SM 53. SM 70+ enables tensor-core-accelera
 
 | Architecture | GPUs |
 |---|---|
-| 53 | Jetson Nano, GTX 10-series (mobile) |
-| 70 | V100, Titan V |
-| 75 | RTX 20-series, Quadro RTX |
-| 80 | A100 |
-| 86 | RTX 30-series, A-series |
-| 89 | RTX 40-series, L-series |
-| 90 | H100, GH200 |
+| 53 | Maxwell, Jetson Nano, GTX 10-series (mobile) |
+| 60 | Pascal |
+| 70 | Volta, V100, Titan V |
+| 75 | Turing, RTX 20-series, Quadro RTX |
+| 80 | Ampere, A100 |
+| 86 | Ampere, RTX 30-series, A-series |
+| 89 | Ada, RTX 40-series, L-series |
+| 90 | Hopper, H100, GH200 |
+| 100 | Blackwell, B100 |
+| 120 | Blackwell, RTX 50-series, RTX PRO |
 
 If `CMAKE_CUDA_ARCHITECTURES` is not specified, CMake targets the architecture of the locally installed GPU (`native`).
 
