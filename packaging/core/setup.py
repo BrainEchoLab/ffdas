@@ -15,6 +15,8 @@ setup(
     name=f"ffdas-core-cuda{cuda_ver}",
     version="0.1.0",
     description=f"ffdas core library (CUDA {cuda_ver})",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     packages=["ffdas_core"],
     package_data={"ffdas_core": ["*.so", "*.dll", "CUDA_VERSION"]},
     distclass=BinaryDistribution,
