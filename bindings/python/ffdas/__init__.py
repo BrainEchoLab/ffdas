@@ -141,7 +141,7 @@ from .utils.spatial import (  # noqa: E402
     angle,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = [
     "half",

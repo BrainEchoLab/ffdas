@@ -15,7 +15,7 @@ else()
     endforeach()
 endif()
 
-project(ffdas VERSION 0.1.0 LANGUAGES CXX CUDA)
+project(ffdas VERSION 0.1.1 LANGUAGES CXX CUDA)
 
 option(FFDAS_USE_NVTX "Enable NVTX profiling annotations" ON)
 
