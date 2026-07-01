@@ -63,6 +63,23 @@ def test_truncate_rank_output_shape_3d(rng):
     assert ffdas.truncate_rank(x, start=0, stop=4).shape == x.shape
 
 
+@pytest.mark.parametrize("shape", [(16, 64), (64, 16), (32, 32)])
+def test_truncate_rank_shape_variants(shape, rng):
+    x_np = rng.standard_normal(shape).astype("float32")
+    k = min(shape)
+    start, stop = 1, k - 1
+    expected = _svd_filter(x_np, start, stop)
+    result = ffdas.truncate_rank(cp.array(x_np), start=start, stop=stop)
+    assert_allclose(cp.asnumpy(result), expected, rtol=1e-2, atol=1e-3)
+
+
+def test_truncate_rank_more_rows_than_cols(rng):
+    x_np = rng.standard_normal((64, 8)).astype("float32")
+    expected = _svd_filter(x_np, 0, 8)
+    result = ffdas.truncate_rank(cp.array(x_np), start=0, stop=8)
+    assert_allclose(cp.asnumpy(result), expected, rtol=1e-3, atol=1e-4)
+
+
 def test_truncate_rank_preallocated(rng):
     x = cp.array(rng.standard_normal((4, 16)).astype("float32"))
     out = cp.zeros_like(x)

@@ -1,8 +1,8 @@
 # truncate_rank
 
-Rank truncation filter via truncated SVD reconstruction. Reconstructs the input using only singular vectors `start` through `stop`, removing all other components. In high frame rate ultrasound (Doppler, flow imaging), the first singular components capture stationary tissue clutter. Removing them isolates the weaker blood flow signal.
+Reconstruct the input from a subset of its singular vectors. Given the SVD $X = U \Sigma V^H$, the output is $U_k \Sigma_k V_k^H$ where $k$ indexes the selected components. Singular vectors are indexed in descending order of singular value: index 0 corresponds to the largest.
 
-The input is internally reshaped to a 2D matrix $(m, n)$ where $m$ is the size of the first dimension (the frame axis) and $n$ is the product of all remaining dimensions (spatial). The SVD is computed on this matrix, and the output is reconstructed from the selected singular components.
+The input is reshaped to a 2D matrix $(m, n)$ where $m$ is the size of the first dimension (Python) or last dimension (MATLAB), and $n$ is the product of all remaining dimensions. The function eigendecomposes the smaller of the two Gram matrices ($X^H X$ or $X X^H$, whichever has lower rank), builds a projection matrix from the selected eigenvectors, and applies it. This is equivalent to truncated SVD reconstruction but avoids computing the full decomposition.
 
 ## Signature
 
@@ -29,9 +29,9 @@ The input is internally reshaped to a 2D matrix $(m, n)$ where $m$ is the size o
 
 | Parameter | Python | MATLAB | Description |
 |---|---|---|---|
-| `x` | at least 2D | at least 2D | Input array. The first dimension (Python) or last dimension (MATLAB) is the frame axis. |
-| `start` | `int`, 0-based | `int`, 1-based | Index of the first singular vector to keep. |
-| `stop` | `int` or `None` | `int` or `[]` | Index past the last singular vector to keep (exclusive in Python, inclusive in MATLAB). Defaults to $\min(m, n)$. |
+| `x` | at least 2D | at least 2D | Input array. The first dimension (Python) or last dimension (MATLAB) is preserved; all others are flattened for the decomposition. |
+| `start` | `int`, 0-based | `int`, 1-based | First singular vector to keep, counting from the largest. |
+| `stop` | `int` or `None` | `int` or `[]` | One past the last singular vector to keep (Python, exclusive) or last to keep (MATLAB, inclusive). Defaults to $\min(m, n)$. |
 
 ## Returns
 
@@ -39,7 +39,7 @@ Filtered array with the same shape and dtype as the input.
 
 ## Example
 
-In high frame rate ultrasound imaging, the first few singular components typically capture stationary tissue (high energy, low rank). Setting `start` to skip these isolates the weaker flow signal.
+In high frame rate ultrasound, the first singular components typically capture stationary tissue (high energy, low rank). Setting `start` to skip them isolates the weaker flow signal.
 
 === "Python"
 
@@ -65,4 +65,6 @@ In high frame rate ultrasound imaging, the first few singular components typical
 
 ## Notes
 
-The implementation uses cuSOLVER for the SVD computation.
+The eigendecomposition is computed via `cusolverDnXsyevd`. The Gram matrix is formed with `cublasSgemm` (or the complex/double equivalent) rather than `ssyrk`/`cherk` to avoid rounding errors when the matrix dimensions differ substantially.
+
+The cost is dominated by the eigendecomposition of the $p \times p$ Gram matrix, where $p = \min(m, n)$, plus two matrix multiplications involving the full $m \times n$ input.
