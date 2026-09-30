@@ -76,26 +76,32 @@ __global__ void das_alg1_kernel(
             }
 
             Ty weight{};
+            int offs0 = 0;
 
+            // Skip the IQ load when out of bounds. Zeroing weight is not
+            // enough: the lerp below would still read x[offs0], which is an
+            // illegal access for deep voxels whose offset+range exceeds the
+            // buffer, and 0*NaN would poison the accumulator if the read
+            // returned a non-finite value.
             if (inbounds) {
-                if constexpr (std::is_same_v<Ty, __half2> || std::is_same_v<Ty, float2> || std::is_same_v<Ty, double2>) { 
+                if constexpr (std::is_same_v<Ty, __half2> || std::is_same_v<Ty, float2> || std::is_same_v<Ty, double2>) {
                     // complex type
                     float s, c;
                     __sincosf(wavenum * phase, &s, &c);
                     weight = {c * scl, s * scl};
-                } else { 
+                } else {
                     // scalar type
                     weight = cast<float, Ty>(scl);
                 }
-            }
 
-            for (int b = 0; b < actual_batch_size; b++) {
-                int offs0 = (((batch_base + b) * channels + m) * seqlen + seqidx) * samples + k;
-                accum[b] = cmadd(
-                    weight, 
-                    cast<Tx,Ty>(lerp(x[offs0], x[offs0+1], fpart)), 
-                    accum[b]
-                );
+                for (int b = 0; b < actual_batch_size; b++) {
+                    offs0 = (((batch_base + b) * channels + m) * seqlen + seqidx) * samples + k;
+                    accum[b] = cmadd(
+                        weight,
+                        cast<Tx,Ty>(lerp(x[offs0], x[offs0+1], fpart)),
+                        accum[b]
+                    );
+                }
             }
         }
     }
