@@ -45,6 +45,9 @@ __global__ void das_alg1_kernel(
 
     Ty accum[tile_width]{};
 
+    // second interpolation tap: k+1, or k itself for a 1-sample recording (keeps a clamped load in range)
+    const int next = (samples > 1) ? 1 : 0;
+
     for (int i = 0; i < (is_sparse ? sparse_count : seqlen); i++) {
         int seqidx = i;
 
@@ -89,11 +92,18 @@ __global__ void das_alg1_kernel(
                 }
             }
 
+            // Branch-free guard: load from an index clamped into this channel's row (so the load is
+            // always legal and the warp never diverges here), then SELECT an exact zero when the sample
+            // is out of range or out of the cone -- a NaN / Inf at the clamped sample cannot reach the
+            // accumulator, and the weight (already 0 then) multiplies a true zero.
+            const int kc = inbounds ? k : 0;
+
             for (int b = 0; b < actual_batch_size; b++) {
-                int offs0 = (((batch_base + b) * channels + m) * seqlen + seqidx) * samples + k;
+                int offs0 = (((batch_base + b) * channels + m) * seqlen + seqidx) * samples + kc;
+                const Tx sample = lerp(x[offs0], x[offs0 + next], fpart);
                 accum[b] = cmadd(
-                    weight, 
-                    cast<Tx,Ty>(lerp(x[offs0], x[offs0+1], fpart)), 
+                    weight,
+                    cast<Tx,Ty>(inbounds ? sample : Tx{}),
                     accum[b]
                 );
             }
