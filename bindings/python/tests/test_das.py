@@ -134,8 +134,8 @@ def test_das_single_sample_impulse():
 
 
 # out-of-range sample indices (#2): a sample index outside [0, samples - 2] contributes exactly 0, and
-# nothing outside the data is read for it -- in every algorithm. ALG4 needs SM 80+ and complex data;
-# anywhere else the library refuses it and the case skips.
+# nothing outside the data is read for it -- in every algorithm. ALG4 exists only for complex input on
+# SM 8.0+; those cases skip, and any error from any other case fails the test.
 
 ALGORITHMS = [
     pytest.param(ffdas.Algorithm.ALG1, False, id="ALG1"),
@@ -144,18 +144,16 @@ ALGORITHMS = [
     pytest.param(ffdas.Algorithm.ALG4, False, id="ALG4"),
     pytest.param(ffdas.Algorithm.ALG4, True, id="ALG4-fp16"),
 ]
-# ALG2 in fp16 fails to launch on SM 7.5 at batch >= 4 (a separate issue), so batched cases run in fp32
-ALGORITHMS_FP32 = [p for p in ALGORITHMS if not p.values[1]]
 
 
-def _run_or_skip(fn, **kwargs):
-    try:
-        return fn(**kwargs)
-    except RuntimeError as exc:  # an algorithm this device / dtype does not implement
-        msg = str(exc).upper()
-        if any(w in msg for w in ("UNSUPPORTED", "INVALID_ARGUMENT", "COMPUTE CAPABILITY")):
-            pytest.skip(f"{kwargs.get('algorithm')}: {exc}")
-        raise
+def _das(**kwargs):
+    """ffdas.das, skipping only the combinations ALG4 does not implement."""
+    if kwargs["algorithm"] == ffdas.Algorithm.ALG4:
+        if not np.issubdtype(kwargs["x"].dtype, np.complexfloating):
+            pytest.skip("ALG4 takes complex input only")
+        if int(cp.cuda.Device().compute_capability) < 80:
+            pytest.skip("ALG4 needs compute capability 8.0 or higher")
+    return ffdas.das(**kwargs)
 
 
 def _nan_padded(shape, dtype, pad=4096):
@@ -189,8 +187,7 @@ def test_das_issue2_nan_in_last_sample_is_not_used(algorithm, use_fp16, dtype):
     (With a batch axis: ALG2 only takes batched input.)"""
     samples = 4
     x = cp.asarray(np.array([[[[1.0, 1.0, 1.0, np.nan]]]]).astype(dtype))
-    out = _run_or_skip(
-        ffdas.das,
+    out = _das(
         x=x,
         srcpos=cp.zeros((1, 3), dtype="float32"),
         dstpos=cp.zeros((1, 3), dtype="float32"),
@@ -202,7 +199,7 @@ def test_das_issue2_nan_in_last_sample_is_not_used(algorithm, use_fp16, dtype):
     _assert_exact_zero(out)
 
 
-@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS_FP32)
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
 @pytest.mark.parametrize("target_sample", [-60.0, 250.0], ids=["before-start", "past-end"])
 @pytest.mark.parametrize("dtype", ["float32", "complex64"])
 @pytest.mark.parametrize("batch", [1, 3, 16])
@@ -210,8 +207,7 @@ def test_das_out_of_range_sample_is_not_read(algorithm, use_fp16, target_sample,
     n_ch, n_seq, n_samp, n_tgt, r = 4, 2, 191, 8, 10.0
     x = _nan_padded((batch, n_ch, n_seq, n_samp), dtype)
     srcpos, dstpos = _co_located(n_ch, n_tgt, r)
-    out = _run_or_skip(
-        ffdas.das,
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
@@ -235,8 +231,7 @@ def test_das_out_of_range_target_ignores_nan_in_the_recording(algorithm, use_fp1
     x = cp.ones((1, n_ch, n_seq, n_samp), dtype="complex64")
     x[..., nan_at] = complex(np.nan, np.nan)
     srcpos, dstpos = _co_located(n_ch, n_tgt, r)
-    out = _run_or_skip(
-        ffdas.das,
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
@@ -258,8 +253,7 @@ def test_das_directivity_rejected_sample_is_not_used(algorithm, use_fp16):
     srcpos, dstpos = _co_located(n_ch, n_tgt, r)  # targets at +z ...
     srcdir = cp.zeros((n_ch, 4), dtype="float32")
     srcdir[:, 2] = -1.0  # ... every channel looks along -z, half-angle 90 degrees
-    out = _run_or_skip(
-        ffdas.das,
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
@@ -298,8 +292,7 @@ def test_das_single_sample_recording_reads_nothing_outside(algorithm, use_fp16, 
     x = _nan_padded((1, 1, 1, 1), dtype)  # (batch, channels, sequence, samples)
     x[...] = np.nan  # the one sample itself is NaN too: it must not be used
     srcpos, dstpos = _co_located(1, 4, 2.0)
-    out = _run_or_skip(
-        ffdas.das,
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
@@ -322,8 +315,7 @@ def test_das_single_sample_recording_reads_nothing_outside(algorithm, use_fp16, 
 def _das_native(samples, fill, k, *, algorithm, use_fp16, n_ch=8, n_seq=2, n_tgt=64):
     x = cp.full((1, n_ch, n_seq, samples), fill, dtype="complex64")
     srcpos, dstpos = _co_located(n_ch, n_tgt, 10.0)
-    return _run_or_skip(
-        ffdas.das,
+    return _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
@@ -343,15 +335,16 @@ def test_das_out_of_range_sample_is_not_read_from_the_relayout_buffer(algorithm,
 
 
 # ALG2 vectorises over the batch (2 or 4 columns per load, whenever the batch size allows it) and tiles
-# it 16..64 columns per block. Its per-thread accumulators were sized M * N / 32, which is too few when a
+# it 16..64 columns per block. The batch sizes below cover every combination of load width (1, 2, 4) and
+# tile width (16, 32, 64), one and several tiles, and a partly filled last tile. Its per-thread accumulators were sized M * N / 32, which is too few when a
 # warp's subtile is wider than the tile (small even batches), and every thread wrote back up to the full
 # batch rather than its own tile (batches > 64): both returned garbage or NaN for whole batch rows.
 
 
 @pytest.mark.parametrize("use_fp16", [False, True], ids=["fp32", "fp16"])
 @pytest.mark.parametrize("dtype", ["float32", "complex64"])
-@pytest.mark.parametrize("batch", [1, 2, 3, 4, 6, 8, 16, 32, 64, 96, 130])
-def test_das_alg2_matches_alg1_at_every_batch_size(batch, dtype, use_fp16):
+@pytest.mark.parametrize("batch", [1, 2, 3, 4, 5, 6, 8, 12, 16, 24, 32, 64, 65, 96, 128, 129, 130])
+def test_das_alg2_matches_alg1_across_batch_sizes(batch, dtype, use_fp16):
     rng = np.random.default_rng(batch)
     n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 64
     xr = rng.standard_normal((batch, n_ch, n_seq, n_samp))
