@@ -1,0 +1,11 @@
+/* Linker version script for libffdas.so: the C API is the whole export surface.
+   Everything else -- the statically linked C++ runtime, template instantiations from
+   libstdc++ headers compiled into CUDA translation units (nvcc does not honour
+   -fvisibility=hidden for those), typeinfo and vtables -- stays local to this library,
+   so no other module in the process can bind its C++ runtime to our private copy. */
+{
+    global:
+        ffdas_*;
+    local:
+        *;
+};

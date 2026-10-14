@@ -7,6 +7,10 @@
     #else
         #define FFDAS_API __declspec(dllimport)
     #endif
+#elif defined(__GNUC__) || defined(__clang__)
+    /* The library is built with hidden visibility (see CMakeLists.txt): this marks the
+       public C entry points, and nothing else, as exported. */
+    #define FFDAS_API __attribute__((visibility("default")))
 #else
     #define FFDAS_API
 #endif

@@ -96,12 +96,27 @@ target_link_libraries(ffdas PRIVATE ${FFDAS_LINK_LIBS})
 # Statically link the C++ runtime. The public API is pure C so no C++
 # objects cross the boundary. This makes the binary self-contained and
 # avoids conflicts with MATLAB's bundled libstdc++.
+#
+# The embedded runtime must stay private: export only the ffdas_* C API.
+# Otherwise libffdas.so exports its copy of libstdc++, and since the Python
+# package loads it with RTLD_GLOBAL, modules loaded afterwards (the binding,
+# CuPy) can end up on two C++ runtimes at once; the first error the binding
+# raised then crashed the interpreter. Hidden visibility, --exclude-libs and
+# the version script (which also catches what nvcc emits with default
+# visibility) together leave ffdas_* as the only exports.
 if(WIN32)
     set_property(TARGET ffdas PROPERTY
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
+    set_target_properties(ffdas PROPERTIES
+        CXX_VISIBILITY_PRESET hidden
+        CUDA_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN ON)
     target_link_options(ffdas PRIVATE
-        $<HOST_LINK:-static-libstdc++;-static-libgcc>)
+        $<HOST_LINK:-static-libstdc++;-static-libgcc>
+        $<HOST_LINK:-Wl$<COMMA>--exclude-libs=ALL>  # $<COMMA>: a literal comma inside a genex
+        $<HOST_LINK:-Wl$<COMMA>--version-script=${CMAKE_CURRENT_SOURCE_DIR}/cmake/ffdas.map>)
+    set_property(TARGET ffdas APPEND PROPERTY LINK_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/ffdas.map)
 endif()
 
 # VS generator: nvcc needs the intermediate directory to exist
