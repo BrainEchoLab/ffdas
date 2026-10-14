@@ -343,7 +343,7 @@ def test_das_out_of_range_sample_is_not_read_from_the_relayout_buffer(algorithm,
 
 @pytest.mark.parametrize("use_fp16", [False, True], ids=["fp32", "fp16"])
 @pytest.mark.parametrize("dtype", ["float32", "complex64"])
-@pytest.mark.parametrize("batch", [1, 2, 3, 4, 5, 6, 8, 12, 16, 24, 32, 64, 65, 96, 128, 129, 130])
+@pytest.mark.parametrize("batch", [1, 2, 3, 4, 5, 6, 8, 12, 16, 24, 32, 33, 40, 48, 64, 65, 96, 128, 129, 130])
 def test_das_alg2_matches_alg1_across_batch_sizes(batch, dtype, use_fp16):
     rng = np.random.default_rng(batch)
     n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 64
@@ -361,12 +361,36 @@ def test_das_alg2_matches_alg1_across_batch_sizes(batch, dtype, use_fp16):
         weights=cp.ones((n_seq, n_tgt), dtype="float32"),
         wavenum=-0.5,
     )
-    # reference in chunks of 16: ALG1 refuses real input at batch >= 32 (a separate issue)
-    ref = np.concatenate([
-        cp.asnumpy(ffdas.das(x=x[b:b + 16], **args, algorithm=ffdas.Algorithm.ALG1)) for b in range(0, batch, 16)
-    ])
+    ref = cp.asnumpy(ffdas.das(x=x, **args, algorithm=ffdas.Algorithm.ALG1))
     out = cp.asnumpy(ffdas.das(x=x, **args, algorithm=ffdas.Algorithm.ALG2, use_fp16=use_fp16))
     # ALG2 carries the interpolation fraction in fp16 even in fp32 mode
     tol = (3e-2 if use_fp16 else 5e-3) * np.abs(ref).max()
     assert np.isfinite(out).all()
     assert_allclose(out, ref, rtol=0, atol=tol)
+
+
+# ALG1 picks its batch tile as the largest power of two up to 128 bytes of accumulators per thread. For
+# real (4-byte) output that gave 32, a width no kernel was compiled for, so real input at batch >= 32
+# was refused ("Invalid dimensions"). The tile is now capped at 16.
+
+
+@pytest.mark.parametrize("use_fp16", [False, True], ids=["fp32", "fp16"])
+@pytest.mark.parametrize("batch", [32, 33, 64, 100])
+def test_das_alg1_real_input_at_large_batch(batch, use_fp16):
+    rng = np.random.default_rng(batch)
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 64
+    x = cp.asarray(rng.standard_normal((batch, n_ch, n_seq, n_samp)).astype("float32"))
+    dstpos = np.zeros((n_tgt, 3), dtype="float32")
+    dstpos[:, 0] = np.linspace(-5, 5, n_tgt)
+    dstpos[:, 2] = 60.0
+    args = dict(
+        srcpos=cp.asarray(np.stack([np.linspace(-5, 5, n_ch), np.zeros(n_ch), np.zeros(n_ch)], 1).astype("float32")),
+        dstpos=cp.asarray(dstpos),
+        offsets=cp.full((n_seq, n_tgt), 10.0, dtype="float32"),
+        weights=cp.ones((n_seq, n_tgt), dtype="float32"),
+        algorithm=ffdas.Algorithm.ALG1,
+        use_fp16=use_fp16,
+    )
+    out = cp.asnumpy(ffdas.das(x=x, **args))
+    chunks = np.concatenate([cp.asnumpy(ffdas.das(x=x[b:b + 16], **args)) for b in range(0, batch, 16)])
+    assert_allclose(out, chunks, rtol=1e-5, atol=1e-6 * np.abs(chunks).max())

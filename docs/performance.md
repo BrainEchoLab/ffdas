@@ -10,7 +10,7 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 |---|---|---|---|---|---|
 | `ALG1` | None | No | Yes | SM 53+ | 1x (baseline) |
 | `ALG2` | Yes (internal) | Yes | No | SM 53+ | ~1.4x |
-| `ALG4` | Yes (internal) | Yes | No | SM 70+ | ~1.6--2x with FP16 |
+| `ALG4` | Yes (internal) | Yes | No | SM 80+ | ~1.6--2x with FP16 |
 
 `DEFAULT` currently dispatches to `ALG1` unconditionally. It does not yet auto-select.
 
@@ -18,7 +18,7 @@ The `algorithm` parameter on `das` and `das_sparse` selects the kernel variant. 
 
 `ALG1` is the right choice when you are reconstructing a single frame (no batch dimension), when you need `float64` or `complex128` precision, or when GPU memory is tight. It uses the standard input layout and avoids a temporary allocation for a permuted copy if possible. It is also the simplest path for verifying correctness before optimizing.
 
-`ALG2` is the recommended default for batched reconstruction. If you can process more than one frame at a time and your data fits in GPU memory, `ALG2` will be faster than `ALG1` in virtually all configurations. The batch size must be a multiple of the internal vector width (typically 4 or 8 depending on the data type).
+`ALG2` is the recommended default for batched reconstruction. If you can process more than one frame at a time and your data fits in GPU memory, `ALG2` will be faster than `ALG1` in virtually all configurations. Any batch size works. Each load fetches as many batch items as the largest power of two dividing the batch size, up to 4 (2 for complex FP32 input).
 
 `ALG4` provides the highest throughput, particularly with FP16 inputs. Its advantage over `ALG2` is most pronounced for large, dense voxel grids where neighboring voxels share similar sample indices. The speedup is geometry-dependent: voxels far from the array benefit most (tight index clustering), while voxels close to the array see less improvement. For typical imaging geometries where most of the volume is at moderate to large depth, `ALG4` with FP16 input is the fastest option.
 

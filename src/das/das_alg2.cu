@@ -404,7 +404,12 @@ ffdas_error_t das_alg2_strided(
     int n_per_warp = getenv_int("FFDAS_ALG2_M", 2);
     int batch_per_warp = getenv_int("FFDAS_ALG2_N", 64);
 
-    batch_per_warp = min(((params.batch_size + 15) / 16) * 16, batch_per_warp);
+    // batch tile: the batch rounded up to a power of two, at least 16 and at most FFDAS_ALG2_N
+    // (rounding up to a multiple of 16 gave 48 for batch 33-48, which is refused below)
+    int batch_tile = 16;
+    while (batch_tile < params.batch_size && batch_tile < batch_per_warp)
+        batch_tile *= 2;
+    batch_per_warp = min(batch_tile, batch_per_warp);
     n_per_warp = max(n_per_warp, 32 / batch_per_warp);
 
     if (((n_per_warp & (n_per_warp-1)) != 0))
