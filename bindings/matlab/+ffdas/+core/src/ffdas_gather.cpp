@@ -15,7 +15,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[])
 {
     if (nrhs < 4)
-        mexErrMsgIdAndTxt("ffdas_gather:nargs", "expected at least 4 input arguments: ffdas_gather(handle, x, indices, axis[, permutation, dtype])");
+        mexErrMsgIdAndTxt("ffdas_gather:nargs", "expected at least 4 input arguments: ffdas_gather(handle, x, indices, axis[, permutation, dtype, interleaved_complex])");
     if (nlhs != 1)
         mexErrMsgIdAndTxt("ffdas_gather:nargs", "expected 1 output argument");
 
@@ -32,8 +32,25 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     axis = x.ndim_val() - axis;  // column-major to row-major
 
+    // interleaved_complex: read a real x as (real, imag) pairs along MATLAB's first dimension,
+    // which is the contiguous last row-major axis: [..., 2n] real becomes [..., n] complex, no copy
+    if (nrhs > 6 && mxIsLogicalScalarTrue(prhs[6])) {
+        int64_t last = x.ndim_val() - 1;
+        if (x.complexity != mxREAL)
+            mexErrMsgIdAndTxt("ffdas_gather:interleaved_complex", "interleaved_complex expects a real array");
+        if (x.class_id != mxINT16_CLASS && x.class_id != mxSINGLE_CLASS)
+            mexErrMsgIdAndTxt("ffdas_gather:interleaved_complex", "interleaved_complex supports int16 and single arrays");
+        if (x.strides[last] != 1 || x.dims[last] % 2 != 0)
+            mexErrMsgIdAndTxt("ffdas_gather:interleaved_complex", "interleaved_complex needs an even first dimension of (real, imag) pairs");
+        x.dims[last] /= 2;
+        for (int64_t i = 0; i < last; i++)
+            x.strides[i] /= 2;  // MATLAB arrays are contiguous: every outer stride is a multiple of the even first dimension
+        x.complexity = mxCOMPLEX;
+    }
+
     if (nrhs > 4) {
-        ndarray::ndarray<int64_t, ndarray::device::host, ndarray::require_vector> p(prhs[4]);
+        // int32, as gather.m passes it (an int64 array here refused every permutation)
+        ndarray::ndarray<int32_t, ndarray::device::host, ndarray::require_vector> p(prhs[4]);
 
         if (p.numel() > 0) {
             std::vector<int64_t> order(p.data(), p.data() + p.numel());
@@ -50,7 +67,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
         }
     }
 
-    mxClassID out_cls = (nrhs > 5) ? class_id_from_name(array_to_string(prhs[5]).c_str()) : x.class_id;
+    std::string dtype = (nrhs > 5) ? array_to_string(prhs[5]) : std::string();
+    mxClassID out_cls = dtype.empty() ? x.class_id : class_id_from_name(dtype.c_str());
     mxComplexity out_cplx = x.complexity;
 
     // allocate output

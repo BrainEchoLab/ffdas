@@ -134,13 +134,33 @@ def test_das_single_sample_impulse():
 
 
 # out-of-range sample indices (#2): a sample index outside [0, samples - 2] contributes exactly 0, and
-# nothing outside the data is read for it
+# nothing outside the data is read for it -- in every algorithm. ALG4 exists only for complex input on
+# SM 8.0+; those cases skip, and any error from any other case fails the test.
+
+ALGORITHMS = [
+    pytest.param(ffdas.Algorithm.ALG1, False, id="ALG1"),
+    pytest.param(ffdas.Algorithm.ALG2, False, id="ALG2"),
+    pytest.param(ffdas.Algorithm.ALG2, True, id="ALG2-fp16"),
+    pytest.param(ffdas.Algorithm.ALG4, False, id="ALG4"),
+    pytest.param(ffdas.Algorithm.ALG4, True, id="ALG4-fp16"),
+]
+
+
+def _das(**kwargs):
+    """ffdas.das, skipping only the combinations ALG4 does not implement."""
+    if kwargs["algorithm"] == ffdas.Algorithm.ALG4:
+        if not np.issubdtype(kwargs["x"].dtype, np.complexfloating):
+            pytest.skip("ALG4 takes complex input only")
+        if int(cp.cuda.Device().compute_capability) < 80:
+            pytest.skip("ALG4 needs compute capability 8.0 or higher")
+    return ffdas.das(**kwargs)
 
 
 def _nan_padded(shape, dtype, pad=4096):
     """Zeros sitting inside a NaN-filled buffer. A read before the first or past the last sample lands
     in the padding and shows up as NaN in the output (0 * NaN), instead of depending on whether the
-    neighbouring device memory happens to be mapped."""
+    neighbouring device memory happens to be mapped. (ALG2 and ALG4 re-lay x into a buffer of their
+    own first: for them see test_das_out_of_range_sample_is_not_read_from_the_relayout_buffer.)"""
     n = int(np.prod(shape))
     buf = cp.full((n + 2 * pad,), np.nan, dtype=dtype)
     buf[pad:pad + n] = 0
@@ -154,64 +174,97 @@ def _co_located(n_ch, n_tgt, r):
     return cp.zeros((n_ch, 3), dtype="float32"), dstpos
 
 
-def test_das_issue2_nan_in_last_sample_is_not_used():
-    """The reproduction from #2: the index lands on the last sample (NaN), so k + 1 is past the end."""
+def _assert_exact_zero(out):
+    cp.cuda.Device().synchronize()
+    out = cp.asnumpy(out)
+    assert np.isfinite(out).all() and np.all(out == 0), out.ravel()[:4]
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_das_issue2_nan_in_last_sample_is_not_used(algorithm, use_fp16, dtype):
+    """The reproduction from #2: the index lands on the last sample (NaN), so k + 1 is past the end.
+    (With a batch axis: ALG2 only takes batched input.)"""
     samples = 4
-    x = cp.array(np.array([[[1.0, 1.0, 1.0, np.nan]]], dtype=np.float32))
-    out = ffdas.das(
+    x = cp.asarray(np.array([[[[1.0, 1.0, 1.0, np.nan]]]]).astype(dtype))
+    out = _das(
         x=x,
         srcpos=cp.zeros((1, 3), dtype="float32"),
         dstpos=cp.zeros((1, 3), dtype="float32"),
         offsets=cp.array(np.array([[samples - 1]], dtype=np.float32)),
         weights=cp.ones((1, 1), dtype="float32"),
-        algorithm=ffdas.Algorithm.ALG1,
+        algorithm=algorithm,
+        use_fp16=use_fp16,
     )
-    value = cp.asnumpy(out)[0]
-    assert np.isfinite(value) and value == 0.0, value
+    _assert_exact_zero(out)
 
 
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
 @pytest.mark.parametrize("target_sample", [-60.0, 250.0], ids=["before-start", "past-end"])
 @pytest.mark.parametrize("dtype", ["float32", "complex64"])
 @pytest.mark.parametrize("batch", [1, 3, 16])
-def test_das_out_of_range_sample_is_not_read(target_sample, dtype, batch):
+def test_das_out_of_range_sample_is_not_read(algorithm, use_fp16, target_sample, dtype, batch):
     n_ch, n_seq, n_samp, n_tgt, r = 4, 2, 191, 8, 10.0
     x = _nan_padded((batch, n_ch, n_seq, n_samp), dtype)
     srcpos, dstpos = _co_located(n_ch, n_tgt, r)
-    out = ffdas.das(
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
         offsets=cp.full((n_seq, n_tgt), target_sample - r, dtype="float32"),  # phase = offset + r
         weights=cp.ones((n_seq, n_tgt), dtype="float32"),
         wavenum=-0.5,
-        algorithm=ffdas.Algorithm.ALG1,
+        algorithm=algorithm,
+        use_fp16=use_fp16,
     )
-    cp.cuda.Device().synchronize()
-    out = cp.asnumpy(out)
-    assert not np.isnan(out).any(), "a sample outside the data was read"
-    assert_allclose(out, 0.0)
+    _assert_exact_zero(out)
 
 
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+@pytest.mark.parametrize("target_sample", [-60.0, 250.0], ids=["before-start", "past-end"])
 @pytest.mark.parametrize("nan_at", [0, 190], ids=["first-sample", "last-sample"])
-def test_das_out_of_range_target_ignores_nan_in_the_recording(nan_at):
+def test_das_out_of_range_target_ignores_nan_in_the_recording(algorithm, use_fp16, target_sample, nan_at):
     """Out-of-range targets must contribute an exact 0 whatever the recording holds: a NaN at the
-    first or last sample of every row must not reach them."""
+    first or last sample of every row must not reach them (an index merely clamped into the data
+    would still multiply a 0 weight by that NaN)."""
     n_ch, n_seq, n_samp, n_tgt, r = 8, 2, 191, 64, 10.0
     x = cp.ones((1, n_ch, n_seq, n_samp), dtype="complex64")
     x[..., nan_at] = complex(np.nan, np.nan)
     srcpos, dstpos = _co_located(n_ch, n_tgt, r)
-    out = ffdas.das(
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
-        offsets=cp.full((n_seq, n_tgt), 250.0 - r, dtype="float32"),  # every target needs sample 250
+        offsets=cp.full((n_seq, n_tgt), target_sample - r, dtype="float32"),
         weights=cp.ones((n_seq, n_tgt), dtype="float32"),
         wavenum=-0.5,
-        algorithm=ffdas.Algorithm.ALG1,
+        algorithm=algorithm,
+        use_fp16=use_fp16,
     )
-    cp.cuda.Device().synchronize()
-    out = cp.asnumpy(out)
-    assert np.isfinite(out).all() and np.all(out == 0), out.ravel()[:4]
+    _assert_exact_zero(out)
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+def test_das_directivity_rejected_sample_is_not_used(algorithm, use_fp16):
+    """A channel the target is outside the sensitivity cone of contributes an exact 0, like an
+    out-of-range sample: the (in-range) data it would have used is NaN here."""
+    n_ch, n_seq, n_samp, n_tgt, r = 8, 2, 191, 64, 10.0
+    x = cp.full((1, n_ch, n_seq, n_samp), complex(np.nan, np.nan), dtype="complex64")
+    srcpos, dstpos = _co_located(n_ch, n_tgt, r)  # targets at +z ...
+    srcdir = cp.zeros((n_ch, 4), dtype="float32")
+    srcdir[:, 2] = -1.0  # ... every channel looks along -z, half-angle 90 degrees
+    out = _das(
+        x=x,
+        srcpos=srcpos,
+        dstpos=dstpos,
+        offsets=cp.full((n_seq, n_tgt), 50.0 - r, dtype="float32"),
+        weights=cp.ones((n_seq, n_tgt), dtype="float32"),
+        srcdir=srcdir,
+        wavenum=-0.5,
+        algorithm=algorithm,
+        use_fp16=use_fp16,
+    )
+    _assert_exact_zero(out)
 
 
 @pytest.mark.parametrize("target_sample", [-60.0, 250.0], ids=["before-start", "past-end"])
@@ -228,26 +281,116 @@ def test_das_sparse_out_of_range_sample_is_not_read(target_sample):
         sparse_indices=cp.tile(cp.asarray([[0], [2]], dtype="int32"), (1, n_tgt)),
         wavenum=-0.5,
     )
-    cp.cuda.Device().synchronize()
-    out = cp.asnumpy(out)
-    assert not np.isnan(out).any(), "a sample outside the data was read"
-    assert_allclose(out, 0.0)
+    _assert_exact_zero(out)
 
 
-def test_das_single_sample_recording_reads_nothing_outside():
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_das_single_sample_recording_reads_nothing_outside(algorithm, use_fp16, dtype):
     """With one sample there is no valid interpolation pair: every target is out of range, and the
     second interpolation tap must not step past the row either."""
-    x = _nan_padded((1, 1, 1), "float32")
+    x = _nan_padded((1, 1, 1, 1), dtype)  # (batch, channels, sequence, samples)
     x[...] = np.nan  # the one sample itself is NaN too: it must not be used
     srcpos, dstpos = _co_located(1, 4, 2.0)
-    out = ffdas.das(
+    out = _das(
         x=x,
         srcpos=srcpos,
         dstpos=dstpos,
         offsets=cp.zeros((1, 4), dtype="float32"),
         weights=cp.ones((1, 4), dtype="float32"),
-        algorithm=ffdas.Algorithm.ALG1,
+        algorithm=algorithm,
+        use_fp16=use_fp16,
     )
-    cp.cuda.Device().synchronize()
-    out = cp.asnumpy(out)
-    assert np.isfinite(out).all() and np.all(out == 0), out
+    _assert_exact_zero(out)
+
+
+# ALG2 / ALG4 re-lay x out into a buffer from the library's caching allocator, so neither a NaN-padded
+# input nor compute-sanitizer can see a read past THAT buffer. The allocator hands out bins of
+# 512 B * 8**n and reuses a freed block for the next request in the same bin: a NaN-filled call whose
+# buffer fills the bin leaves NaN in the slack, and the real (zero-filled, smaller) call that follows
+# reuses the block -- an out-of-range load then returns NaN into the output. A false PASS is possible
+# if the allocator stops reusing blocks; a false failure is not.
+
+
+def _das_native(samples, fill, k, *, algorithm, use_fp16, n_ch=8, n_seq=2, n_tgt=64):
+    x = cp.full((1, n_ch, n_seq, samples), fill, dtype="complex64")
+    srcpos, dstpos = _co_located(n_ch, n_tgt, 10.0)
+    return _das(
+        x=x,
+        srcpos=srcpos,
+        dstpos=dstpos,
+        offsets=cp.full((n_seq, n_tgt), k - 10.0, dtype="float32"),  # phase = ofs + r = k
+        weights=cp.ones((n_seq, n_tgt), dtype="float32"),
+        wavenum=-0.5,
+        algorithm=algorithm,
+        use_fp16=use_fp16,
+    )
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+def test_das_out_of_range_sample_is_not_read_from_the_relayout_buffer(algorithm, use_fp16):
+    _das_native(255, complex(np.nan, np.nan), 50.0, algorithm=algorithm, use_fp16=use_fp16)  # fills the 32 KiB bin with NaN
+    out = _das_native(191, 0j, 250.0, algorithm=algorithm, use_fp16=use_fp16)  # same bin; targets 59 samples past the end
+    _assert_exact_zero(out)
+
+
+# ALG2 vectorises over the batch (2 or 4 columns per load, whenever the batch size allows it) and tiles
+# it 16..64 columns per block. The batch sizes below cover every combination of load width (1, 2, 4) and
+# tile width (16, 32, 64), one and several tiles, and a partly filled last tile. Its per-thread accumulators were sized M * N / 32, which is too few when a
+# warp's subtile is wider than the tile (small even batches), and every thread wrote back up to the full
+# batch rather than its own tile (batches > 64): both returned garbage or NaN for whole batch rows.
+
+
+@pytest.mark.parametrize("use_fp16", [False, True], ids=["fp32", "fp16"])
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+@pytest.mark.parametrize("batch", [1, 2, 3, 4, 5, 6, 8, 12, 16, 24, 32, 33, 40, 48, 64, 65, 96, 128, 129, 130])
+def test_das_alg2_matches_alg1_across_batch_sizes(batch, dtype, use_fp16):
+    rng = np.random.default_rng(batch)
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 64
+    xr = rng.standard_normal((batch, n_ch, n_seq, n_samp))
+    if dtype == "complex64":
+        xr = xr + 1j * rng.standard_normal(xr.shape)
+    x = cp.asarray(xr.astype(dtype))
+    dstpos = np.zeros((n_tgt, 3), dtype="float32")
+    dstpos[:, 0] = np.linspace(-5, 5, n_tgt)
+    dstpos[:, 2] = 60.0
+    args = dict(
+        srcpos=cp.asarray(np.stack([np.linspace(-5, 5, n_ch), np.zeros(n_ch), np.zeros(n_ch)], 1).astype("float32")),
+        dstpos=cp.asarray(dstpos),
+        offsets=cp.full((n_seq, n_tgt), 10.0, dtype="float32"),
+        weights=cp.ones((n_seq, n_tgt), dtype="float32"),
+        wavenum=-0.5,
+    )
+    ref = cp.asnumpy(ffdas.das(x=x, **args, algorithm=ffdas.Algorithm.ALG1))
+    out = cp.asnumpy(ffdas.das(x=x, **args, algorithm=ffdas.Algorithm.ALG2, use_fp16=use_fp16))
+    # ALG2 carries the interpolation fraction in fp16 even in fp32 mode
+    tol = (3e-2 if use_fp16 else 5e-3) * np.abs(ref).max()
+    assert np.isfinite(out).all()
+    assert_allclose(out, ref, rtol=0, atol=tol)
+
+
+# ALG1 picks its batch tile as the largest power of two up to 128 bytes of accumulators per thread. For
+# real (4-byte) output that gave 32, a width no kernel was compiled for, so real input at batch >= 32
+# was refused ("Invalid dimensions"). The tile is now capped at 16.
+
+
+@pytest.mark.parametrize("use_fp16", [False, True], ids=["fp32", "fp16"])
+@pytest.mark.parametrize("batch", [32, 33, 64, 100])
+def test_das_alg1_real_input_at_large_batch(batch, use_fp16):
+    rng = np.random.default_rng(batch)
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 64
+    x = cp.asarray(rng.standard_normal((batch, n_ch, n_seq, n_samp)).astype("float32"))
+    dstpos = np.zeros((n_tgt, 3), dtype="float32")
+    dstpos[:, 0] = np.linspace(-5, 5, n_tgt)
+    dstpos[:, 2] = 60.0
+    args = dict(
+        srcpos=cp.asarray(np.stack([np.linspace(-5, 5, n_ch), np.zeros(n_ch), np.zeros(n_ch)], 1).astype("float32")),
+        dstpos=cp.asarray(dstpos),
+        offsets=cp.full((n_seq, n_tgt), 10.0, dtype="float32"),
+        weights=cp.ones((n_seq, n_tgt), dtype="float32"),
+        algorithm=ffdas.Algorithm.ALG1,
+        use_fp16=use_fp16,
+    )
+    out = cp.asnumpy(ffdas.das(x=x, **args))
+    chunks = np.concatenate([cp.asnumpy(ffdas.das(x=x[b:b + 16], **args)) for b in range(0, batch, 16)])
+    assert_allclose(out, chunks, rtol=1e-5, atol=1e-6 * np.abs(chunks).max())
