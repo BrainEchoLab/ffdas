@@ -214,9 +214,11 @@ ffdas_error_t das_alg1_strided(
     } else {
         // compute tile width as the largest power of two that results in
         // less than or equal to 128 bytes of register memory per thread
-        // (reasonable heuristic w.r.t. number of registers needed)
+        // (reasonable heuristic w.r.t. number of registers needed), and at most 16:
+        // that is the widest tile compiled. A 32-wide tile for real (4-byte) output
+        // measured slower (1.3-2x on SM 12.0, -4..+12 % on SM 7.5).
         int log2n = (int)floor(log2(params.batch_size));
-        tile_width = (int)min((int)pow(2, log2n), (int)(128 / builtin_traits<Ty>::size));
+        tile_width = (int)min((int)pow(2, log2n), min(16, (int)(128 / builtin_traits<Ty>::size)));
     }
 
     // tile_width must be power of two
