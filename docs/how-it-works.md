@@ -59,7 +59,7 @@ This raises payload efficiency from around 40% to around 100%. The permutation i
 
 The warp is divided into groups that share a voxel and process a tile of batch items. Within a group, threads distribute geometric calculations through warp shuffles, avoiding redundant delay and weight computation.
 
-`ALG2` is roughly 40% faster than `ALG1`, with an additional ~20% improvement when combined with half-precision input storage. It requires a batch dimension and the batch size must be a multiple of the group's vector width.
+`ALG2` is roughly 40% faster than `ALG1`, with an additional ~20% improvement when combined with half-precision input storage. It requires a batch dimension. Any batch size works; when the batch size is even, each load fetches several batch items at once (up to four).
 
 ### ALG4: tensor core acceleration
 
@@ -72,7 +72,7 @@ Tighter clustering of sample indices means fewer MMA iterations. This is geometr
 `ALG4` provides the highest throughput of the three variants, particularly with FP16 input where tensor cores operate at peak mixed-precision throughput. Like `ALG2`, it requires a batch dimension and permutes the data internally.
 
 !!! note
-    `ALG4` uses WMMA instructions and requires compute capability 7.0 (Volta) or higher.
+    `ALG4` uses sparse tensor core (MMA) instructions and requires compute capability 8.0 (Ampere) or higher.
 
 ### Mixed-precision storage
 
