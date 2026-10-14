@@ -276,6 +276,9 @@ __global__ void das_alg4_kernel(
     __shared__ int index_table[warps_per_block][32];
 
     float3 yp = dstpos[min(n, ndst-1)];
+
+    // offset of the second interpolation tap; 0 for a one-sample recording, where every index is unused
+    const int next_row = (samples > 1) ? batch_size : 0;
     float2 acc[2*vec_size]{};
 
     for (int o = 0; o < seqlen; o++) {
@@ -308,9 +311,14 @@ __global__ void das_alg4_kernel(
                 inbounds &= (proj > xd.w);
             }
 
+            // a sample outside [0, samples-2] (or rejected by directivity) enters the unique-index
+            // set as -1: its weight is 0, and its B rows are read from rows 0 and 1 and set to 0 (#2)
+            const bool use = lane_valid && inbounds;
+            const int ks = use ? k : -1;
+
             Tx weight{};
 
-            if (lane_valid && inbounds) {
+            if (use) {
                 if constexpr (std::is_same_v<Tx, __half2> || std::is_same_v<Tx, float2> || std::is_same_v<Ty, double2>) { 
                     // complex type
                     float s, c;
@@ -325,10 +333,10 @@ __global__ void das_alg4_kernel(
             // find unique nonzeros for targets along the columns of A frag
             unsigned uniq_count, uniq_rank;
             const unsigned mask = 0x11111111u << (lane & 3);  // mask all threads in this col (stride 4)
-            bool is_leader = warp_count_unique(mask, k, uniq_count, uniq_rank);
+            bool is_leader = warp_count_unique(mask, ks, uniq_count, uniq_rank);
 
             if (is_leader)
-                index_table[warp][(lane & 3)*M + uniq_rank] = k;
+                index_table[warp][(lane & 3)*M + uniq_rank] = ks;
 
             // compute which lane holds the column of A frag that corresponds
             // to the rows of B that this thread holds
@@ -344,7 +352,7 @@ __global__ void das_alg4_kernel(
 
             // each mma can pack two unique nonzeros for each column of A
             for (int i=0; i < total; i+=2) {
-                Tx b0[vec_size], b2[vec_size];
+                Tx b0[vec_size]{}, b2[vec_size]{};
                 Tx a0 = Tx{}, a2 = Tx{};
 
                 if ((i + (lane&1)) < first_count && batch < batch_size) {
@@ -355,9 +363,11 @@ __global__ void das_alg4_kernel(
                     const int s = index_table[warp][uniq_index];
 
                     const int chan = min(channels-1, mbase + (lane % 4) / 2);
-                    const int idx = ((chan * seqlen + o) * samples + s) * batch_size + batch;
+                    const int idx = ((chan * seqlen + o) * samples + max(s, 0)) * batch_size + batch;
 
                     vector_load<Tx, vec_size>(&x[idx], b0);
+                    #pragma unroll
+                    for (int j = 0; j < vec_size; j++) b0[j] = (s >= 0) ? b0[j] : Tx{};
                 }
 
                 if ((i + (lane&1)) < second_count && batch < batch_size) {
@@ -365,9 +375,11 @@ __global__ void das_alg4_kernel(
                     const int s = index_table[warp][uniq_index];
 
                     const int chan = min(channels-1, mbase + 2 + (lane % 4) / 2);
-                    const int idx = ((chan * seqlen + o) * samples + s) * batch_size + batch;
+                    const int idx = ((chan * seqlen + o) * samples + max(s, 0)) * batch_size + batch;
 
                     vector_load<Tx, vec_size>(&x[idx], b2);
+                    #pragma unroll
+                    for (int j = 0; j < vec_size; j++) b2[j] = (s >= 0) ? b2[j] : Tx{};
                 }
 
                 if (((uniq_rank == i) || (uniq_rank == i+1))) {
@@ -388,9 +400,11 @@ __global__ void das_alg4_kernel(
                     const int s = index_table[warp][uniq_index];
 
                     const int chan = min(channels-1, mbase + (lane % 4) / 2);
-                    const int idx = ((chan * seqlen + o) * samples + s + 1) * batch_size + batch;
+                    const int idx = ((chan * seqlen + o) * samples + max(s, 0)) * batch_size + batch + next_row;
 
                     vector_load<Tx, vec_size>(&x[idx], b0);
+                    #pragma unroll
+                    for (int j = 0; j < vec_size; j++) b0[j] = (s >= 0) ? b0[j] : Tx{};
                 }
 
                 if ((i + (lane&1)) < second_count && batch < batch_size) {
@@ -398,9 +412,11 @@ __global__ void das_alg4_kernel(
                     const int s = index_table[warp][uniq_index];
 
                     const int chan = min(channels-1, mbase + 2 + (lane % 4) / 2);
-                    const int idx = ((chan * seqlen + o) * samples + s + 1) * batch_size + batch;
+                    const int idx = ((chan * seqlen + o) * samples + max(s, 0)) * batch_size + batch + next_row;
 
                     vector_load<Tx, vec_size>(&x[idx], b2);
+                    #pragma unroll
+                    for (int j = 0; j < vec_size; j++) b2[j] = (s >= 0) ? b2[j] : Tx{};
                 }
 
                 if ((uniq_rank == i) || (uniq_rank == i+1)) {
