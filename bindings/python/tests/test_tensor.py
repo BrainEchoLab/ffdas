@@ -84,6 +84,18 @@ def test_gather_preallocated():
     assert_allclose(cp.asnumpy(out), cp.asnumpy(x)[[0, 3], :])
 
 
+def test_gather_interleaved_int16_pairs_as_complex():
+    """Raw IQ as interleaved int16 (real, imag) pairs: viewed as complex int16 without a copy and
+    gathered straight into complex64, as the MATLAB option 'interleaved_complex' does."""
+    rng = np.random.default_rng(0)
+    raw = rng.integers(-3000, 3000, (3, 6, 4, 2 * 5)).astype(np.int16)  # (repeats, channels, beams, 2 * samples)
+    x = ffdas.view(cp.asarray(raw).reshape(3, 6, 4, 5, 2), ffdas.short2)
+    channel_map = cp.asarray([5, 0, 3, 1, 4, 2], dtype="int32")
+    out = ffdas.gather(x, channel_map, axis=1, out=cp.empty((3, 6, 4, 5), dtype="complex64"))
+    ref = (raw[..., 0::2] + 1j * raw[..., 1::2]).astype(np.complex64)[:, cp.asnumpy(channel_map)]
+    np.testing.assert_array_equal(cp.asnumpy(out), ref)
+
+
 # scatter
 
 def test_scatter_axis0():
