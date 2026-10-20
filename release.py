@@ -13,11 +13,14 @@ Usage:
     python release.py                     # build everything for CUDA 12 + 13
     python release.py --cuda 12           # CUDA 12 only
     python release.py --target python     # Python packages only
+    python release.py --version 0.1.2.dev1  # a pre-release of the version in the sources
 """
 
 import argparse
+import contextlib
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +30,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.resolve()
 BUILD_DIR = ROOT / "_build"
+
+# Every place the package version is written: (file, pattern whose group 1 is the version,
+# number of occurrences).
+VERSION_SITES = [
+    ("bindings/python/pyproject.toml", r'(?m)^version = "([^"]+)"', 1),
+    ("bindings/python/pyproject.toml", r'"ffdas-core-cuda\d+==([^"]+)"', 2),
+    ("bindings/python/ffdas/__init__.py", r'(?m)^__version__ = "([^"]+)"', 1),
+    ("packaging/core/setup.py", r'(?m)^[ \t]*version="([^"]+)"', 1),
+]
 
 CUDA_ARCHITECTURES = {
     "12": "53-real;60-real;70-real;75-real;80-real;86-real;89-real;90",
@@ -75,6 +87,64 @@ def project_version():
         if "project(ffdas VERSION" in line:
             return line.split("VERSION")[1].split(")")[0].strip().split()[0]
     raise RuntimeError("could not parse version from CMakeLists.txt")
+
+
+def source_version():
+    """The package version written in the sources; every site must agree."""
+    found = set()
+    for path, pattern, count in VERSION_SITES:
+        matches = re.findall(pattern, (ROOT / path).read_text(encoding="utf-8"))
+        if len(matches) != count:
+            raise RuntimeError(
+                f"{path}: expected {count} version string(s) matching {pattern!r}, "
+                f"found {len(matches)}")
+        found.update(matches)
+    if len(found) != 1:
+        raise RuntimeError(f"the sources disagree on the version: {sorted(found)}")
+    return found.pop()
+
+
+def check_version(version):
+    """Refuse a version that is not normalised PEP 440, or not of the release the sources lead to."""
+    from packaging.version import InvalidVersion, Version
+
+    try:
+        parsed = Version(version)
+    except InvalidVersion:
+        sys.exit(f"error: {version!r} is not a PEP 440 version (e.g. 0.1.2.dev1, 0.1.2rc1)")
+    if str(parsed) != version:
+        sys.exit(f"error: write the version in its normalised form: {parsed}")
+    if parsed.base_version != project_version():
+        sys.exit(f"error: {version} is not a version of {project_version()}, "
+                 f"the release CMakeLists.txt describes")
+
+
+@contextlib.contextmanager
+def stamped_version(version):
+    """Write ``version`` into every version site for the duration of the build.
+
+    The files are restored byte for byte afterwards, also when the build fails, so the
+    sources keep their own version.
+    """
+    originals = {}
+    try:
+        for path, pattern, count in VERSION_SITES:
+            file = ROOT / path
+            text = file.read_bytes()
+            originals.setdefault(file, text)
+
+            def splice(m):
+                start, end = m.start(1) - m.start(0), m.end(1) - m.start(0)
+                return m.group(0)[:start] + version.encode() + m.group(0)[end:]
+
+            text, n = re.subn(pattern.encode(), splice, text)
+            if n != count:
+                raise RuntimeError(f"{path}: expected {count} version string(s), found {n}")
+            file.write_bytes(text)
+        yield
+    finally:
+        for file, text in originals.items():
+            file.write_bytes(text)
 
 
 def platform_tag():
@@ -189,7 +259,7 @@ def build_matlab(core_build_dir):
     return build_dir
 
 
-def package_matlab_zip(cuda_ver, core_build_dir, matlab_build_dir, out_dir):
+def package_matlab_zip(cuda_ver, core_build_dir, matlab_build_dir, out_dir, version):
     staging = BUILD_DIR / "staging"
     if staging.exists():
         shutil.rmtree(staging)
@@ -202,8 +272,7 @@ def package_matlab_zip(cuda_ver, core_build_dir, matlab_build_dir, out_dir):
         staging / "+ffdas" / "+core" / lib_filename(),
     )
 
-    ver = project_version()
-    zip_name = f"ffdas-cuda{cuda_ver}-{ver}-matlab-{platform_tag()}.zip"
+    zip_name = f"ffdas-cuda{cuda_ver}-{version}-matlab-{platform_tag()}.zip"
     zip_path = out_dir / zip_name
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -226,6 +295,10 @@ def main():
         "--target", nargs="+", default=["python", "matlab"],
         help="Targets to build (default: python matlab)")
     parser.add_argument(
+        "--version",
+        help="package version to build, e.g. 0.1.2.dev1 for a pre-release; it is written "
+             "into the Python packages for the build only (default: the sources' version)")
+    parser.add_argument(
         "--clean", action="store_true",
         help="remove all build artifacts and exit")
     args = parser.parse_args()
@@ -236,6 +309,15 @@ def main():
                 print(f"removing {d}")
                 shutil.rmtree(d)
         return
+
+    version = source_version()
+    if args.version is not None and args.version != version:
+        check_version(args.version)
+        version = args.version
+        stamp = stamped_version(version)
+    else:
+        stamp = contextlib.nullcontext()
+    print(f"ffdas {version}")
 
     for ver in args.cuda:
         if ver not in CUDA_ARCHITECTURES:
@@ -261,16 +343,17 @@ def main():
         core_builds[ver] = build_core(ver, cuda_roots[ver])
 
     if "python" in args.target:
-        for ver in args.cuda:
-            print(f"\n{'=' * 60}")
-            print(f"  Core Python wheel — CUDA {ver}")
-            print(f"{'=' * 60}")
-            package_core_wheel(ver, core_builds[ver], out_dir)
+        with stamp:
+            for ver in args.cuda:
+                print(f"\n{'=' * 60}")
+                print(f"  Core Python wheel — CUDA {ver}")
+                print(f"{'=' * 60}")
+                package_core_wheel(ver, core_builds[ver], out_dir)
 
-        print(f"\n{'=' * 60}")
-        print("  Python bindings wheel")
-        print(f"{'=' * 60}")
-        build_bindings_wheel(core_builds[args.cuda[0]], out_dir)
+            print(f"\n{'=' * 60}")
+            print("  Python bindings wheel")
+            print(f"{'=' * 60}")
+            build_bindings_wheel(core_builds[args.cuda[0]], out_dir)
 
     if "matlab" in args.target:
         print(f"\n{'=' * 60}")
@@ -283,7 +366,7 @@ def main():
             print(f"  MATLAB archive — CUDA {ver}")
             print(f"{'=' * 60}")
             zip_path = package_matlab_zip(
-                ver, core_builds[ver], matlab_build, out_dir)
+                ver, core_builds[ver], matlab_build, out_dir, version)
             print(f"  -> {zip_path.name}")
 
     print(f"\n{'=' * 60}")
