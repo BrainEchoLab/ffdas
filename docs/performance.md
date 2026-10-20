@@ -49,27 +49,33 @@ ffdas supports three input precisions for `das`:
 
 **FP16 (half-precision)** halves memory traffic compared to FP32 and doubles the effective bandwidth for the optimized algorithms. Most ultrasound acquisition systems produce data within FP16's dynamic range (~3.3 decimal digits, +/-65504). The output is always accumulated in FP32 regardless of input precision, so the final image maintains full 32-bit accuracy. FP16 provides the largest speedup when combined with `ALG2` or `ALG4`.
 
-In Python, set `use_fp16=True` to have the library convert FP32 inputs to FP16 internally, or provide a `TensorView` wrapping half-precision data directly:
+`use_fp16=True` converts FP32 input to FP16 inside the call, on **every** call (the whole input). When the same data is beamformed more than once (several grids from one buffer, a live viewer drawing an orthoview and a volume), convert it once with `to_fp16` and pass the result: half-precision input runs in half precision without a conversion, and gives the same image as `use_fp16=True`. The output is FP32 (complex64 for complex data) either way.
 
 === "Python"
 
     ```python
-    # automatic conversion (fused with layout permutation)
+    # conversion inside the call, every call
     output = ffdas.das(rf, srcpos, dstpos, offsets, weights, use_fp16=True)
 
-    # manual: wrap a float16 array as a half TensorView
-    rf_half = ffdas.view(cp.asarray(rf, dtype=cp.float16), ffdas.half)
-    output = ffdas.das(rf_half, srcpos, dstpos, offsets, weights)
-
-    # complex IQ data: use half2 view
-    rf_half2 = ffdas.view(cp.asarray(rf.view(cp.float16).reshape(*rf.shape, 2)), ffdas.half2)
+    # convert once, reuse: a float16 array (real rf) or a half2 TensorView (complex IQ)
+    rf_half = ffdas.to_fp16(rf)
+    ortho = ffdas.das(rf_half, srcpos, ortho_pos, ortho_offsets, ortho_weights)
+    volume = ffdas.das(rf_half, srcpos, volume_pos, volume_offsets, volume_weights)
     ```
 
 === "MATLAB"
 
     ```matlab
-    % set use_fp16 to true (9th positional argument)
+    % conversion inside the call: use_fp16 (9th positional argument)
     output = ffdas.das(rf, srcpos, dstpos, offsets, weights, [], wavenum, int32(0), true);
+
+    % convert once, reuse: MATLAB has no half gpuArray, so the half bits are held in a uint16 gpuArray
+    rf_half = ffdas.to_fp16(rf);
+    ortho = ffdas.das(rf_half, srcpos, ortho_pos, ortho_offsets, ortho_weights, [], wavenum);
+    volume = ffdas.das(rf_half, srcpos, volume_pos, volume_offsets, volume_weights, [], wavenum);
+
+    % or straight from raw int16 IQ to half precision in the channel-reordering gather
+    rf_half = ffdas.gather(raw, channel_map, 4, [1 2 4 3], 'uint16', 'interleaved_complex', true);
     ```
 
 **FP32 (single-precision)** is the default and sufficient for the vast majority of ultrasound imaging. All internal geometric calculations (delays, weights, distances) use FP32 regardless of input precision.

@@ -45,3 +45,11 @@ __global__ void strided_copy_kernel(
 
     y[yidx] = cast<Tx, Ty>(x[xidx]);
 }
+
+
+// contiguous_copy of a tensor that is already contiguous: a flat element-wise cast
+template<typename Tx, typename Ty>
+__global__ void contiguous_cast_kernel(int size, const Tx *x, Ty *y) {
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += gridDim.x * blockDim.x)
+        y[i] = cast<Tx, Ty>(x[i]);
+}

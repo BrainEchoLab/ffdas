@@ -84,8 +84,9 @@ void mexFunction(int nlhs, mxArray *plhs[],
     for (int i = 0; i < spatial_ndim; i++)
         out_dims[o++] = dstpos.shape(i);
 
-    // out follows the input data type
-    mxClassID out_cls = x.class_id;
+    // out follows the input data type, except that half-precision input (IEEE half bits in a uint16
+    // array, see ffdas.to_fp16) gives single: the kernels accumulate in single precision
+    mxClassID out_cls = (x.class_id == mxUINT16_CLASS) ? mxSINGLE_CLASS : x.class_id;
     mxComplexity out_cplx = x.complexity;
     auto out = ndarray::make_ndarray(out_dims, out_cls, out_cplx);
 

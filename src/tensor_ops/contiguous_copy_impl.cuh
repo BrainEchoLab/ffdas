@@ -28,6 +28,17 @@ ffdas_error_t contiguous_copy_impl(
 
     ffdas::detail::nvtx_range nvtx_cast(handle, "contiguous_copy_impl");
 
+    // already contiguous (a type conversion, e.g. to half precision): a flat cast, without the
+    // per-element index arithmetic and the dims / strides arrays copied from the host
+    if (x_desc.is_contiguous()) {
+        const int size = (int)x_desc.numel();
+        dim3 block_dim(256);
+        dim3 grid_dim(min((size + 255) / 256, 65535 * 8));
+        contiguous_cast_kernel<Tx, Ty><<<grid_dim, block_dim, 0, handle.stream>>>(size, x, out);
+        CUDA_LAUNCH_CHECK();
+        return FFDAS_SUCCESS;
+    }
+
     size_t ndim = x_desc.ndim();
     std::vector<int64_t> strides = make_contiguous_strides(x_desc.dims);
 

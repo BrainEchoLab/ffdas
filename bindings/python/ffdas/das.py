@@ -1,11 +1,12 @@
 from typing import overload
 
+import array_api_compat
 from array_api_compat import array_namespace
 
 from ._core import _ffdas
 from ._core.library import get_library_handle
 from ._core.tensor_like import TensorLike, T
-from ._core.tensor import empty_like, zeros_like, astype
+from ._core.tensor import empty_like, zeros_like, astype, contiguous_copy
 
 
 def _ensure_contiguous(x):
@@ -33,6 +34,38 @@ def _channels_and_events(x, srcpos, srcdir, channels_trailing):
             f"for one look direction per sequence event and channel"
         )
     return channels, events
+
+
+def _is_half(x):
+    if isinstance(x, _ffdas.TensorView):
+        return x.dtype in (_ffdas.half, _ffdas.half2)
+    return x.dtype == array_namespace(x).float16
+
+
+def _output_like(x, shape):
+    """The das output for x: float32 / complex64 for half-precision x (the kernels accumulate in
+    single precision), otherwise x's own type."""
+    if not _is_half(x):
+        return empty_like(x, shape=shape)
+    base = x.base if isinstance(x, _ffdas.TensorView) else x
+    xp = array_namespace(base)
+    complex_ = isinstance(x, _ffdas.TensorView) and x.dtype == _ffdas.half2
+    return xp.empty(shape, dtype=xp.complex64 if complex_ else xp.float32, device=array_api_compat.device(base))
+
+
+def to_fp16(x):
+    """x in half precision, converted once, for das / das_sparse calls that reuse it.
+
+    ``use_fp16=True`` converts the whole input on every call. Converting once and passing the
+    result instead gives the same output without that cost. Real x becomes a float16 array,
+    complex x a ``half2`` TensorView of the same shape.
+    """
+    xp = array_namespace(x)
+    if xp.isdtype(x.dtype, "complex floating"):
+        out = _ffdas.view(xp.empty((*x.shape, 2), dtype=xp.float16, device=array_api_compat.device(x)), _ffdas.half2)
+    else:
+        out = xp.empty(x.shape, dtype=xp.float16, device=array_api_compat.device(x))
+    return contiguous_copy(x, out=out)
 
 
 def _compute_type(x, use_fp16):
@@ -119,13 +152,16 @@ def das(
         wavenum: Wavenumber for phase rotation, typically -2*pi*fc/fs.
             Set to 0 to disable.
         algorithm: Algorithm variant.
-        use_fp16: Use half-precision arithmetic.
+        use_fp16: Use half-precision arithmetic. Converts x on every call;
+            to reuse x across calls, convert it once with ``ffdas.to_fp16``
+            and pass that (half-precision x always runs in half precision).
         channels_trailing: If true, the input dimensions are interpreted as (batch, sequence, channels, samples)
             instead of (batch, channels, sequence, samples). Default: False.
         out: Pre-allocated output array.
 
     Returns:
-        Beamformed output with shape (...) or (batch, ...).
+        Beamformed output with shape (...) or (batch, ...); float32 / complex64
+        for half-precision x.
     """
     if dstpos.ndim < 2 or dstpos.shape[-1] != 3:
         raise ValueError("dstpos must have dimensions (..., 3)")
@@ -158,9 +194,10 @@ def das(
     srcdir = _ensure_contiguous(astype(srcdir, "float32"))
 
     if out is None:
-        out = empty_like(x, shape=out_dims)
+        out = _output_like(x, out_dims)
 
-    beta = zeros_like(x, shape=(1,), device="cpu")
+    # beta has the output's type (it is read as one output element)
+    beta = zeros_like(out, shape=(1,), device="cpu")
     compute_type = _compute_type(x, use_fp16)
 
     _ffdas.das(
@@ -258,7 +295,8 @@ def das_sparse(
         out: Pre-allocated output array.
 
     Returns:
-        Beamformed output with shape (...) or (batch, ...).
+        Beamformed output with shape (...) or (batch, ...); float32 / complex64
+        for half-precision x.
     """
     if dstpos.ndim < 2 or dstpos.shape[-1] != 3:
         raise ValueError("dstpos must have dimensions (..., 3)")
@@ -299,9 +337,10 @@ def das_sparse(
     sparse_indices = _ensure_contiguous(astype(sparse_indices, "int32"))
 
     if out is None:
-        out = empty_like(x, shape=out_dims)
+        out = _output_like(x, out_dims)
 
-    beta = zeros_like(x, shape=(1,), device="cpu")
+    # beta has the output's type (it is read as one output element)
+    beta = zeros_like(out, shape=(1,), device="cpu")
     compute_type = _compute_type(x, use_fp16)
 
     _ffdas.das_sparse(

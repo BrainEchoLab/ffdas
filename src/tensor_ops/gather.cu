@@ -30,6 +30,8 @@ ffdas_error_t ffdas_gather(
             return ffdas::detail::ffdas_gather_dispatch<FFDAS_R_16I, FFDAS_R_16I>(*handle, x_tensor, x, out_tensor, out, mode, num_indices, indices);
         case FFDAS_R_32F:
             return ffdas::detail::ffdas_gather_dispatch<FFDAS_R_16I, FFDAS_R_32F>(*handle, x_tensor, x, out_tensor, out, mode, num_indices, indices);
+        case FFDAS_R_16F:  // raw int16 samples straight to half precision, in one pass
+            return ffdas::detail::ffdas_gather_dispatch<FFDAS_R_16I, FFDAS_R_16F>(*handle, x_tensor, x, out_tensor, out, mode, num_indices, indices);
         default:
             break;
         }
@@ -60,6 +62,8 @@ ffdas_error_t ffdas_gather(
             return ffdas::detail::ffdas_gather_dispatch<FFDAS_C_16I, FFDAS_C_16I>(*handle, x_tensor, x, out_tensor, out, mode, num_indices, indices);
         case FFDAS_C_32F:
             return ffdas::detail::ffdas_gather_dispatch<FFDAS_C_16I, FFDAS_C_32F>(*handle, x_tensor, x, out_tensor, out, mode, num_indices, indices);
+        case FFDAS_C_16F:  // raw int16 samples straight to half precision, in one pass
+            return ffdas::detail::ffdas_gather_dispatch<FFDAS_C_16I, FFDAS_C_16F>(*handle, x_tensor, x, out_tensor, out, mode, num_indices, indices);
         default:
             break;
         }

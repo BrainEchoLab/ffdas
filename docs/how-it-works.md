@@ -82,7 +82,7 @@ Samples are converted to FP32 before interpolation and accumulation, so the outp
 
 The benefit depends on the algorithm. `ALG1`'s low payload efficiency means it wastes most transferred bytes regardless of element size, so halving the element size helps less. `ALG2` and `ALG4` achieve full payload efficiency, so FP16 translates directly into proportionally less data transfer.
 
-In Python, FP16 input is enabled by passing `use_fp16=True` to `das` or `das_sparse`, or by constructing a `TensorView` with `ffdas.view(array, ffdas.half)` or `ffdas.view(array, ffdas.half2)` for complex data.
+FP16 input is enabled by passing `use_fp16=True` to `das` or `das_sparse` (a conversion inside every call), or by passing data already converted with `to_fp16` (Python and MATLAB), which is converted once and reused.
 
 ### Skipped work
 

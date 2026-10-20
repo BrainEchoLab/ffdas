@@ -174,6 +174,9 @@ ffdas_error_t das_alg1_dispatch_compute(
             return das_alg1_launch<Tx, Ty, __half, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
         } else if constexpr (std::is_same_v<Tx, float2>) {
             return das_alg1_launch<Tx, Ty, __half2, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
+        } else if constexpr (std::is_same_v<Tx, __half> || std::is_same_v<Tx, __half2>) {
+            // already half precision (converted once by the caller): no conversion
+            return das_alg1_launch<Tx, Ty, Tx, tile_width, is_sparse>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, sparse_indices, beta, out);
         }
         return FFDAS_ERROR_UNSUPPORTED_TYPE;
     } else if (compute_type == FFDAS_COMPUTE_32F) {
