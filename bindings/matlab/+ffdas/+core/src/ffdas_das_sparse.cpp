@@ -41,16 +41,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     bool have_batch = (x.ndim_val() == 4);
     int64_t channels = x.shape(x.ndim_val()-3);
+    int64_t sequence = x.shape(x.ndim_val()-2);
 
     if (srcpos.ndim_val() != 2 || srcpos.shape(1) != 3 || srcpos.shape(0) != channels)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "srcpos must have shape (3, channels) for the %d channels of x", (int)channels);
 
-    if (srcdir.numel() > 0) {
-        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || srcdir.ndim_val() != 2 || srcdir.shape(1) != 4 || srcdir.shape(0) != channels)
-            mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-                "srcdir must be a single array of shape (4, channels)");
-    }
+    // a per-event srcdir row is the event a sparse entry selects
+    ScopedDirectivityDesc directivity(srcdir, channels, sequence, "ffdas_das_sparse:error");
 
     // dstpos must have dimensions (..., 3)
     int64_t dstnd = dstpos.ndim_val();
@@ -105,10 +103,10 @@ void mexFunction(int nlhs, mxArray *plhs[],
     else
         compute_type = FFDAS_COMPUTE_32F;
         
-    ffdas_error_t err = ffdas_das_sparse(
+    ffdas_error_t err = ffdas_das_sparse_ex(
         handle,
         srcpos.data(),
-        srcdir.numel() > 0 ? static_cast<const float*>(srcdir.data()) : nullptr,
+        directivity.desc,
         wavenum,
         x_desc.desc, 
         x.data(),

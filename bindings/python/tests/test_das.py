@@ -537,3 +537,209 @@ def test_das_non_contiguous_out_is_refused():
     out = cp.zeros((2, 16), dtype="float32")[:, ::2]
     with pytest.raises(RuntimeError):
         ffdas.das(**args, out=out)
+
+
+# Receive directivity per sequence event (srcdir (events, channels, 4)) and skipping entries that weigh
+# 0. Checked against das_reference.py.
+
+
+def _unit(v):
+    return v / np.linalg.norm(v, axis=-1, keepdims=True)
+
+
+def _per_event_srcdir(rng, n_seq, n_ch, cut_deg=35.0):
+    """Every event its own look directions: tilted up to ~30 degrees off +z, a 35 degree cut."""
+    look = _unit(np.concatenate([rng.uniform(-0.5, 0.5, (n_seq, n_ch, 2)), np.ones((n_seq, n_ch, 1))], -1))
+    cut = np.full((n_seq, n_ch, 1), np.cos(np.deg2rad(cut_deg)))
+    return np.concatenate([look, cut], -1).astype("float32")
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_das_per_event_srcdir_matches_reference(algorithm, use_fp16, dtype, rng):
+    n_ch, n_seq, n_samp, n_tgt, batch = 8, 3, 191, 200, 4
+    args = _problem(rng, x_shape=(batch, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt, dtype=dtype)
+    args["srcdir"] = _per_event_srcdir(rng, n_seq, n_ch)
+    ref = das_reference(**args, wavenum=-0.5)
+    out = _das(**_on_gpu(args), wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    _assert_matches(out, ref, 3e-2 if use_fp16 else 5e-3)
+
+
+def test_das_sparse_per_event_srcdir_is_indexed_by_the_event(rng):
+    """A per-event srcdir row belongs to the event an entry selects, not to the entry: indices are
+    permuted, so entry i and event i differ."""
+    n_ch, n_seq, n_samp, n_tgt, n_sparse = 8, 6, 191, 200, 3
+    args = _problem(rng, x_shape=(2, n_ch, n_seq, n_samp), n_seq=n_sparse, n_tgt=n_tgt)
+    args["sparse_indices"] = np.stack([rng.permutation(n_seq)[:n_sparse] for _ in range(n_tgt)], 1).astype("int32")
+    args["srcdir"] = _per_event_srcdir(rng, n_seq, n_ch)
+    ref = das_reference(**args, wavenum=-0.5)
+    out = ffdas.das_sparse(**_on_gpu(args), wavenum=-0.5)
+    _assert_matches(out, ref, 1e-5)
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+def test_das_shared_srcdir_equals_the_same_row_for_every_event(algorithm, use_fp16, rng):
+    n_ch, n_seq, n_samp, n_tgt = 8, 3, 191, 200
+    args = _on_gpu(_problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt))
+    shared = cp.asarray(_per_event_srcdir(rng, 1, n_ch)[0])
+    kw = dict(wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    a = _das(**args, srcdir=shared, **kw)
+    b = _das(**args, srcdir=cp.ascontiguousarray(cp.broadcast_to(shared, (n_seq, n_ch, 4))), **kw)
+    assert_allclose(cp.asnumpy(a), cp.asnumpy(b), rtol=0, atol=0)
+
+
+def test_das_sparse_one_call_equals_one_call_per_beam(rng):
+    """The live viewer's per-beam workaround -- one das_sparse call per transmit beam, over the targets
+    that beam serves, with that beam's srcdir -- is the per-event srcdir in one call."""
+    n_ch, n_beams, n_samp, n_tgt, n_sparse, batch = 16, 6, 191, 300, 3, 4
+    args = _problem(rng, x_shape=(batch, n_ch, n_beams, n_samp), n_seq=n_sparse, n_tgt=n_tgt)
+    idx = np.stack([np.sort(rng.permutation(n_beams)[:n_sparse]) for _ in range(n_tgt)], 1).astype("int32")
+    args["weights"][rng.random(args["weights"].shape) < 0.3] = 0  # some targets served by fewer beams
+    srcdir = _per_event_srcdir(rng, n_beams, n_ch, cut_deg=15.0)
+    gpu = _on_gpu({**args, "sparse_indices": idx, "srcdir": srcdir})
+    one_call = cp.asnumpy(ffdas.das_sparse(**gpu, wavenum=-0.5))
+
+    per_beam = np.zeros_like(one_call)
+    for beam in range(n_beams):
+        served = np.flatnonzero((idx == beam).any(0))
+        sel = (idx[:, served] == beam).argmax(0)  # the entry of each served target that is this beam
+        cols = (sel, served)
+        out = ffdas.das_sparse(
+            x=gpu["x"], srcpos=gpu["srcpos"], dstpos=cp.asarray(args["dstpos"][served]),
+            offsets=cp.asarray(args["offsets"][cols][None]), weights=cp.asarray(args["weights"][cols][None]),
+            sparse_indices=cp.full((1, served.size), beam, dtype="int32"),
+            srcdir=cp.asarray(srcdir[beam]), wavenum=-0.5,
+        )
+        per_beam[:, served] += cp.asnumpy(out)
+    assert_allclose(one_call, per_beam, rtol=0, atol=1e-5 * np.abs(per_beam).max())
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+def test_das_zero_weight_event_is_not_read(algorithm, use_fp16, rng):
+    """An event that weighs 0 contributes nothing, even where its data is NaN."""
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 200
+    args = _on_gpu(_problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt))
+    kw = dict(wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    alone = _das(**{**args, "x": cp.ascontiguousarray(args["x"][:, :, :1]),
+                    "offsets": args["offsets"][:1], "weights": args["weights"][:1]}, **kw)
+    x = args["x"].copy()
+    x[:, :, 1] = complex(np.nan, np.nan)
+    weights = args["weights"].copy()
+    weights[1] = 0
+    out = _das(**{**args, "x": x, "weights": weights}, **kw)
+    assert np.isfinite(cp.asnumpy(out)).all()
+    tol = 3e-2 if use_fp16 else 1e-5  # one event vs two: different batch tiling in ALG2
+    assert_allclose(cp.asnumpy(out), cp.asnumpy(alone), rtol=0, atol=tol * np.abs(cp.asnumpy(alone)).max())
+
+
+# ALG4 sums 8 targets per sparse matrix multiply: a zero-weight target's zero coefficients still
+# multiply the samples the other targets of its warp read (0 * NaN = NaN). Not fixed yet.
+_ALG4_MIXED_WARP = pytest.mark.xfail(strict=True, reason="ALG4 does not yet isolate a zero-weight target in a mixed warp")
+MIXED_WARP_ALGORITHMS = [
+    pytest.param(*p.values, id=p.id, marks=_ALG4_MIXED_WARP if p.values[0] == ffdas.Algorithm.ALG4 else ())
+    for p in ALGORITHMS
+]
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", MIXED_WARP_ALGORITHMS)
+def test_das_zero_weight_target_beside_weighted_ones_ignores_nan(algorithm, use_fp16, rng):
+    """Every other target weighs 0 for event 1, so every warp mixes zero and nonzero weights. Event 1
+    is NaN and the zero-weight targets' offsets for it too: they still get the event-0 image."""
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 200
+    args = _on_gpu(_problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt))
+    kw = dict(wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    alone = _das(**{**args, "x": cp.ascontiguousarray(args["x"][:, :, :1]),
+                    "offsets": args["offsets"][:1], "weights": args["weights"][:1]}, **kw)
+    x = args["x"].copy()
+    x[:, :, 1] = complex(np.nan, np.nan)
+    offsets, weights = args["offsets"].copy(), args["weights"].copy()
+    weights[1, ::2] = 0
+    offsets[1, ::2] = np.nan
+    out = cp.asnumpy(_das(**{**args, "x": x, "offsets": offsets, "weights": weights}, **kw))[:, ::2]
+    alone = cp.asnumpy(alone)[:, ::2]
+    assert np.isfinite(out).all()
+    tol = 3e-2 if use_fp16 else 1e-5  # one event vs two: different batch tiling in ALG2
+    assert_allclose(out, alone, rtol=0, atol=tol * np.abs(alone).max())
+
+
+def test_das_sparse_zero_padding_is_free_and_exact(rng):
+    """K = 9 with zero-weight padding (any index, even outside x) is the compact K = 4 call, bitwise."""
+    n_ch, n_seq, n_samp, n_tgt = 8, 6, 191, 200
+    args = _problem(rng, x_shape=(2, n_ch, n_seq, n_samp), n_seq=4, n_tgt=n_tgt)
+    idx = np.stack([np.sort(rng.permutation(n_seq)[:4]) for _ in range(n_tgt)], 1).astype("int32")
+
+    def pad(a, v):
+        return np.concatenate([a, np.full((5, n_tgt), v, a.dtype)])
+
+    compact = ffdas.das_sparse(**_on_gpu({**args, "sparse_indices": idx}), wavenum=-0.5)
+    padded = ffdas.das_sparse(**_on_gpu({
+        **args, "offsets": pad(args["offsets"], 1e9), "weights": pad(args["weights"], 0),
+        "sparse_indices": np.concatenate([idx, rng.integers(-5, n_seq + 5, (5, n_tgt)).astype("int32")]),
+    }), wavenum=-0.5)
+    assert_allclose(cp.asnumpy(padded), cp.asnumpy(compact), rtol=0, atol=0)
+
+
+def test_das_sparse_index_outside_x_is_skipped():
+    n_ch, n_seq, n_samp, n_tgt = 8, 3, 191, 64
+    x = _nan_padded((1, n_ch, n_seq, n_samp), "complex64")
+    srcpos, dstpos = _co_located(n_ch, n_tgt, 10.0)
+    out = ffdas.das_sparse(
+        x=x, srcpos=srcpos, dstpos=dstpos,
+        offsets=cp.full((2, n_tgt), 40.0, dtype="float32"),
+        weights=cp.ones((2, n_tgt), dtype="float32"),
+        sparse_indices=cp.asarray(np.stack([np.full(n_tgt, -1), np.full(n_tgt, n_seq)]).astype("int32")),
+        wavenum=-0.5,
+    )
+    _assert_exact_zero(out)
+
+
+def test_das_per_event_srcdir_event_count_mismatch():
+    with pytest.raises(ValueError):
+        ffdas.das(**_das_args(srcdir=cp.zeros((3, 4, 4), dtype="float32")))
+
+
+def test_sort_sparse_keeps_the_image_and_groups_the_targets(rng):
+    n_ch, n_seq, n_samp, n_tgt, n_sparse = 8, 6, 191, 300, 4
+    args = _problem(rng, x_shape=(2, n_ch, n_seq, n_samp), n_seq=n_sparse, n_tgt=n_tgt)
+    idx = np.stack([rng.permutation(n_seq)[:n_sparse] for _ in range(n_tgt)], 1).astype("int32")
+    args["weights"][rng.random(args["weights"].shape) < 0.4] = 0
+    gpu = _on_gpu({**args, "sparse_indices": idx})
+    ref = cp.asnumpy(ffdas.das_sparse(**gpu, wavenum=-0.5))
+
+    order, si, ofs, w = ffdas.utils.sort_sparse(gpu["sparse_indices"], gpu["offsets"], gpu["weights"])
+    out = ffdas.das_sparse(**{**gpu, "dstpos": gpu["dstpos"][order], "offsets": ofs, "weights": w,
+                              "sparse_indices": si}, wavenum=-0.5)
+    image = np.empty_like(ref)
+    image[:, cp.asnumpy(order)] = cp.asnumpy(out)
+    assert_allclose(image, ref, rtol=0, atol=1e-5 * np.abs(ref).max())
+
+    # each target: nonzero entries first, in ascending event order; targets grouped by those lists
+    si, w = cp.asnumpy(si), cp.asnumpy(w)
+    key = np.where(w != 0, si, n_seq)
+    assert (np.diff(key, axis=0) >= 0).all()
+    assert all(tuple(key[:, i]) <= tuple(key[:, i + 1]) for i in range(n_tgt - 1))
+
+
+def test_sort_sparse_zero_targets():
+    # the sorting workflow on an empty problem: empty arrays out, and das_sparse gives an empty image
+    si, w = cp.zeros((4, 0), dtype="int32"), cp.zeros((4, 0), dtype="float32")
+    order, si, ofs, w = ffdas.utils.sort_sparse(si, w, w)
+    assert order.shape == (0,) and si.shape == ofs.shape == w.shape == (4, 0)
+    srcpos, _ = _co_located(8, 0, 10.0)
+    x = cp.ones((2, 8, 6, 64), dtype="complex64")
+    out = ffdas.das_sparse(x, srcpos, cp.zeros((0, 3), dtype="float32")[order], ofs, w, si)
+    assert out.shape == (2, 0)
+
+
+def test_sort_sparse_stays_on_the_input_device(rng):
+    # a library whose arange defaults to another device (PyTorch: the CPU) must not mix devices;
+    # array_api_strict has a second device to check that without a GPU framework
+    xp = pytest.importorskip("array_api_strict")
+    from array_api_compat import device
+
+    dev = xp.Device("device1")
+    idx = np.stack([rng.permutation(6)[:4] for _ in range(50)], 1).astype("int32")
+    w = rng.random((4, 50)).astype("float32")
+    w[w < 0.4] = 0
+    out = ffdas.utils.sort_sparse(xp.asarray(idx, device=dev), xp.asarray(w, device=dev), xp.asarray(w, device=dev))
+    assert all(device(a) == dev for a in out)

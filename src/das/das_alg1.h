@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ffdas.h"
+#include "das_directivity.h"
 
 
 namespace ffdas::detail {
@@ -9,7 +10,7 @@ template<typename Tx, typename Ty>
 ffdas_error_t das_alg1_strided(
     ffdas_context &handle,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const das_directivity &srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
@@ -27,7 +28,7 @@ template<typename Tx, typename Ty>
 ffdas_error_t das_alg1_sparse(
     ffdas_context &handle,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const das_directivity &srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,

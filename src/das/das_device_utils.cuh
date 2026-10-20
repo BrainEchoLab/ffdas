@@ -4,6 +4,7 @@
 #include "math/core.cuh"
 #include "math/vector.cuh"
 #include "math/bitops.cuh"
+#include "das_directivity.h"
 
 
 __device__ __forceinline__

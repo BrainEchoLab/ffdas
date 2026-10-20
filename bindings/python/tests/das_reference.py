@@ -9,7 +9,9 @@ channel m:
     used  = 0 <= k < samples - 1                         (and inside channel m's srcdir cone)
     out  += weights[i, n] * exp(1j * wavenum * phase) * ((1 - t) x[.., m, e, k] + t x[.., m, e, k + 1])
 
-The phase rotation applies to complex data only. A sample that is not used contributes an exact 0.
+The phase rotation applies to complex data only. srcdir is (channels, 4), or (events, channels, 4)
+indexed by the event e. A sample that is not used contributes an exact 0, and so does an entry that
+weighs 0 or (sparse) selects an event outside x.
 """
 
 import numpy as np
@@ -48,13 +50,20 @@ def das_reference(x, srcpos, dstpos, offsets, weights, *, srcdir=None, wavenum=0
     t = phase - k
     k = k.astype(np.int64)
     used = (k >= 0) & (k < n_samp - 1)
+    n_ev = x.shape[2]
+    valid = (wgt != 0) & (event >= 0) & (event < n_ev)                # entries that count at all
+    used &= valid[:, None, :]
+    event = np.where(valid, event, 0)
 
+    weight = np.broadcast_to(wgt[:, None, :], phase.shape).copy()
     if srcdir is not None:
         srcdir = np.asarray(srcdir, dtype=np.float64)
-        proj = np.einsum("ctk,ck->ct", d, srcdir[:, :3]) / r
-        used &= (proj > srcdir[:, 3][:, None])[None]
-
-    weight = wgt[:, None, :]
+        if srcdir.ndim == 2:
+            srcdir = np.broadcast_to(srcdir, (n_ev,) + srcdir.shape)
+        axes = srcdir[event]                                         # (entries, targets, channels, 4)
+        u = d / r[..., None]                                         # (channels, targets, 3)
+        proj = np.einsum("ctk,etck->ect", u, axes[..., :3])
+        used &= proj > axes[..., 3].transpose(0, 2, 1)
     if is_complex:
         weight = weight * np.exp(1j * wavenum * phase)
 

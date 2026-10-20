@@ -20,7 +20,7 @@ ffdas_error_t das_alg2_launch(
     ffdas_context &handle,
     const das_problem_params& params,
     const float3 *srcpos,
-    const float4 *srcdir,
+    const das_directivity &srcdir,
     float wavenum,
     const Tx* x, 
     const float3 *dstpos, 
@@ -71,7 +71,7 @@ ffdas_error_t das_alg2_launch(
     constexpr int block = 1024;
     constexpr int warps_per_block = block / 32;
 
-    bool dir_check = (srcdir != NULL);
+    bool dir_check = (srcdir.axes != nullptr);
 
     dim3 block_dim(block);
     dim3 grid_dim(
@@ -103,7 +103,7 @@ ffdas_error_t das_alg2_launch(
             params.samples, 
             params.seqlen, 
             params.channels,
-            NULL,
+            das_directivity{},
             wavenum, 
             x_ld_batch_ptr.get(), 
             params.ndst, 
@@ -127,7 +127,7 @@ ffdas_error_t das_alg2_dispatch_vec_size(
     ffdas_context &handle,
     const das_problem_params& params,
     const float3 *srcpos,
-    const float4 *srcdir,
+    const das_directivity &srcdir,
     float wavenum,
     const Tx* x, 
     const float3 *dstpos, 
@@ -201,7 +201,7 @@ ffdas_error_t das_alg2_dispatch_compute(
     ffdas_context &handle,
     const das_problem_params& params,
     const float3 *srcpos,
-    const float4 *srcdir,
+    const das_directivity &srcdir,
     float wavenum,
     const Tx* x, 
     const float3 *dstpos, 
@@ -232,7 +232,7 @@ ffdas_error_t das_alg2_dispatch_n(
     ffdas_context &handle,
     const das_problem_params& params,
     const float3 *srcpos,
-    const float4 *srcdir,
+    const das_directivity &srcdir,
     float wavenum,
     const Tx* x, 
     const float3 *dstpos, 
@@ -381,7 +381,7 @@ template<typename Tx, typename Ty>
 ffdas_error_t das_alg2_strided(
     ffdas_context &handle,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const das_directivity &srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
@@ -483,32 +483,32 @@ ffdas_error_t das_alg2_strided(
 
 // template instantiations
 template ffdas_error_t das_alg2_strided<__half, float>(
-    ffdas_context&, const float3 *, const float4 *, float, const ffdas_tensor_desc&, const __half*, 
+    ffdas_context&, const float3 *, const das_directivity &, float, const ffdas_tensor_desc&, const __half*, 
     const float3 *, const float *, const float *, float, const ffdas_tensor_desc&, float*, 
     ffdas_compute_type_t
 );
 
 template ffdas_error_t das_alg2_strided<float, float>(
-    ffdas_context&, const float3 *, const float4 *, float, const ffdas_tensor_desc&, const float*, 
+    ffdas_context&, const float3 *, const das_directivity &, float, const ffdas_tensor_desc&, const float*, 
     const float3 *, const float *, const float *, float, const ffdas_tensor_desc&, float*, 
     ffdas_compute_type_t
 );
 
 template ffdas_error_t das_alg2_strided<__half2, float2>(
-    ffdas_context&, const float3 *, const float4 *, float, const ffdas_tensor_desc&, const __half2*, 
+    ffdas_context&, const float3 *, const das_directivity &, float, const ffdas_tensor_desc&, const __half2*, 
     const float3 *, const float *, const float *, float2, const ffdas_tensor_desc&, float2*, 
     ffdas_compute_type_t
 );
 
 template ffdas_error_t das_alg2_strided<float2, float2>(
-    ffdas_context&, const float3 *, const float4 *, float, const ffdas_tensor_desc&, const float2*, 
+    ffdas_context&, const float3 *, const das_directivity &, float, const ffdas_tensor_desc&, const float2*, 
     const float3 *, const float *, const float *, float2, const ffdas_tensor_desc&, float2*, 
     ffdas_compute_type_t
 );
 
 template<>
 ffdas_error_t das_alg2_strided<double, double>(
-    ffdas_context&, const float3 *, const float4 *, float, const ffdas_tensor_desc&, const double*, 
+    ffdas_context&, const float3 *, const das_directivity &, float, const ffdas_tensor_desc&, const double*, 
     const float3 *, const float *, const float *, double, const ffdas_tensor_desc&, double*, 
     ffdas_compute_type_t
 ) {
@@ -517,7 +517,7 @@ ffdas_error_t das_alg2_strided<double, double>(
 
 template<>
 ffdas_error_t das_alg2_strided<double2, double2>(
-    ffdas_context&, const float3 *, const float4 *, float, const ffdas_tensor_desc&, const double2*, 
+    ffdas_context&, const float3 *, const das_directivity &, float, const ffdas_tensor_desc&, const double2*, 
     const float3 *, const float *, const float *, double2, const ffdas_tensor_desc&, double2*, 
     ffdas_compute_type_t
 ) {

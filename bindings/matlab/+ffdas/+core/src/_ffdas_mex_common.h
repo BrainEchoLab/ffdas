@@ -144,3 +144,30 @@ struct ScopedTensorDesc {
     ScopedTensorDesc(const ScopedTensorDesc &) = delete;
     ScopedTensorDesc &operator=(const ScopedTensorDesc &) = delete;
 };
+
+
+// Receive directivity of das / das_sparse, in MATLAB order: srcdir [] (none), (4, channels) for every
+// event, or (4, channels, sequence) per event
+struct ScopedDirectivityDesc {
+    ffdas_directivity_desc_t desc = nullptr;
+
+    template<typename Dir>
+    ScopedDirectivityDesc(const Dir &srcdir, int64_t channels, int64_t sequence, const char *id) {
+        if (srcdir.numel() == 0)
+            return;
+        // row-major: (channels, 4) or (sequence, channels, 4)
+        const int64_t nd = srcdir.ndim_val();
+        const bool shared = (nd == 2 && srcdir.shape(0) == channels && srcdir.shape(1) == 4);
+        const bool per_event = (nd == 3 && srcdir.shape(0) == sequence && srcdir.shape(1) == channels && srcdir.shape(2) == 4);
+        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || !(shared || per_event))
+            mexErrMsgIdAndTxt(id,
+                "srcdir must be a single gpuArray of shape (4, channels) or (4, channels, sequence), with %d channels and %d events",
+                (int)channels, (int)sequence);
+        check(ffdas_create_directivity_desc(&desc, channels, per_event ? sequence : 0,
+                                            static_cast<const float *>(srcdir.data())));
+    }
+
+    ~ScopedDirectivityDesc() { if (desc) ffdas_destroy_directivity_desc(desc); }
+    ScopedDirectivityDesc(const ScopedDirectivityDesc &) = delete;
+    ScopedDirectivityDesc &operator=(const ScopedDirectivityDesc &) = delete;
+};

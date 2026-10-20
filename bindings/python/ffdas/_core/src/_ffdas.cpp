@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <optional>
 #include <iostream>
 #include <complex>
 #include <cstdio>
@@ -183,6 +184,27 @@ struct ScopedTensorDesc {
 
     ScopedTensorDesc(const ScopedTensorDesc &) = delete;
     ScopedTensorDesc &operator=(const ScopedTensorDesc &) = delete;
+};
+
+
+// srcdir (channels, 4) or (events, channels, 4)
+struct ScopedDirectivityDesc {
+    ffdas_directivity_desc_t desc = nullptr;
+
+    explicit ScopedDirectivityDesc(const nb::ndarray<const float, nb::device::cuda, nb::c_contig> &srcdir) {
+        int64_t nd = srcdir.ndim();
+        if ((nd != 2 && nd != 3) || srcdir.shape(nd - 1) != 4)
+            throw std::invalid_argument("srcdir must have shape (channels, 4) or (events, channels, 4)");
+        int64_t events = (nd == 3) ? (int64_t)srcdir.shape(0) : 0;
+        check(ffdas_create_directivity_desc(&desc, srcdir.shape(nd - 2), events, srcdir.data()));
+    }
+
+    ~ScopedDirectivityDesc() {
+        if (desc) ffdas_destroy_directivity_desc(desc);
+    }
+
+    ScopedDirectivityDesc(const ScopedDirectivityDesc &) = delete;
+    ScopedDirectivityDesc &operator=(const ScopedDirectivityDesc &) = delete;
 };
 
 
@@ -520,11 +542,14 @@ NB_MODULE(_ffdas, m) {
 
         ScopedTensorDesc x_desc(ndim, x_dims.data(), x_strides.data(), to_ffdas_dtype(x.dtype()));
         ScopedTensorDesc out_desc(y);
+        std::optional<ScopedDirectivityDesc> directivity;
+        if (srcdir.has_value())
+            directivity.emplace(*srcdir);
 
-        check(ffdas_das(
+        check(ffdas_das_ex(
             handle.h,
             srcpos.data(),
-            srcdir.has_value() ? (*srcdir).data() : nullptr,
+            directivity ? directivity->desc : nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),
@@ -569,11 +594,14 @@ NB_MODULE(_ffdas, m) {
 
         ScopedTensorDesc x_desc(ndim, x_dims.data(), x_strides.data(), to_ffdas_dtype(x.dtype()));
         ScopedTensorDesc out_desc(y);
+        std::optional<ScopedDirectivityDesc> directivity;
+        if (srcdir.has_value())
+            directivity.emplace(*srcdir);
 
-        check(ffdas_das_sparse(
+        check(ffdas_das_sparse_ex(
             handle.h,
             srcpos.data(),
-            srcdir.has_value() ? (*srcdir).data() : nullptr,
+            directivity ? directivity->desc : nullptr,
             wavenum,
             x_desc.desc, 
             x.data(),

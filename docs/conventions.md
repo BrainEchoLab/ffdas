@@ -49,6 +49,7 @@ For position arrays specifically: Python places the coordinate dimension last, `
 | Channel positions | `(channels, 3)` | `(3, channels)` |
 | Target positions | `(..., 3)` | `(3, ...)` |
 | Channel data | `([batch,] channels, seq, samples)` | `(samples, seq, channels[, batch])` |
+| Receive directivity (`srcdir`) | `([seq,] channels, 4)` | `(4, channels[, seq])` |
 
 See the individual [API reference](api/index.md) pages for the exact shapes of each function's inputs and outputs.
 

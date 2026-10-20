@@ -39,6 +39,7 @@ set(FFDAS_SOURCES
     ${SRC_DIR}/das/das_alg1.cu
     ${SRC_DIR}/das/das_alg2.cu
     ${SRC_DIR}/das/das_alg4.cu
+    ${SRC_DIR}/das/das_directivity.cu
     ${SRC_DIR}/greens/greens.cu
     ${SRC_DIR}/truncate_rank/truncate_rank.cu
     ${SRC_DIR}/contraction/contraction.cu
