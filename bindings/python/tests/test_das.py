@@ -5,6 +5,8 @@ from numpy.testing import assert_allclose
 
 import ffdas
 
+from das_reference import das_reference
+
 
 def _das_args(**overrides):
     """Minimal valid cupy argument set."""
@@ -394,3 +396,144 @@ def test_das_alg1_real_input_at_large_batch(batch, use_fp16):
     out = cp.asnumpy(ffdas.das(x=x, **args))
     chunks = np.concatenate([cp.asnumpy(ffdas.das(x=x[b:b + 16], **args)) for b in range(0, batch, 16)])
     assert_allclose(out, chunks, rtol=1e-5, atol=1e-6 * np.abs(chunks).max())
+
+
+# Each sequence event's own offsets and weights. Without a batch dimension (3-D x) every event used
+# event 0's offsets / weights / sparse indices: their row stride was taken from the output's batch
+# stride, which is 0 then. Checked against a float64 numpy reference (das_reference.py).
+
+
+def _problem(rng, *, x_shape, n_seq, n_tgt, dtype="complex64"):
+    """Channels on a line, targets 40-60 samples deep, offsets and weights that differ per event."""
+    n_ch = x_shape[-3]
+    xr = rng.standard_normal(x_shape)
+    if dtype == "complex64":
+        xr = xr + 1j * rng.standard_normal(x_shape)
+    dstpos = np.stack([rng.uniform(-5, 5, n_tgt), rng.uniform(-2, 2, n_tgt), rng.uniform(40, 60, n_tgt)], 1)
+    srcpos = np.stack([np.linspace(-5, 5, n_ch), np.zeros(n_ch), np.zeros(n_ch)], 1)
+    return dict(
+        x=xr.astype(dtype),
+        srcpos=srcpos.astype("float32"),
+        dstpos=dstpos.astype("float32"),
+        offsets=rng.uniform(0, 20, (n_seq, n_tgt)).astype("float32"),
+        weights=rng.uniform(0.5, 1.5, (n_seq, n_tgt)).astype("float32"),
+    )
+
+
+def _on_gpu(args):
+    return {k: cp.asarray(v) if isinstance(v, np.ndarray) else v for k, v in args.items()}
+
+
+def _assert_matches(out, ref, rel):
+    out = cp.asnumpy(out)
+    assert out.shape == ref.shape
+    assert_allclose(out, ref, rtol=0, atol=rel * np.abs(ref).max())
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+@pytest.mark.parametrize("batch", [1, 4])
+def test_das_matches_reference(algorithm, use_fp16, dtype, batch, rng):
+    n_ch, n_seq, n_samp, n_tgt = 8, 3, 191, 200
+    args = _problem(rng, x_shape=(batch, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt, dtype=dtype)
+    ref = das_reference(**args, wavenum=-0.5)
+    out = _das(**_on_gpu(args), wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    _assert_matches(out, ref, 3e-2 if use_fp16 else 5e-3)
+
+
+@pytest.mark.parametrize("algorithm", [ffdas.Algorithm.ALG1, ffdas.Algorithm.ALG4], ids=["ALG1", "ALG4"])
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_das_unbatched_input_uses_each_events_offsets_and_weights(algorithm, dtype, rng):
+    n_ch, n_seq, n_samp, n_tgt = 8, 3, 191, 200
+    args = _problem(rng, x_shape=(n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt, dtype=dtype)
+    ref = das_reference(**args, wavenum=-0.5)
+    gpu = _on_gpu(args)
+    out = _das(**gpu, wavenum=-0.5, algorithm=algorithm)
+    # ALG4 multiplies on the tensor cores (tf32 / fp16 operands)
+    _assert_matches(out, ref, 5e-3 if algorithm == ffdas.Algorithm.ALG4 else 1e-5)
+    batched = _das(**{**gpu, "x": gpu["x"][None]}, wavenum=-0.5, algorithm=algorithm)
+    assert_allclose(cp.asnumpy(out), cp.asnumpy(batched)[0], rtol=0, atol=0)
+
+
+def test_das_sparse_unbatched_input_uses_each_entrys_event(rng):
+    n_ch, n_seq, n_samp, n_tgt, n_sparse = 8, 6, 191, 200, 3
+    args = _problem(rng, x_shape=(n_ch, n_seq, n_samp), n_seq=n_sparse, n_tgt=n_tgt)
+    args["sparse_indices"] = np.stack([rng.permutation(n_seq)[:n_sparse] for _ in range(n_tgt)], 1).astype("int32")
+    ref = das_reference(**args, wavenum=-0.5)
+    gpu = _on_gpu(args)
+    out = ffdas.das_sparse(**gpu, wavenum=-0.5)
+    _assert_matches(out, ref, 1e-5)
+    batched = ffdas.das_sparse(**{**gpu, "x": gpu["x"][None]}, wavenum=-0.5)
+    assert_allclose(cp.asnumpy(out), cp.asnumpy(batched)[0], rtol=0, atol=0)
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+def test_das_zero_targets_gives_an_empty_result(algorithm, use_fp16):
+    n_ch, n_seq, n_samp = 4, 2, 64
+    out = _das(
+        x=cp.ones((2, n_ch, n_seq, n_samp), dtype="complex64"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((0, 3), dtype="float32"),
+        offsets=cp.zeros((n_seq, 0), dtype="float32"),
+        weights=cp.ones((n_seq, 0), dtype="float32"),
+        algorithm=algorithm,
+        use_fp16=use_fp16,
+    )
+    assert out.shape == (2, 0)
+
+
+def test_das_sparse_zero_targets_gives_an_empty_result():
+    n_ch, n_seq, n_samp, n_sparse = 4, 3, 64, 2
+    out = ffdas.das_sparse(
+        x=cp.ones((n_ch, n_seq, n_samp), dtype="float32"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((0, 3), dtype="float32"),
+        offsets=cp.zeros((n_sparse, 0), dtype="float32"),
+        weights=cp.ones((n_sparse, 0), dtype="float32"),
+        sparse_indices=cp.zeros((n_sparse, 0), dtype="int32"),
+    )
+    assert out.shape == (0,)
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", ALGORITHMS)
+def test_das_empty_batch_gives_an_empty_result(algorithm, use_fp16):
+    n_ch, n_seq, n_samp, n_tgt = 4, 2, 64, 8
+    out = _das(
+        x=cp.ones((0, n_ch, n_seq, n_samp), dtype="complex64"),
+        srcpos=cp.zeros((n_ch, 3), dtype="float32"),
+        dstpos=cp.zeros((n_tgt, 3), dtype="float32"),
+        offsets=cp.zeros((n_seq, n_tgt), dtype="float32"),
+        weights=cp.ones((n_seq, n_tgt), dtype="float32"),
+        algorithm=algorithm,
+        use_fp16=use_fp16,
+    )
+    assert out.shape == (0, n_tgt)
+
+
+def test_das_offsets_event_count_mismatch():
+    with pytest.raises(ValueError):
+        ffdas.das(**_das_args(offsets=cp.zeros((3, 8), dtype="float32"), weights=cp.ones((3, 8), dtype="float32")))
+
+
+def test_das_srcpos_channel_count_mismatch():
+    with pytest.raises(ValueError):
+        ffdas.das(**_das_args(srcpos=cp.zeros((5, 3), dtype="float32")))
+
+
+def test_das_srcdir_channel_count_mismatch():
+    with pytest.raises(ValueError):
+        ffdas.das(**_das_args(srcdir=cp.zeros((5, 4), dtype="float32")))
+
+
+def test_das_sparse_srcpos_channel_count_mismatch():
+    with pytest.raises(ValueError):
+        ffdas.das_sparse(**_das_sparse_args(srcpos=cp.zeros((5, 3), dtype="float32")))
+
+
+def test_das_non_contiguous_out_is_refused():
+    """The kernels write the output as one dense block; a strided out= used to be written (and its
+    offsets read) at the wrong places."""
+    args = _das_args(x=cp.zeros((2, 4, 2, 16), dtype="float32"))
+    out = cp.zeros((2, 16), dtype="float32")[:, ::2]
+    with pytest.raises(RuntimeError):
+        ffdas.das(**args, out=out)

@@ -104,7 +104,9 @@ __global__ void __launch_bounds__(warps_per_block * 32) das_alg2_kernel(
             const float dy = yp.y - xp.y;
             const float dz = yp.z - xp.z;
 
-            const float rsq = max(dx * dx + dy * dy + dz * dz, 1e-7);  // TODO: maybe take epsilon value as argument
+            // a float literal: max(float, 1e-7) is the double overload, which put FP64 conversions and compares in
+            // this loop (the result is the same for every float)
+            const float rsq = fmaxf(dx * dx + dy * dy + dz * dz, 1e-7f);  // TODO: maybe take epsilon value as argument
             const float rinv = rsqrtf(rsq);
             const float phase = ofs + rsq * rinv;
 

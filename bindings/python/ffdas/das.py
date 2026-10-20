@@ -17,6 +17,21 @@ def _ensure_contiguous(x):
     return x
 
 
+def _channels_and_events(x, srcpos, srcdir, channels_trailing):
+    """Check x against the channel arrays; return (channels, events) of x."""
+    if x.ndim not in (3, 4):
+        raise ValueError(
+            f"x must have dimensions ([batch,] channels, sequence, samples); got {x.ndim} dimensions"
+        )
+    channel_axis, event_axis = (-2, -3) if channels_trailing else (-3, -2)
+    channels, events = x.shape[channel_axis], x.shape[event_axis]
+    if tuple(srcpos.shape) != (channels, 3):
+        raise ValueError(f"srcpos shape {srcpos.shape} must be ({channels}, 3) for {channels} channels")
+    if srcdir is not None and tuple(srcdir.shape) != (channels, 4):
+        raise ValueError(f"srcdir shape {srcdir.shape} must be ({channels}, 4) for {channels} channels")
+    return channels, events
+
+
 def _compute_type(x, use_fp16):
     if use_fp16:
         return _ffdas.ComputeType.FP16
@@ -120,6 +135,12 @@ def das(
     if weights.shape[1:] != spatial_dims:
         raise ValueError(
             f"weights shape {weights.shape} must match target layout {spatial_dims}"
+        )
+
+    _, events = _channels_and_events(x, srcpos, srcdir, channels_trailing)
+    if offsets.shape[0] != events or weights.shape[0] != events:
+        raise ValueError(
+            f"offsets and weights leading dimension must match the {events} sequence events of x"
         )
 
     srcpos = _ensure_contiguous(astype(srcpos, "float32"))
@@ -254,6 +275,8 @@ def das_sparse(
         raise ValueError(
             f"offsets and weights leading dimension must match sparse count {sparse_count}"
         )
+
+    _channels_and_events(x, srcpos, srcdir, channels_trailing)
 
     srcpos = _ensure_contiguous(astype(srcpos, "float32"))
     dstpos = _ensure_contiguous(astype(dstpos, "float32"))

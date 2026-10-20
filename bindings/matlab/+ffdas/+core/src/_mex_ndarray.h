@@ -176,7 +176,8 @@ struct ndarray {
     }
 
     bool is_contiguous() const {
-        if (strides.empty())
+        // an empty array has no layout (its strides follow from a zero dimension)
+        if (strides.empty() || numel() == 0)
             return true;
 
         int prev = strides[0];

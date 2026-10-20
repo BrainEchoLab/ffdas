@@ -396,10 +396,14 @@ ffdas_error_t das_alg2_strided(
     das_problem_params params;
     FFDAS_CHECK(get_das_problem_params(x_desc, out_desc, params));
 
+    if (!params.have_batch)
+        return FFDAS_ERROR_INVALID_DIMS;
     if (params.channels > DAS_ALG2_MAX_CHANNELS)
         return FFDAS_ERROR_INVALID_DIMS;
     if (params.samples > INT16_MAX)
         return FFDAS_ERROR_INVALID_DIMS;
+    if (das_is_empty(params))
+        return FFDAS_SUCCESS;
 
     int n_per_warp = getenv_int("FFDAS_ALG2_M", 2);
     int batch_per_warp = getenv_int("FFDAS_ALG2_N", 64);
