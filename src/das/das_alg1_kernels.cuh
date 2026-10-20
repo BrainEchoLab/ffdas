@@ -18,7 +18,7 @@ __global__ void das_alg1_kernel(
     int seqlen,
     int channels,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const ffdas::detail::das_directivity srcdir, 
     float wavenum,
     const Tx *x, 
     int ndst, 
@@ -49,14 +49,25 @@ __global__ void das_alg1_kernel(
     const int next = (samples > 1) ? 1 : 0;
 
     for (int i = 0; i < (is_sparse ? sparse_count : seqlen); i++) {
+        const int entry = n + i * outstride;
         int seqidx = i;
 
         if constexpr(is_sparse) {
-            seqidx = sparse_indices[n + i * outstride];
+            seqidx = sparse_indices[entry];
         }
 
-        const float ofs = offsets[n + i * outstride];
-        const float scl = weights[n + i * outstride];
+        const float ofs = offsets[entry];
+        const float scl = weights[entry];
+
+        // An entry that weighs 0 (a transmit that does not reach this target, the padding of a
+        // sparse list) contributes nothing and reads nothing -- so the work follows the nonzero
+        // (target, event) pairs. So does a sparse index outside x's events.
+        bool skip = (scl == 0.0f);
+        if constexpr (is_sparse) {
+            skip |= ((unsigned)seqidx >= (unsigned)seqlen);
+        }
+        if (skip)
+            continue;
 
         for (int m = 0; m < channels; m++) {
             const float3 xp = srcpos[m];
@@ -75,7 +86,8 @@ __global__ void das_alg1_kernel(
             bool inbounds = (k >= 0) & (k < (samples - 1));
 
             if constexpr (dir_check) {
-                float4 xd = srcdir[m];
+                // this event's row of look directions (event_stride 0: one row for every event)
+                float4 xd = srcdir.axes[seqidx * srcdir.event_stride + m];
                 float proj = (dx * xd.x + dy * xd.y + dz * xd.z) * rinv;
                 inbounds &= (proj > xd.w);
             }

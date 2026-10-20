@@ -16,14 +16,19 @@ function out = das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices, s
 %               shape (..., n).
 %     SPARSE_INDICES - Indices into the sequence dimension of X (gpuArray,
 %               int32, 1-based), shape (..., n).
-%     SRCDIR  - Source directivity vectors (gpuArray, single),
-%               shape (4, channels). See DAS.
+%     SRCDIR  - Receive directivity (gpuArray, single), shape (4, channels)
+%               or (4, channels, sequence). See DAS. A per-event SRCDIR is
+%               indexed by the event an entry selects, not by the entry.
 %     WAVENUM - Wavenumber for phase rotation (single, default: 0.0).
 %     ALGORITHM      - Algorithm variant (int32, default: 0).
 %                      das_sparse runs ALG1 only: 0 (default) or 1.
 %     USE_FP16       - Use half-precision arithmetic (logical, default: false).
 %     CHANNELS_TRAILING - If true, the channel dimension follows the sequence
 %                         dimension in X. Default: true.
+%
+%   Entries that weigh 0 (padding) and indices outside X are skipped, so the
+%   cost follows each target's nonzero entries: put those first, in
+%   ascending event order, so neighbouring targets stay in step.
 %
 %   Output:
 %     OUT - Beamformed output (gpuArray), shape (...[, batch]).

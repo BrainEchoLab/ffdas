@@ -84,6 +84,10 @@ The benefit depends on the algorithm. `ALG1`'s low payload efficiency means it w
 
 In Python, FP16 input is enabled by passing `use_fp16=True` to `das` or `das_sparse`, or by constructing a `TensorView` with `ffdas.view(array, ffdas.half)` or `ffdas.view(array, ffdas.half2)` for complex data.
 
+### Skipped work
+
+An (event, target) pair that weighs exactly 0 is skipped: `ALG1` skips it per target (one thread is one target), `ALG2` and `ALG4` skip an event when it weighs 0 for every target of a warp, and leave the samples of zero-weight targets out of the warp's loads. A sample that a channel's receive directivity rejects contributes an exact 0. In `das_sparse` this makes the cost follow each target's nonzero entries rather than the fixed number of entries per target, so padding a target's list with zero weights is free. A warp of 32 targets runs at the pace of its busiest target and reads fastest when all 32 read the same event, so the order of the targets matters: `ffdas.utils.sort_sparse` groups them by their event lists (see [das_sparse](api/das.md#das_sparse)).
+
 ## DEFAULT algorithm selection
 
 `Algorithm.DEFAULT` currently dispatches to `ALG1`. It does not yet auto-select based on the problem configuration. If you want `ALG2` or `ALG4`, you must request them explicitly. Auto-selection based on batch size, grid dimensions, and hardware capabilities is planned for a future release.

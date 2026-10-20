@@ -245,7 +245,7 @@ __global__ void das_alg4_kernel(
     int samples, 
     int seqlen,
     int channels,
-    const float4 *srcdir, 
+    const ffdas::detail::das_directivity srcdir, 
     float wavenum,
     const Tx *x, 
     int ndst, 
@@ -286,6 +286,11 @@ __global__ void das_alg4_kernel(
         const float ofs = offsets[to];
         const float scl = weights[to];
 
+        // an event that weighs 0 for every target of this warp contributes nothing: skip it (the
+        // early return above is warp-uniform, so the whole warp is here)
+        if (__all_sync(0xFFFFFFFFu, scl == 0.0f))
+            continue;
+
         for (int mbase = 0; mbase < channels; mbase += chan_per_tile) {
             int m = mbase + (lane % chan_per_tile);
             const int lane_valid = (m < channels);
@@ -308,14 +313,16 @@ __global__ void das_alg4_kernel(
             bool inbounds = (k >= 0) & (k < (samples-1));
 
             if constexpr (dir_check) {
-                float4 xd = srcdir[m];
+                // this event's row of look directions (event_stride 0: one row for every event)
+                float4 xd = srcdir.axes[o * srcdir.event_stride + m];
                 float proj = (dx * xd.x + dy * xd.y + dz * xd.z) * rinv;
                 inbounds &= (proj > xd.w);
             }
 
-            // a sample outside [0, samples-2] (or rejected by directivity) enters the unique-index
-            // set as -1: its weight is 0, and its B rows are read from rows 0 and 1 and set to 0 (#2)
-            const bool use = lane_valid && inbounds;
+            // a sample outside [0, samples-2], rejected by directivity or weighing 0 enters the
+            // unique-index set as -1: its weight is 0, and its B rows are read from rows 0 and 1 and
+            // set to 0 (#2)
+            const bool use = lane_valid && inbounds && (scl != 0.0f);
             const int ks = use ? k : -1;
 
             Tx weight{};

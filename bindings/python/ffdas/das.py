@@ -27,8 +27,11 @@ def _channels_and_events(x, srcpos, srcdir, channels_trailing):
     channels, events = x.shape[channel_axis], x.shape[event_axis]
     if tuple(srcpos.shape) != (channels, 3):
         raise ValueError(f"srcpos shape {srcpos.shape} must be ({channels}, 3) for {channels} channels")
-    if srcdir is not None and tuple(srcdir.shape) != (channels, 4):
-        raise ValueError(f"srcdir shape {srcdir.shape} must be ({channels}, 4) for {channels} channels")
+    if srcdir is not None and tuple(srcdir.shape) not in ((channels, 4), (events, channels, 4)):
+        raise ValueError(
+            f"srcdir shape {srcdir.shape} must be ({channels}, 4), or ({events}, {channels}, 4) "
+            f"for one look direction per sequence event and channel"
+        )
     return channels, events
 
 
@@ -103,11 +106,16 @@ def das(
         dstpos: Destination (target) positions, shape (..., 3). The spatial
             dimensions are dstpos.shape[:-1].
         offsets: Per-target time offsets in samples, shape (sequence, ...).
-        weights: Per-target apodization weights, shape (sequence, ...).
-        srcdir: Source directivity vectors, shape (channels, 4). The first
-            three components are the unit surface normal; the fourth is
-            the cosine of the sensitivity half-angle. Channels whose
-            angle to a target exceeds this are excluded.
+        weights: Per-target apodization weights, shape (sequence, ...). An
+            event that weighs 0 for a target is skipped for it: it costs
+            nothing and contributes nothing, even where x is NaN.
+        srcdir: Receive directivity: per channel a unit look direction
+            (first three components) and the cosine of the sensitivity
+            half-angle (fourth). A channel contributes to a target only if
+            the target lies inside its cone. Shape (channels, 4), the same
+            for every sequence event, or (sequence, channels, 4): one look
+            direction per event and channel, e.g. a sub-array pre-steered
+            at each transmit's receive focus.
         wavenum: Wavenumber for phase rotation, typically -2*pi*fc/fs.
             Set to 0 to disable.
         algorithm: Algorithm variant.
@@ -235,9 +243,14 @@ def das_sparse(
         weights: Per-target apodization weights, shape (n, ...).
         sparse_indices: Indices into the sequence dimension of x,
             shape (n, ...). Each target compounds the n events given
-            by these indices.
-        srcdir: Source directivity vectors, shape (channels, 4).
-            See ``das`` for details.
+            by these indices. Entries that weigh 0 (padding) and indices
+            outside x are skipped, so the cost follows each target's
+            nonzero entries; put those first, in ascending event order,
+            so neighbouring targets stay in step.
+        srcdir: Receive directivity, shape (channels, 4) or
+            (sequence, channels, 4). See ``das``. A per-event srcdir is
+            indexed by the event an entry selects (its sparse index), not
+            by the entry.
         wavenum: Wavenumber for phase rotation (-2*pi*fc/fs).
         algorithm: Algorithm variant.
         use_fp16: Use half-precision arithmetic.

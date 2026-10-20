@@ -22,7 +22,7 @@ __global__ void __launch_bounds__(warps_per_block * 32) das_alg2_kernel(
     int samples, 
     int seqlen,
     int channels,
-    const float4 *srcdir, 
+    const ffdas::detail::das_directivity srcdir, 
     float wavenum,
     const Tx *x, 
     int ndst, 
@@ -90,6 +90,11 @@ __global__ void __launch_bounds__(warps_per_block * 32) das_alg2_kernel(
         const float ofs = offsets[to];
         const float scl = weights[to];
 
+        // an event that weighs 0 for every target of this warp contributes nothing: skip it (the
+        // early returns above are warp-uniform, so the whole warp is here)
+        if (__all_sync(0xFFFFFFFFu, scl == 0.0f))
+            continue;
+
         const int last_ch = channels - 1;
 
         for (int c = 0; c < channels; c += chan_per_warp) {
@@ -116,15 +121,16 @@ __global__ void __launch_bounds__(warps_per_block * 32) das_alg2_kernel(
             bool inbounds = (ipart >= 0) & (ipart < (samples-1));
 
             if constexpr (dir_check) {
-                float4 xd = srcdir[lane_ch];
+                // this event's row of look directions (event_stride 0: one row for every event)
+                float4 xd = srcdir.axes[o * srcdir.event_stride + lane_ch];
                 float proj = (dx * xd.x + dy * xd.y + dz * xd.z) * rinv;
                 inbounds &= (proj > xd.w);
             }
 
-            // a sample outside [0, samples-2] (or rejected by directivity) is sent to the loading
-            // threads as index 0 (rows 0 and 1, inside the data) with a fraction of -0, which tells
-            // them to use 0 for the value (#2). A used sample's fraction is never negative
-            const bool use = lane_valid && inbounds;
+            // a sample outside [0, samples-2], rejected by directivity or weighing 0 is sent to the
+            // loading threads as index 0 (rows 0 and 1, inside the data) with a fraction of -0, which
+            // tells them to use 0 for the value (#2). A used sample's fraction is never negative
+            const bool use = lane_valid && inbounds && (scl != 0.0f);
 
             Ty weight{};
 

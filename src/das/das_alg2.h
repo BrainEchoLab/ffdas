@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ffdas.h"
+#include "das_directivity.h"
 
 
 constexpr int DAS_ALG2_MAX_CHANNELS = 4096;
@@ -12,7 +13,7 @@ template<typename Tx, typename Ty>
 ffdas_error_t das_alg2_strided(
     ffdas_context &handle,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const das_directivity &srcdir, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,

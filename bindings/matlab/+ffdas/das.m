@@ -17,16 +17,23 @@ function out = das(x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorit
 %               shape (..., sequence).
 %     WEIGHTS - Per-target apodization weights (gpuArray, single),
 %               shape (..., sequence).
-%     SRCDIR  - Source directivity vectors (gpuArray, single),
-%               shape (4, channels). The first three rows are the unit
-%               surface normal; the fourth is the cosine of the sensitivity
-%               half-angle. Default: [] (disabled).
+%     SRCDIR  - Receive directivity (gpuArray, single): per channel a
+%               unit look direction (rows 1-3) and the cosine of the
+%               sensitivity half-angle (row 4). A channel contributes to a
+%               target only inside its cone. Shape (4, channels), the same
+%               for every sequence event, or (4, channels, sequence): one
+%               look direction per event and channel (e.g. sub-arrays
+%               pre-steered at each transmit's receive focus).
+%               Default: [] (disabled).
 %     WAVENUM - Wavenumber for phase rotation (single), typically
 %               -2*pi*fc/fs. Default: 0.0 (disabled).
 %     ALGORITHM      - Algorithm variant (int32, default: 0).
 %     USE_FP16       - Use half-precision arithmetic (logical, default: false).
 %     CHANNELS_TRAILING - If true, the channel dimension follows the sequence
 %                         dimension in X. Default: true.
+%
+%   An event that weighs 0 for a target is skipped for it: it costs nothing
+%   and contributes nothing, even where X is NaN.
 %
 %   Output:
 %     OUT - Beamformed output (gpuArray), shape (...[, batch]).

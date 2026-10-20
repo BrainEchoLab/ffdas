@@ -18,7 +18,7 @@ The [quickstart](getting-started/quickstart.md) walks through computing transmit
 
 The library provides GPU-accelerated implementations of:
 
-- [`das`](api/das.md), [`das_sparse`](api/das.md#das_sparse) — delay-and-sum with multiple algorithm variants, sparse compounding, half-precision compute, and directivity masking.
+- [`das`](api/das.md), [`das_sparse`](api/das.md#das_sparse) — delay-and-sum with multiple algorithm variants, sparse compounding, half-precision compute, and receive directivity (per channel, or per channel and transmit event).
 - [`greens`](api/greens.md) — frequency-domain Green's function summation for wave propagation modeling. Requires SM 70+.
 - [`truncate_rank`](api/truncate_rank.md) — rank truncation filter (truncated SVD reconstruction).
 - [`einsum`](api/einsum.md) — binary tensor contraction using Einstein summation notation.

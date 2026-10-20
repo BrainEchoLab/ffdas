@@ -111,6 +111,9 @@ typedef struct ffdas_contraction_plan* ffdas_contraction_plan_t;
 struct ffdas_interpolation_plan;
 typedef struct ffdas_interpolation_plan* ffdas_interpolation_plan_t;
 
+struct ffdas_directivity_desc;
+typedef struct ffdas_directivity_desc* ffdas_directivity_desc_t;
+
 
 #if defined(__cplusplus)
 extern "C" {
@@ -210,6 +213,65 @@ FFDAS_API ffdas_error_t ffdas_das_sparse(
     ffdas_handle_t handle,
     const float *srcpos,
     const float *srcdir,
+    float wavenum,
+    ffdas_tensor_desc_t x_desc,
+    const void* x,
+    const float *dstpos,
+    const float *offsets,
+    const float *weights,
+    int sparse_count,
+    const int *sparse_indices,
+    const void *beta,
+    ffdas_tensor_desc_t out_desc,
+    void* out,
+    ffdas_compute_type_t compute_type,
+    ffdas_alg_t alg
+);
+
+/* Receive directivity for ffdas_das_ex and ffdas_das_sparse_ex.
+ *
+ * axes: device float4 array [events][channels] -- or [channels] when events is 0, then shared by every
+ * event -- holding each channel's unit look direction (x, y, z) and the cosine of its sensitivity
+ * half-angle (w). A target contributes through a channel only if, with d the unit vector from the
+ * channel to the target, dot(d, look) > w (w < -1 disables the cut). With events > 0 it must equal
+ * the sequence length of x: per transmit event, each channel can look elsewhere. das_sparse picks
+ * the row by the event a sparse entry selects, not by the entry. The array must be 16-byte aligned.
+ *
+ * The descriptor refers to the arrays; it does not copy them, and does not need a handle.
+ */
+FFDAS_API ffdas_error_t ffdas_create_directivity_desc(
+    ffdas_directivity_desc_t *desc,
+    int64_t channels,
+    int64_t events,
+    const float *axes
+);
+
+FFDAS_API ffdas_error_t ffdas_destroy_directivity_desc(
+    ffdas_directivity_desc_t desc
+);
+
+/* ffdas_das / ffdas_das_sparse with a directivity descriptor in place of srcdir (NULL: none). */
+FFDAS_API ffdas_error_t ffdas_das_ex(
+    ffdas_handle_t handle,
+    const float *srcpos,
+    ffdas_directivity_desc_t directivity,
+    float wavenum,
+    ffdas_tensor_desc_t x_desc,
+    const void* x,
+    const float *dstpos,
+    const float *offsets,
+    const float *weights,
+    const void *beta,
+    ffdas_tensor_desc_t out_desc,
+    void* out,
+    ffdas_compute_type_t compute_type,
+    ffdas_alg_t alg
+);
+
+FFDAS_API ffdas_error_t ffdas_das_sparse_ex(
+    ffdas_handle_t handle,
+    const float *srcpos,
+    ffdas_directivity_desc_t directivity,
     float wavenum,
     ffdas_tensor_desc_t x_desc,
     const void* x,

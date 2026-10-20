@@ -6,6 +6,7 @@
 #include "type_utils.h"
 #include "tensor.cuh"
 #include "error_checking.h"
+#include "das_directivity.h"
 
 #include "das_alg1.h"
 #include "das_alg2.h"
@@ -17,7 +18,7 @@ template<typename Tx, typename Ty>
 ffdas_error_t das_sparse_impl(
     ffdas_context &handle,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const ffdas_directivity_desc *directivity, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const Tx* x,
@@ -34,6 +35,9 @@ ffdas_error_t das_sparse_impl(
 ) {
     if (!can_use_int32_indexing(x_desc) || !can_use_int32_indexing(out_desc))
         return FFDAS_ERROR_INVALID_DIMS;
+
+    das_directivity srcdir;
+    FFDAS_CHECK(make_das_directivity(directivity, x_desc, srcdir));
 
     switch (alg)
     {
@@ -52,7 +56,7 @@ template<ffdas_datatype_t Tx_t, ffdas_datatype_t Ty_t>
 ffdas_error_t ffdas_das_sparse_dispatch(
     ffdas_context &handle,
     const float3 *srcpos, 
-    const float4 *srcdir, 
+    const ffdas_directivity_desc *directivity, 
     float wavenum,
     const ffdas_tensor_desc &x_desc, 
     const void* x,
@@ -73,7 +77,7 @@ ffdas_error_t ffdas_das_sparse_dispatch(
     return das_sparse_impl<Tx, Ty>(
         handle,
         srcpos,
-        srcdir,
+        directivity,
         wavenum,
         x_desc,
         static_cast<const Tx*>(x),
