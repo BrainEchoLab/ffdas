@@ -68,7 +68,7 @@ In Python, set `use_fp16=True` to have the library convert FP32 inputs to FP16 i
 === "MATLAB"
 
     ```matlab
-    % set use_fp16 to true (8th positional argument)
+    % set use_fp16 to true (9th positional argument)
     output = ffdas.das(rf, srcpos, dstpos, offsets, weights, [], wavenum, int32(0), true);
     ```
 

@@ -254,6 +254,8 @@ ffdas_error_t das_alg4_strided(
 
     if (params.channels > DAS_ALG4_MAX_CHANNELS)
         return FFDAS_ERROR_INVALID_DIMS;
+    if (das_is_empty(params))
+        return FFDAS_SUCCESS;
 
     if constexpr (std::is_same<Tx, __half2>::value || std::is_same<Tx, float2>::value) {
         return das_alg4_dispatch_compute<Tx>(

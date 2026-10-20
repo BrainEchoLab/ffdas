@@ -37,33 +37,19 @@ void mexFunction(int nlhs, mxArray *plhs[],
     // leadig in row-major order and would require no permutation
     bool channels_trailing = static_cast<bool>(mxGetScalar(prhs[10]));
 
-    // x must have dimensions ([batch,] channels, sequence, samples)
-    if (x.ndim_val() < 3 || x.ndim_val() > 4)
-        mexErrMsgIdAndTxt("ffdas_das:error",
-            "x must have 3 or 4 dimensions (got %d)", x.ndim_val());
-
-    if (!channels_trailing) {
-        // in this case, it is possible that the batch and sequence dims are both 1, 
-        // and since matlab removes any trailing dimension, we have to add it back here
-        if (x.ndim_val() == 2)
-            x.reshape({1, x.shape(0), x.shape(1)});
-
-        if (x.ndim_val() == 3) {
-            x.permute({1, 0, 2});
-        } else {
-            x.permute({0, 2, 1, 3});
-        }
-    }
+    // x as ([batch,] channels, sequence, samples)
+    das_input_layout(x, channels_trailing, "ffdas_das:error");
 
     bool have_batch = (x.ndim_val() == 4);
-    int64_t sequence = channels_trailing ? x.shape(x.ndim_val()-2) : x.shape(x.ndim_val()-3);
+    int64_t channels = x.shape(x.ndim_val()-3);
+    int64_t sequence = x.shape(x.ndim_val()-2);
 
-    if (srcpos.ndim_val() != 2 || srcpos.shape(1) != 3)
+    if (srcpos.ndim_val() != 2 || srcpos.shape(1) != 3 || srcpos.shape(0) != channels)
         mexErrMsgIdAndTxt("ffdas_das:error",
-            "srcpos must have shape (3, channels)");
+            "srcpos must have shape (3, channels) for the %d channels of x", (int)channels);
 
     if (srcdir.numel() > 0) {
-        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || srcdir.ndim_val() != 2 || srcdir.shape(1) != 4)
+        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || srcdir.ndim_val() != 2 || srcdir.shape(1) != 4 || srcdir.shape(0) != channels)
             mexErrMsgIdAndTxt("ffdas_das:error",
                 "srcdir must be a single array of shape (4, channels)");
     }
@@ -74,24 +60,17 @@ void mexFunction(int nlhs, mxArray *plhs[],
         mexErrMsgIdAndTxt("ffdas_das:error",
             "dstpos must have shape (3, ...)");
 
-    // offset and weight must both have dimensions (..., sequence) matching the leading dims of dstpos
+    // offsets and weights: (..., sequence) in MATLAB order, ... the spatial dimensions of dstpos.
+    // Compared without size-1 dimensions, so a (pixels x 1) array for a single event is accepted.
     if (offsets.dims != weights.dims)
         mexErrMsgIdAndTxt("ffdas_das:error",
             "offsets and weights must have the same shape");
-    if (sequence == 1 && offsets.ndim_val() != (dstnd-1))  // matlab squeezed the sequence dimension from offsets/weights
+    std::vector<int64_t> expected(dstpos.dims.begin(), dstpos.dims.end() - 1);
+    expected.insert(expected.begin(), sequence);
+    if (squeezed(offsets.dims) != squeezed(expected))
         mexErrMsgIdAndTxt("ffdas_das:error",
-            "offsets and weights must have the same number of dimensions as dstpos");
-    if (sequence > 1 && (offsets.ndim_val()-1) != (dstnd-1))  // check number of spatial dimensions
-        mexErrMsgIdAndTxt("ffdas_das:error",
-            "offsets and weights must have the same number of dimensions as dstpos");
-    if (sequence > 1 && offsets.shape(0) != sequence)
-        mexErrMsgIdAndTxt("ffdas_das:error",
-            "leading dimension of offsets/weights must match the channel dimension of x");
-    for (int i = 0; i < dstnd-1; i++) {
-        if (offsets.shape((sequence > 1) ? i+1 : i) != dstpos.shape(i))
-            mexErrMsgIdAndTxt("ffdas_das:error",
-                "spatial dimensions of offsets/weights must match dstpos");
-    }
+            "offsets and weights must have shape (..., %d): the spatial dimensions of dstpos, then one entry per sequence event of x",
+            (int)sequence);
 
     // out will have dimensions ([batch,] ...)
     int64_t spatial_ndim = dstnd - 1;

@@ -206,6 +206,9 @@ ffdas_error_t das_alg1_strided(
     das_problem_params params;
     FFDAS_CHECK(get_das_problem_params(x_desc, out_desc, params));
 
+    if (das_is_empty(params))
+        return FFDAS_SUCCESS;
+
     int tile_width;
     const char* env = std::getenv("FFDAS_ALG1_TILE_SIZE");
     if (env) {
@@ -265,6 +268,9 @@ ffdas_error_t das_alg1_sparse(
 ) {
     das_problem_params params;
     FFDAS_CHECK(get_das_problem_params(x_desc, out_desc, params));
+
+    if (das_is_empty(params))
+        return FFDAS_SUCCESS;
 
     if (sparse_count <= 0)
         return FFDAS_ERROR_INVALID_ARGUMENT;

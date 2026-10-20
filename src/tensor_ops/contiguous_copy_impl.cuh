@@ -22,6 +22,10 @@ ffdas_error_t contiguous_copy_impl(
     if (!ffdas::detail::can_use_int32_indexing(x_desc))
         return FFDAS_ERROR_INVALID_DIMS;
 
+    // nothing to copy (a zero-size grid is a CUDA launch error)
+    if (x_desc.numel() == 0)
+        return FFDAS_SUCCESS;
+
     ffdas::detail::nvtx_range nvtx_cast(handle, "contiguous_copy_impl");
 
     size_t ndim = x_desc.ndim();

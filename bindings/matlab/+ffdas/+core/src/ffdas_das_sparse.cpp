@@ -28,41 +28,27 @@ void mexFunction(int nlhs, mxArray *plhs[],
     ndarray::ndarray<ndarray::access::read_only, float,  ndarray::device::gpu> weights(prhs[5]);
     ndarray::ndarray<ndarray::access::read_only, int32_t, ndarray::device::gpu> sparse_indices(prhs[6]);
 
-    ndarray::ndarray<ndarray::access::read_only, float> srcdir(prhs[7]);
+    // untyped: the default [] arrives as an empty double gpuArray
+    ndarray::ndarray<ndarray::access::read_only> srcdir(prhs[7]);
 
     float wavenum = static_cast<float>(mxGetScalar(prhs[8]));
     int algorithm = static_cast<int>(mxGetScalar(prhs[9]));
     bool use_fp16 = static_cast<bool>(mxGetScalar(prhs[10]));
     bool channels_trailing = static_cast<bool>(mxGetScalar(prhs[11]));
 
-    // x must have dimensions ([batch,] channels, sequence, samples)
-    if (x.ndim_val() < 3 || x.ndim_val() > 4)
-        mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-            "x must have 3 or 4 dimensions (got %d)", x.ndim_val());
-
-    if (!channels_trailing) {
-        // in this case, it is possible that the batch and sequence dims are both 1, 
-        // and since matlab removes any trailing dimension, we have to add it back here
-        if (x.ndim_val() == 2)
-            x.reshape({1, x.shape(0), x.shape(1)});
-
-        if (x.ndim_val() == 3) {
-            x.permute({1, 0, 2});
-        } else {
-            x.permute({0, 2, 1, 3});
-        }
-    }
+    // x as ([batch,] channels, sequence, samples)
+    das_input_layout(x, channels_trailing, "ffdas_das_sparse:error");
 
     bool have_batch = (x.ndim_val() == 4);
-    int64_t sequence = channels_trailing ? x.shape(x.ndim_val()-2) : x.shape(x.ndim_val()-3);
+    int64_t channels = x.shape(x.ndim_val()-3);
 
-    if (srcpos.ndim_val() != 2 || srcpos.shape(1) != 3)
+    if (srcpos.ndim_val() != 2 || srcpos.shape(1) != 3 || srcpos.shape(0) != channels)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-            "srcpos must have shape (3, channels)");
+            "srcpos must have shape (3, channels) for the %d channels of x", (int)channels);
 
     if (srcdir.numel() > 0) {
-        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || srcdir.ndim_val() != 2 || srcdir.shape(1) != 4)
-            mexErrMsgIdAndTxt("ffdas_das:error",
+        if (srcdir.class_id != mxSINGLE_CLASS || srcdir.complexity != mxREAL || !srcdir.is_on_gpu() || srcdir.ndim_val() != 2 || srcdir.shape(1) != 4 || srcdir.shape(0) != channels)
+            mexErrMsgIdAndTxt("ffdas_das_sparse:error",
                 "srcdir must be a single array of shape (4, channels)");
     }
 
@@ -72,21 +58,22 @@ void mexFunction(int nlhs, mxArray *plhs[],
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "dstpos must have shape (3, ...)");
 
-    // offset, weight and sparse_indices must all have dimensions (..., n) matching the leading dims of dstpos
+    // offsets, weights and sparse_indices: (..., n) in MATLAB order, ... the spatial dimensions of
+    // dstpos and n the number of events compounded per target. Compared without size-1 dimensions
+    // (MATLAB drops a trailing n of 1), so n is the element count over the number of targets.
     if (offsets.dims != weights.dims || offsets.dims != sparse_indices.dims)
         mexErrMsgIdAndTxt("ffdas_das_sparse:error",
             "offsets, weights and sparse_indices must have the same shape");
-    if (sequence == 1 && offsets.ndim_val() != (dstnd-1))  // matlab squeezed the sequence dimension from offsets/weights
-        mexErrMsgIdAndTxt("ffdas_das:error",
-            "offsets and weights must have the same number of dimensions as dstpos");
-    if (sequence > 1 && (offsets.ndim_val()-1) != (dstnd-1))  // check number of spatial dimensions
-        mexErrMsgIdAndTxt("ffdas_das:error",
-            "offsets and weights must have the same number of dimensions as dstpos");
-    for (int i = 0; i < dstnd-1; i++) {
-        if (offsets.shape((sequence > 1) ? i+1 : i) != dstpos.shape(i))
-            mexErrMsgIdAndTxt("ffdas_das_sparse:error",
-                "spatial dimensions of offsets, weights and sparse_indices must match dstpos");
-    }
+    std::vector<int64_t> spatial(dstpos.dims.begin(), dstpos.dims.end() - 1);
+    int64_t targets = 1;
+    for (int64_t d : spatial)
+        targets *= d;
+    int64_t sparse_count = (targets > 0) ? (int64_t)sparse_indices.numel() / targets : 0;
+    std::vector<int64_t> expected = spatial;
+    expected.insert(expected.begin(), sparse_count);
+    if (targets > 0 && (sparse_count < 1 || squeezed(offsets.dims) != squeezed(expected)))
+        mexErrMsgIdAndTxt("ffdas_das_sparse:error",
+            "offsets, weights and sparse_indices must have shape (..., n): the spatial dimensions of dstpos, then the n events per target");
 
     // out will have dimensions ([batch,] ...)
     int64_t spatial_ndim = dstnd - 1;
@@ -128,7 +115,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
         dstpos.data(),
         static_cast<const float*>(offsets.data()),
         static_cast<const float*>(weights.data()),
-        sparse_indices.shape(0),
+        (int)sparse_count,
         sparse_indices.data(),
         beta,
         out_desc.desc, 

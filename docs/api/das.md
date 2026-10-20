@@ -39,17 +39,17 @@ For each target, `das` computes a weighted sum of interpolated samples from all 
 | `x` | `([batch,] channels, seq, samples)` | `(samples, seq, channels[, batch])` | Channel data (RF or IQ). |
 | `srcpos` | `(channels, 3)` | `(3, channels)` | Channel positions in sampling wavelengths. |
 | `dstpos` | `(..., 3)` | `(3, ...)` | Target positions in sampling wavelengths. |
-| `offsets` | `(seq, ...)` | `(..., seq)` | Per-target transmit time offsets in samples. Spatial dimensions must match `dstpos`. |
+| `offsets` | `(seq, ...)` | `(..., seq)` | Per-target transmit time offsets in samples, one row per sequence event of `x`. Spatial dimensions must match `dstpos`. In MATLAB a single event on a flat list of targets is `(targets, 1)`. |
 | `weights` | `(seq, ...)` | `(..., seq)` | Per-target apodization weights. Same shape as `offsets`. |
 | `srcdir` | `(channels, 4)` or `None` | `(4, channels)` or `[]` | Directivity vectors. The first three components are the unit surface normal of each channel element; the fourth is the cosine of the sensitivity half-angle. Targets outside a channel's cone receive zero contribution from that channel. |
 | `wavenum` | `float` | `single` | Wavenumber for phase rotation, typically `-2*pi*fc/fs` for IQ data. Set to `0` to disable. |
-| `algorithm` | `Algorithm` | `int32` | Algorithm variant. `DEFAULT` (0) selects automatically. |
+| `algorithm` | `Algorithm` | `int32` | Algorithm variant. `DEFAULT` (0) runs `ALG1`; see [Performance](../performance.md). |
 | `use_fp16` | `bool` | `logical` | Use half-precision arithmetic. |
 | `channels_trailing` | `bool` | `logical` (default `true`) | If `true`, channel data layout is `(samples, seq, channels[, batch])`. If `false`, `(samples, channels, seq[, batch])`. |
 
 ## Returns
 
-Reconstructed output with the spatial dimensions of `dstpos`: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB.
+Reconstructed output with the spatial dimensions of `dstpos`: `([batch,] ...)` in Python, `(...[, batch])` in MATLAB. With zero targets (or an empty batch) the result is empty. A preallocated `out` must be contiguous.
 
 ## Example
 
@@ -80,6 +80,7 @@ Reconstructed output with the spatial dimensions of `dstpos`: `([batch,] ...)` i
         voxel_pos * k, ...    % (3, 64, 64, 64)
         offsets, ...          % (64, 64, 64, 1) — one transmit event
         weights, ...          % (64, 64, 64, 1)
+        [], ...               % srcdir: none
         -2 * pi * center_freq / sampling_freq ...  % wavenumber in sampling wavelengths
     );
     % output: (64, 64, 64, batch)

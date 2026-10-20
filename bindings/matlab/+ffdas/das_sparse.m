@@ -20,7 +20,7 @@ function out = das_sparse(x, srcpos, dstpos, offsets, weights, sparse_indices, s
 %               shape (4, channels). See DAS.
 %     WAVENUM - Wavenumber for phase rotation (single, default: 0.0).
 %     ALGORITHM      - Algorithm variant (int32, default: 0).
-%                      Possible values: 0 (auto), 1, 2, 4.
+%                      das_sparse runs ALG1 only: 0 (default) or 1.
 %     USE_FP16       - Use half-precision arithmetic (logical, default: false).
 %     CHANNELS_TRAILING - If true, the channel dimension follows the sequence
 %                         dimension in X. Default: true.

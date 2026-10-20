@@ -102,6 +102,35 @@ std::string array_to_string(const mxArray* x) {
     return out;
 }
 
+// MATLAB drops trailing singleton dimensions (and keeps at least two), so the shapes the MEX
+// functions compare are taken with their size-1 dimensions removed
+inline std::vector<int64_t> squeezed(const std::vector<int64_t> &dims) {
+    std::vector<int64_t> out;
+    for (int64_t d : dims)
+        if (d != 1)
+            out.push_back(d);
+    return out;
+}
+
+// x as ([batch,] channels, sequence, samples) in row-major order: MATLAB order (samples, sequence,
+// channels[, batch]) if channels_trailing, else (samples, channels, sequence[, batch])
+template<typename... Args>
+inline void das_input_layout(ndarray::ndarray<Args...> &x, bool channels_trailing, const char *id) {
+    // a single channel (or event) and no batch: MATLAB dropped the trailing singleton
+    if (x.ndim_val() == 2)
+        x.reshape({1, x.shape(0), x.shape(1)});
+
+    if (x.ndim_val() < 3 || x.ndim_val() > 4)
+        mexErrMsgIdAndTxt(id, "x must have 3 or 4 dimensions (got %d)", (int)x.ndim_val());
+
+    if (!channels_trailing) {
+        if (x.ndim_val() == 3)
+            x.permute({1, 0, 2});
+        else
+            x.permute({0, 2, 1, 3});
+    }
+}
+
 struct ScopedTensorDesc {
     ffdas_tensor_desc_t desc = nullptr;
 
