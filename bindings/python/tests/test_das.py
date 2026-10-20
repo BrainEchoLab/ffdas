@@ -148,10 +148,16 @@ ALGORITHMS = [
 ]
 
 
+def _is_complex(x):
+    if isinstance(x, ffdas.TensorView):  # e.g. half2 from ffdas.to_fp16
+        return x.dtype in (ffdas.half2, ffdas.float2, ffdas.double2)
+    return np.issubdtype(x.dtype, np.complexfloating)
+
+
 def _das(**kwargs):
     """ffdas.das, skipping only the combinations ALG4 does not implement."""
     if kwargs["algorithm"] == ffdas.Algorithm.ALG4:
-        if not np.issubdtype(kwargs["x"].dtype, np.complexfloating):
+        if not _is_complex(kwargs["x"]):
             pytest.skip("ALG4 takes complex input only")
         if int(cp.cuda.Device().compute_capability) < 80:
             pytest.skip("ALG4 needs compute capability 8.0 or higher")
@@ -743,3 +749,73 @@ def test_sort_sparse_stays_on_the_input_device(rng):
     w[w < 0.4] = 0
     out = ffdas.utils.sort_sparse(xp.asarray(idx, device=dev), xp.asarray(w, device=dev), xp.asarray(w, device=dev))
     assert all(device(a) == dev for a in out)
+
+
+# Half-precision input converted once (ffdas.to_fp16) and reused: the same image as use_fp16=True,
+# which converts on every call; the output is single precision either way.
+
+
+@pytest.mark.parametrize("algorithm", [ffdas.Algorithm.ALG1, ffdas.Algorithm.ALG2, ffdas.Algorithm.ALG4],
+                         ids=["ALG1", "ALG2", "ALG4"])
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_das_to_fp16_once_equals_use_fp16(algorithm, dtype, rng):
+    n_ch, n_seq, n_samp, n_tgt = 8, 3, 191, 200
+    args = _on_gpu(_problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt, dtype=dtype))
+    kw = dict(wavenum=-0.5, algorithm=algorithm)
+    per_call = _das(**args, use_fp16=True, **kw)
+    x_half = ffdas.to_fp16(args["x"])
+    once = _das(**{**args, "x": x_half}, **kw)
+    once_fp16 = _das(**{**args, "x": x_half}, use_fp16=True, **kw)
+    assert once.dtype == np.dtype(dtype)
+    assert_allclose(cp.asnumpy(once), cp.asnumpy(per_call), rtol=0, atol=0)
+    assert_allclose(cp.asnumpy(once_fp16), cp.asnumpy(per_call), rtol=0, atol=0)
+
+
+def test_das_sparse_to_fp16_once_equals_use_fp16(rng):
+    n_ch, n_seq, n_samp, n_tgt, n_sparse = 8, 6, 191, 200, 3
+    args = _problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_sparse, n_tgt=n_tgt)
+    args["sparse_indices"] = np.stack([rng.permutation(n_seq)[:n_sparse] for _ in range(n_tgt)], 1).astype("int32")
+    args = _on_gpu(args)
+    per_call = ffdas.das_sparse(**args, wavenum=-0.5, use_fp16=True)
+    once = ffdas.das_sparse(**{**args, "x": ffdas.to_fp16(args["x"])}, wavenum=-0.5)
+    assert once.dtype == np.complex64
+    assert_allclose(cp.asnumpy(once), cp.asnumpy(per_call), rtol=0, atol=0)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_to_fp16_empty_batch(dtype, rng):
+    # an empty batch converts to an empty half array and beamforms to an empty image
+    args = _on_gpu(_problem(rng, x_shape=(1, 8, 3, 191), n_seq=3, n_tgt=50, dtype=dtype))
+    x = cp.zeros((0, 8, 3, 191), dtype=dtype)
+    h = ffdas.to_fp16(x)
+    assert tuple(h.shape) == x.shape
+    out = ffdas.das(**{**args, "x": h}, wavenum=-0.5)
+    assert out.shape == (0, 50) and out.dtype == np.dtype(dtype)
+
+
+def test_to_fp16_of_a_view(rng):
+    # interleaved (re, im) pairs viewed as complex convert exactly like the complex array
+    shape = (2, 8, 3, 191)
+    z = cp.asarray((rng.standard_normal(shape) + 1j * rng.standard_normal(shape)).astype("complex64"))
+    pairs = z.view(cp.float32).reshape(*shape, 2)
+    h_view = ffdas.to_fp16(ffdas.view(pairs, ffdas.float2))
+    h = ffdas.to_fp16(z)
+    assert h_view.dtype == ffdas.half2 and tuple(h_view.shape) == shape
+    assert_allclose(cp.asnumpy(h_view.base), cp.asnumpy(h.base), rtol=0, atol=0)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_to_fp16_rounds_like_a_cast(dtype, rng):
+    x = rng.standard_normal((3, 5, 7)) * 100
+    if dtype == "complex64":
+        x = x + 1j * rng.standard_normal(x.shape) * 100
+    x = cp.asarray(x.astype(dtype))
+    h = ffdas.to_fp16(x)
+    if dtype == "float32":
+        assert h.dtype == cp.float16
+        assert_allclose(cp.asnumpy(h), cp.asnumpy(x.astype(cp.float16)), rtol=0, atol=0)
+    else:
+        assert h.dtype == ffdas.half2 and tuple(h.shape) == x.shape
+        pairs = cp.asnumpy(h.base).astype(np.float32)
+        want = cp.asnumpy(x.view(cp.float32).reshape(*x.shape, 2).astype(cp.float16)).astype(np.float32)
+        assert_allclose(pairs, want, rtol=0, atol=0)

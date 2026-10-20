@@ -95,7 +95,7 @@ $$
 \hat{d} \cdot \hat{\ell} > w ,
 $$
 
-a cone of half-angle $\arccos w$ around the look direction $\hat{\ell}$. $w < -1$ disables the cut. A rejected sample contributes an exact 0, whatever `x` holds there.
+a cone of half-angle $\arccos w$ around the look direction $\hat{\ell}$. $w < -1$ disables the cut. A rejected sample contributes an exact 0, whatever `x` holds there. Not yet in `ALG4` when other targets of its warp read a NaN or Inf: the rejected channel's zero coefficients still multiply their samples (0 × NaN = NaN).
 
 **Per transmit event.** A `(seq, channels, 4)` `srcdir` gives each channel a look direction and cut per sequence event, for receive channels whose directivity changes with the transmit. The case it was made for: channels that are sub-arrays pre-steered at the receive focus of the current transmit (micro-beamforming ASICs). The group sums its elements with delays that point it at the focus, so it hears well only around that direction, and the direction changes with every transmit; its look direction is then the unit vector from the group to that transmit's receive focus. In `das_sparse`, the row is the event a sparse entry selects, not the entry.
 

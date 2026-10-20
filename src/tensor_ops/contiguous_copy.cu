@@ -18,7 +18,8 @@ ffdas_error_t ffdas_contiguous_copy(
     ffdas_tensor_desc x_tensor = *x_desc;
     ffdas_tensor_desc out_tensor = *out_desc;
     
-    if (!x_tensor.same_dims(out_tensor) || !out_tensor.is_contiguous())
+    // an empty out has no layout: array libraries give it any strides (CuPy: all 0)
+    if (!x_tensor.same_dims(out_tensor) || (out_tensor.numel() != 0 && !out_tensor.is_contiguous()))
         return FFDAS_ERROR_INVALID_DIMS;
 
     ffdas::detail::nvtx_range nvtx(*handle, "contiguous_copy");

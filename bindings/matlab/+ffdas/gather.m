@@ -8,7 +8,9 @@ function out = gather(x, indices, axis, permutation, dtype, options)
 %   would create.
 %
 %   OUT = GATHER(..., DTYPE) casts the output to DTYPE. Supported types:
-%   'single', 'int16', 'int32'. Complexity is inferred from the input.
+%   'single', 'int16', 'int32', and 'uint16' for IEEE half precision (held
+%   in a uint16 gpuArray; see FFDAS.TO_FP16). Complexity is inferred from
+%   the input.
 %
 %   OUT = GATHER(..., 'interleaved_complex', true) reads a real X as
 %   interleaved (real, imag) pairs along its first dimension: an int16 or

@@ -218,6 +218,9 @@ ffdas_error_t das_alg2_dispatch_compute(
             return das_alg2_dispatch_vec_size<Tx, Ty, __half, M, N>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, beta, out);
         } else if constexpr (std::is_same_v<Tx, float2>) {
             return das_alg2_dispatch_vec_size<Tx, Ty, __half2, M, N>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, beta, out);
+        } else if constexpr (std::is_same_v<Tx, __half> || std::is_same_v<Tx, __half2>) {
+            // already half precision (converted once by the caller)
+            return das_alg2_dispatch_vec_size<Tx, Ty, Tx, M, N>(handle, params, srcpos, srcdir, wavenum, x, dstpos, offsets, weights, beta, out);
         }
         return FFDAS_ERROR_UNSUPPORTED_TYPE;
     }
