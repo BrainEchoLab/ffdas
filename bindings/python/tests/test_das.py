@@ -783,6 +783,17 @@ def test_das_sparse_to_fp16_once_equals_use_fp16(rng):
 
 
 @pytest.mark.parametrize("dtype", ["float32", "complex64"])
+def test_to_fp16_empty_batch(dtype, rng):
+    # an empty batch converts to an empty half array and beamforms to an empty image
+    args = _on_gpu(_problem(rng, x_shape=(1, 8, 3, 191), n_seq=3, n_tgt=50, dtype=dtype))
+    x = cp.zeros((0, 8, 3, 191), dtype=dtype)
+    h = ffdas.to_fp16(x)
+    assert tuple(h.shape) == x.shape
+    out = ffdas.das(**{**args, "x": h}, wavenum=-0.5)
+    assert out.shape == (0, 50) and out.dtype == np.dtype(dtype)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "complex64"])
 def test_to_fp16_rounds_like_a_cast(dtype, rng):
     x = rng.standard_normal((3, 5, 7)) * 100
     if dtype == "complex64":

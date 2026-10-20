@@ -36,6 +36,13 @@ assert(strcmp(classUnderlying(once), "single"), "half-precision input should giv
 assert(isequal(gather(once), gather(per_call)), "converting once should give the use_fp16 image");
 fprintf("to_fp16 once == use_fp16 per call: identical\n");
 
+% an empty batch stays empty, with its size and complexity, and beamforms to an empty image
+empty_half = ffdas.to_fp16(x(:, :, :, []));
+assert(isequal(size(empty_half), [n_samples, n_events, n_channels, 0]) && ~isreal(empty_half) ...
+    && strcmp(classUnderlying(empty_half), "uint16"), "an empty batch should give an empty complex uint16 gpuArray");
+assert(isempty(ffdas.das(empty_half, channel_pos, pixel_pos, offsets, weights, [], wavenum)), ...
+    "an empty batch should give an empty image");
+
 % raw int16 (real, imag) pairs straight to half precision in the gather
 raw = int16(round(1000 * randn(2 * n_samples, n_events, n_channels, batch, "single", "gpuArray")));
 half_direct = ffdas.gather(raw, gpuArray(int32(1:n_channels)), 3, [], 'uint16', 'interleaved_complex', true);

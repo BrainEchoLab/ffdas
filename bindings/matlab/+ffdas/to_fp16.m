@@ -17,6 +17,15 @@ function out = to_fp16(x)
         x gpuArray
     end
 
+    % nothing to convert (e.g. an empty batch); gather refuses an empty index list
+    if isempty(x)
+        out = zeros(size(x), 'uint16', 'gpuArray');
+        if ~isreal(x)
+            out = complex(out, out);
+        end
+        return
+    end
+
     % a gather of every element along the last dimension, with a type conversion
     d = max(ndims(x), 2);
     out = ffdas.gather(x, gpuArray(int32(1:size(x, d))), d, [], 'uint16');

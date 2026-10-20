@@ -47,9 +47,12 @@ __global__ void strided_copy_kernel(
 }
 
 
-// contiguous_copy of a tensor that is already contiguous: a flat element-wise cast
+// contiguous_copy of a tensor that is already contiguous: a flat element-wise cast. The index is
+// 64-bit: size fits in int, but the last grid-stride step past it may not, and a wrapped (negative)
+// int index would still pass i < size
 template<typename Tx, typename Ty>
 __global__ void contiguous_cast_kernel(int size, const Tx *x, Ty *y) {
-    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < size; i += gridDim.x * blockDim.x)
+    const int64_t stride = (int64_t)gridDim.x * blockDim.x;
+    for (int64_t i = (int64_t)blockIdx.x * blockDim.x + threadIdx.x; i < size; i += stride)
         y[i] = cast<Tx, Ty>(x[i]);
 }
