@@ -1,6 +1,6 @@
 """Entry and target order for ``ffdas.das_sparse``."""
 
-from array_api_compat import array_namespace
+from array_api_compat import array_namespace, device
 
 __all__ = [
     "sort_sparse",
@@ -24,14 +24,17 @@ def sort_sparse(sparse_indices, offsets, weights):
     """
     xp = array_namespace(sparse_indices, offsets, weights)
     n, n_targets = sparse_indices.shape
-    # an entry that weighs 0 is padding: it sorts after every event
-    key = xp.where(weights != 0, sparse_indices, xp.max(sparse_indices) + 1)
+    # an entry that weighs 0 is padding: it sorts after every event (a constant key, not max + 1,
+    # so that zero targets need no reduction)
+    padding = xp.full_like(sparse_indices, xp.iinfo(sparse_indices.dtype).max)
+    key = xp.where(weights != 0, sparse_indices, padding)
     entries = xp.argsort(key, axis=0, stable=True)
     key = xp.take_along_axis(key, entries, axis=0)
     # stable sorts from the last slot to the first: a lexicographic sort of the event lists
-    order = xp.arange(n_targets)
+    # (the permutation lives where the inputs do: arange's default device can be the CPU)
+    order = xp.arange(n_targets, device=device(sparse_indices))
     for slot in range(n - 1, -1, -1):
-        order = xp.take(order, xp.argsort(xp.take(key[slot], order), stable=True))
+        order = xp.take(order, xp.argsort(xp.take(key[slot, ...], order), stable=True))
     entries = xp.take(entries, order, axis=1)
     return (order,) + tuple(xp.take_along_axis(xp.take(a, order, axis=1), entries, axis=0)
                             for a in (sparse_indices, offsets, weights))

@@ -688,3 +688,28 @@ def test_sort_sparse_keeps_the_image_and_groups_the_targets(rng):
     key = np.where(w != 0, si, n_seq)
     assert (np.diff(key, axis=0) >= 0).all()
     assert all(tuple(key[:, i]) <= tuple(key[:, i + 1]) for i in range(n_tgt - 1))
+
+
+def test_sort_sparse_zero_targets():
+    # the sorting workflow on an empty problem: empty arrays out, and das_sparse gives an empty image
+    si, w = cp.zeros((4, 0), dtype="int32"), cp.zeros((4, 0), dtype="float32")
+    order, si, ofs, w = ffdas.utils.sort_sparse(si, w, w)
+    assert order.shape == (0,) and si.shape == ofs.shape == w.shape == (4, 0)
+    srcpos, _ = _co_located(8, 0, 10.0)
+    x = cp.ones((2, 8, 6, 64), dtype="complex64")
+    out = ffdas.das_sparse(x, srcpos, cp.zeros((0, 3), dtype="float32")[order], ofs, w, si)
+    assert out.shape == (2, 0)
+
+
+def test_sort_sparse_stays_on_the_input_device(rng):
+    # a library whose arange defaults to another device (PyTorch: the CPU) must not mix devices;
+    # array_api_strict has a second device to check that without a GPU framework
+    xp = pytest.importorskip("array_api_strict")
+    from array_api_compat import device
+
+    dev = xp.Device("device1")
+    idx = np.stack([rng.permutation(6)[:4] for _ in range(50)], 1).astype("int32")
+    w = rng.random((4, 50)).astype("float32")
+    w[w < 0.4] = 0
+    out = ffdas.utils.sort_sparse(xp.asarray(idx, device=dev), xp.asarray(w, device=dev), xp.asarray(w, device=dev))
+    assert all(device(a) == dev for a in out)
