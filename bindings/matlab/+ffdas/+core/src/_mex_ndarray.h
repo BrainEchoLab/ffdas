@@ -312,14 +312,16 @@ private:
 
         if constexpr (expect_vector) {
             int nonunit = 0;
-            int64_t len = 1;
+            int64_t len = 1, count = 1;
             for (int64_t d : dims) {
+                count *= d;
                 if (d > 1) { nonunit++; len = d; }
             }
             if (nonunit > 1)
                 mexErrMsgIdAndTxt("ndarray:ndarray",
                     "expected a vector, got array with %d non-unit dimensions", nonunit);
-            dims = {(nonunit == 0) ? 0 : len};
+            // a 1 x 1 array is a vector of length 1; only an array without elements has length 0
+            dims = {(count == 0) ? 0 : len};
             strides = {1};
         }
     }

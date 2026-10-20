@@ -36,6 +36,11 @@ def _channels_and_events(x, srcpos, srcdir, channels_trailing):
     return channels, events
 
 
+# TensorView element types that are complex (a pair per element)
+_COMPLEX_VIEWS = (_ffdas.half2, _ffdas.float2, _ffdas.complex64, _ffdas.complex128, _ffdas.double2, _ffdas.short2,
+                  _ffdas.int2)
+
+
 def _is_half(x):
     if isinstance(x, _ffdas.TensorView):
         return x.dtype in (_ffdas.half, _ffdas.half2)
@@ -58,14 +63,19 @@ def to_fp16(x):
 
     ``use_fp16=True`` converts the whole input on every call. Converting once and passing the
     result instead gives the same output without that cost. Real x becomes a float16 array,
-    complex x a ``half2`` TensorView of the same shape.
+    complex x a ``half2`` TensorView of the same shape. x may be an ``ffdas.view`` too (e.g.
+    interleaved pairs viewed as ``float2``).
     """
-    xp = array_namespace(x)
-    if xp.isdtype(x.dtype, "complex floating"):
-        out = _ffdas.view(xp.empty((*x.shape, 2), dtype=xp.float16, device=array_api_compat.device(x)), _ffdas.half2)
+    view = isinstance(x, _ffdas.TensorView)
+    base = x.base if view else x  # a view has no array namespace of its own
+    xp, dev = array_namespace(base), array_api_compat.device(base)
+    complex_ = x.dtype in _COMPLEX_VIEWS if view else xp.isdtype(x.dtype, "complex floating")
+    shape = tuple(x.shape)
+    if complex_:
+        out = _ffdas.view(xp.empty((*shape, 2), dtype=xp.float16, device=dev), _ffdas.half2)
     else:
-        out = xp.empty(x.shape, dtype=xp.float16, device=array_api_compat.device(x))
-    return contiguous_copy(x, out=out)
+        out = xp.empty(shape, dtype=xp.float16, device=dev)
+    return contiguous_copy(x, out=out)  # the view itself: its shape and element type
 
 
 def _compute_type(x, use_fp16):

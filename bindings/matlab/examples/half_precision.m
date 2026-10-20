@@ -43,6 +43,13 @@ assert(isequal(size(empty_half), [n_samples, n_events, n_channels, 0]) && ~isrea
 assert(isempty(ffdas.das(empty_half, channel_pos, pixel_pos, offsets, weights, [], wavenum)), ...
     "an empty batch should give an empty image");
 
+% one channel and one event (samples x 1) converts like a column of a wider buffer
+column = gpuArray(single((1:n_samples)' / 7));
+one = ffdas.to_fp16(column);
+two = ffdas.to_fp16([column, column]);
+assert(isequal(size(one), [n_samples, 1]) && isequal(gather(one), gather(two(:, 1))), ...
+    "a samples x 1 buffer should convert like one column");
+
 % raw int16 (real, imag) pairs straight to half precision in the gather
 raw = int16(round(1000 * randn(2 * n_samples, n_events, n_channels, batch, "single", "gpuArray")));
 half_direct = ffdas.gather(raw, gpuArray(int32(1:n_channels)), 3, [], 'uint16', 'interleaved_complex', true);

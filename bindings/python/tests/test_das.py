@@ -793,6 +793,17 @@ def test_to_fp16_empty_batch(dtype, rng):
     assert out.shape == (0, 50) and out.dtype == np.dtype(dtype)
 
 
+def test_to_fp16_of_a_view(rng):
+    # interleaved (re, im) pairs viewed as complex convert exactly like the complex array
+    shape = (2, 8, 3, 191)
+    z = cp.asarray((rng.standard_normal(shape) + 1j * rng.standard_normal(shape)).astype("complex64"))
+    pairs = z.view(cp.float32).reshape(*shape, 2)
+    h_view = ffdas.to_fp16(ffdas.view(pairs, ffdas.float2))
+    h = ffdas.to_fp16(z)
+    assert h_view.dtype == ffdas.half2 and tuple(h_view.shape) == shape
+    assert_allclose(cp.asnumpy(h_view.base), cp.asnumpy(h.base), rtol=0, atol=0)
+
+
 @pytest.mark.parametrize("dtype", ["float32", "complex64"])
 def test_to_fp16_rounds_like_a_cast(dtype, rng):
     x = rng.standard_normal((3, 5, 7)) * 100
