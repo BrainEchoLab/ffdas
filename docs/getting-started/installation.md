@@ -219,6 +219,24 @@ The `release.py` script at the repository root automates the full release workfl
 
 See `python release.py --help` for options.
 
+To build a pre-release, pass its version:
+
+```bash
+python release.py --version 0.1.2.dev1
+```
+
+The version is written into the Python packages for the duration of the build and the files are restored afterwards, so the sources keep their own version. It must be a normalised [PEP 440](https://peps.python.org/pep-0440/) version of the release `CMakeLists.txt` describes: `0.1.2.devN` or `0.1.2rcN` while it says `0.1.2`. The wheels and MATLAB archives carry the full version in their names.
+
+### Pre-releases
+
+Pre-releases are published on the [GitHub Releases](https://github.com/brainecholab/ffdas/releases) page only, not on PyPI, so `pip install ffdas` keeps installing the latest release. To try one, install the two wheels for your platform and CUDA version from the release's assets in one command:
+
+```bash
+pip install <url of ffdas_core_cuda12-...whl> <url of ffdas-...whl>
+```
+
+MATLAB archives are used as for a release.
+
 ## Troubleshooting
 
 **Core library not found at import time.** If `import ffdas` raises `ImportError: Could not find the ffdas core library`, the CUDA extra was not included when installing. The correct command is `pip install ffdas[cuda12]` or `pip install ffdas[cuda13]` — the bracket suffix pulls in the GPU-accelerated core library. Some shells (e.g. zsh) require quoting: `pip install 'ffdas[cuda12]'`.
