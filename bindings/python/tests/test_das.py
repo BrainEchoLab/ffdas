@@ -632,6 +632,36 @@ def test_das_zero_weight_event_is_not_read(algorithm, use_fp16, rng):
     assert_allclose(cp.asnumpy(out), cp.asnumpy(alone), rtol=0, atol=tol * np.abs(cp.asnumpy(alone)).max())
 
 
+# ALG4 sums 8 targets per sparse matrix multiply: a zero-weight target's zero coefficients still
+# multiply the samples the other targets of its warp read (0 * NaN = NaN). Not fixed yet.
+_ALG4_MIXED_WARP = pytest.mark.xfail(strict=True, reason="ALG4 does not yet isolate a zero-weight target in a mixed warp")
+MIXED_WARP_ALGORITHMS = [
+    pytest.param(*p.values, id=p.id, marks=_ALG4_MIXED_WARP if p.values[0] == ffdas.Algorithm.ALG4 else ())
+    for p in ALGORITHMS
+]
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", MIXED_WARP_ALGORITHMS)
+def test_das_zero_weight_target_beside_weighted_ones_ignores_nan(algorithm, use_fp16, rng):
+    """Every other target weighs 0 for event 1, so every warp mixes zero and nonzero weights. Event 1
+    is NaN and the zero-weight targets' offsets for it too: they still get the event-0 image."""
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 200
+    args = _on_gpu(_problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt))
+    kw = dict(wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    alone = _das(**{**args, "x": cp.ascontiguousarray(args["x"][:, :, :1]),
+                    "offsets": args["offsets"][:1], "weights": args["weights"][:1]}, **kw)
+    x = args["x"].copy()
+    x[:, :, 1] = complex(np.nan, np.nan)
+    offsets, weights = args["offsets"].copy(), args["weights"].copy()
+    weights[1, ::2] = 0
+    offsets[1, ::2] = np.nan
+    out = cp.asnumpy(_das(**{**args, "x": x, "offsets": offsets, "weights": weights}, **kw))[:, ::2]
+    alone = cp.asnumpy(alone)[:, ::2]
+    assert np.isfinite(out).all()
+    tol = 3e-2 if use_fp16 else 1e-5  # one event vs two: different batch tiling in ALG2
+    assert_allclose(out, alone, rtol=0, atol=tol * np.abs(alone).max())
+
+
 def test_das_sparse_zero_padding_is_free_and_exact(rng):
     """K = 9 with zero-weight padding (any index, even outside x) is the compact K = 4 call, bitwise."""
     n_ch, n_seq, n_samp, n_tgt = 8, 6, 191, 200

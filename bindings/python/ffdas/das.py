@@ -108,7 +108,10 @@ def das(
         offsets: Per-target time offsets in samples, shape (sequence, ...).
         weights: Per-target apodization weights, shape (sequence, ...). An
             event that weighs 0 for a target is skipped for it: it costs
-            nothing and contributes nothing, even where x is NaN.
+            nothing and contributes nothing, even where x is NaN. Not yet
+            in ALG4 when a warp mixes zero and nonzero weights: such a
+            target can still take up a NaN or Inf that another target of
+            its warp reads, or a NaN in its own offset.
         srcdir: Receive directivity: per channel a unit look direction
             (first three components) and the cosine of the sensitivity
             half-angle (fourth). A channel contributes to a target only if
