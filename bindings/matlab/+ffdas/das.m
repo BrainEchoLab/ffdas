@@ -33,7 +33,10 @@ function out = das(x, srcpos, dstpos, offsets, weights, srcdir, wavenum, algorit
 %                         dimension in X. Default: true.
 %
 %   An event that weighs 0 for a target is skipped for it: it costs nothing
-%   and contributes nothing, even where X is NaN.
+%   and contributes nothing, even where X is NaN. Not yet in ALG4 when a
+%   warp mixes zero and nonzero weights: such a target can still take up a
+%   NaN or Inf that another target of its warp reads, or a NaN in its own
+%   offset.
 %
 %   Output:
 %     OUT - Beamformed output (gpuArray), shape (...[, batch]).

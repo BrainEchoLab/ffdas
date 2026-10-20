@@ -638,6 +638,36 @@ def test_das_zero_weight_event_is_not_read(algorithm, use_fp16, rng):
     assert_allclose(cp.asnumpy(out), cp.asnumpy(alone), rtol=0, atol=tol * np.abs(cp.asnumpy(alone)).max())
 
 
+# ALG4 sums 8 targets per sparse matrix multiply: a zero-weight target's zero coefficients still
+# multiply the samples the other targets of its warp read (0 * NaN = NaN). Not fixed yet.
+_ALG4_MIXED_WARP = pytest.mark.xfail(strict=True, reason="ALG4 does not yet isolate a zero-weight target in a mixed warp")
+MIXED_WARP_ALGORITHMS = [
+    pytest.param(*p.values, id=p.id, marks=_ALG4_MIXED_WARP if p.values[0] == ffdas.Algorithm.ALG4 else ())
+    for p in ALGORITHMS
+]
+
+
+@pytest.mark.parametrize("algorithm,use_fp16", MIXED_WARP_ALGORITHMS)
+def test_das_zero_weight_target_beside_weighted_ones_ignores_nan(algorithm, use_fp16, rng):
+    """Every other target weighs 0 for event 1, so every warp mixes zero and nonzero weights. Event 1
+    is NaN and the zero-weight targets' offsets for it too: they still get the event-0 image."""
+    n_ch, n_seq, n_samp, n_tgt = 8, 2, 191, 200
+    args = _on_gpu(_problem(rng, x_shape=(4, n_ch, n_seq, n_samp), n_seq=n_seq, n_tgt=n_tgt))
+    kw = dict(wavenum=-0.5, algorithm=algorithm, use_fp16=use_fp16)
+    alone = _das(**{**args, "x": cp.ascontiguousarray(args["x"][:, :, :1]),
+                    "offsets": args["offsets"][:1], "weights": args["weights"][:1]}, **kw)
+    x = args["x"].copy()
+    x[:, :, 1] = complex(np.nan, np.nan)
+    offsets, weights = args["offsets"].copy(), args["weights"].copy()
+    weights[1, ::2] = 0
+    offsets[1, ::2] = np.nan
+    out = cp.asnumpy(_das(**{**args, "x": x, "offsets": offsets, "weights": weights}, **kw))[:, ::2]
+    alone = cp.asnumpy(alone)[:, ::2]
+    assert np.isfinite(out).all()
+    tol = 3e-2 if use_fp16 else 1e-5  # one event vs two: different batch tiling in ALG2
+    assert_allclose(out, alone, rtol=0, atol=tol * np.abs(alone).max())
+
+
 def test_das_sparse_zero_padding_is_free_and_exact(rng):
     """K = 9 with zero-weight padding (any index, even outside x) is the compact K = 4 call, bitwise."""
     n_ch, n_seq, n_samp, n_tgt = 8, 6, 191, 200
@@ -694,6 +724,31 @@ def test_sort_sparse_keeps_the_image_and_groups_the_targets(rng):
     key = np.where(w != 0, si, n_seq)
     assert (np.diff(key, axis=0) >= 0).all()
     assert all(tuple(key[:, i]) <= tuple(key[:, i + 1]) for i in range(n_tgt - 1))
+
+
+def test_sort_sparse_zero_targets():
+    # the sorting workflow on an empty problem: empty arrays out, and das_sparse gives an empty image
+    si, w = cp.zeros((4, 0), dtype="int32"), cp.zeros((4, 0), dtype="float32")
+    order, si, ofs, w = ffdas.utils.sort_sparse(si, w, w)
+    assert order.shape == (0,) and si.shape == ofs.shape == w.shape == (4, 0)
+    srcpos, _ = _co_located(8, 0, 10.0)
+    x = cp.ones((2, 8, 6, 64), dtype="complex64")
+    out = ffdas.das_sparse(x, srcpos, cp.zeros((0, 3), dtype="float32")[order], ofs, w, si)
+    assert out.shape == (2, 0)
+
+
+def test_sort_sparse_stays_on_the_input_device(rng):
+    # a library whose arange defaults to another device (PyTorch: the CPU) must not mix devices;
+    # array_api_strict has a second device to check that without a GPU framework
+    xp = pytest.importorskip("array_api_strict")
+    from array_api_compat import device
+
+    dev = xp.Device("device1")
+    idx = np.stack([rng.permutation(6)[:4] for _ in range(50)], 1).astype("int32")
+    w = rng.random((4, 50)).astype("float32")
+    w[w < 0.4] = 0
+    out = ffdas.utils.sort_sparse(xp.asarray(idx, device=dev), xp.asarray(w, device=dev), xp.asarray(w, device=dev))
+    assert all(device(a) == dev for a in out)
 
 
 # Half-precision input converted once (ffdas.to_fp16) and reused: the same image as use_fp16=True,
